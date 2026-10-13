@@ -399,7 +399,7 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           ),
           opts_help("Folder holding the MITOS2 reference databases, and the database ",
                     "to annotate against; pick the clade closest to your samples.",
-                    href = "https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html")
+                    href = "https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html")
         ),
         mp_checkbox(
           ns("use_trnaScan"),
@@ -431,7 +431,7 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           opts_help("GenBank-format (.gb) reference used by MitoFinder to identify ",
                     "genes. The MitoPilot custom_assembly_db() function can generate ",
                     "this annotation database for a clade.",
-                    href = "https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html"),
+                    href = "https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html"),
           div(
             style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
             div(
@@ -655,7 +655,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
                   "data is only included in Metazoa_RefSeq235 (and custom databases ",
                   "built from it); with other databases the annotation editor's rRNA ",
                   "alignment falls back to the per-sample BLAST reference genome.",
-                  href = "https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html"),
+                  href = "https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html"),
         div(
           style = "flex: 1",
           selectizeInput(
@@ -681,7 +681,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
         ),
         opts_help("Taxonomic ruleset of expected genes and naming conventions used ",
                   "to curate annotations; pick the clade closest to your samples.",
-                  href = "https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.html"),
+                  href = "https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.html"),
         div(
           style = "flex: 1",
           selectizeInput(
@@ -717,7 +717,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           ),
           opts_help("Per-gene curation rules (expected length, start and stop ",
                     "codons, and so on) for the selected ruleset.",
-                    href = "https://smithsonian.github.io/MitoPilot/articles/Curation-and-Validation.html")
+                    href = "https://nmnh-oceandna.github.io/MitoPilot/articles/Curation-and-Validation.html")
         ),
         size = "m",
         footer = mp_footer(
