@@ -77,6 +77,29 @@ test_that("run reports module copes with projects without .runs", {
   })
 })
 
+test_that("an open Run Reports window picks up new and finished runs every 15 seconds", {
+  d <- withr::local_tempdir()
+  dir.create(run_dir(d, "nextflow"), recursive = TRUE)
+  put <- function(base, fx) file.copy(test_path("fixtures", "runs", fx),
+    file.path(run_dir(d, "nextflow"), paste0(base, ".nextflow.log")), overwrite = TRUE)
+  ms <- run_reports_session(d)
+  shiny::testServer(run_reports_server, args = list(id = "rr"), session = ms, {
+    session$setInputs(open = 1)
+    output$poll
+    expect_equal(nrow(runs()), 0L)
+    put("assemble_2026-09-08_12-51-00", "unfinished.nextflow.log")
+    session$elapse(15000)
+    expect_equal(runs()$result, "unfinished")
+    output$poll
+    session$setInputs(tbl__reactable__selected = 1)
+    put("assemble_2026-09-08_12-51-00", "clean.nextflow.log")
+    put("assemble_2026-09-09_12-51-00", "clean.nextflow.log")
+    session$elapse(15000)
+    expect_equal(runs()$result, c("finished", "finished"))
+    expect_equal(nrow(runs()), 2L)
+  })
+})
+
 test_that("run reports button builds", {
   expect_match(as.character(run_reports_ui("rr")), "Run Reports")
 })

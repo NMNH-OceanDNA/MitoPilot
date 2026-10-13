@@ -466,7 +466,7 @@ run_progress_text <- function(log, now = Sys.time(), stale = 3600) {
   idle <- as.numeric(difftime(now, upd, units = "secs"))
   state <- if (isTRUE(attr(p, "ended"))) {
     paste("Nextflow has finished, but the run report is not written yet. It is written",
-          "once the run's exit status is logged; reopen Run Reports in a moment.")
+          "once the run's exit status is logged, and shows here within 15 seconds.")
   } else if (idle > stale) {
     paste("No log update for", fmt_duration(idle), "and no finish recorded:",
           "Nextflow may have stopped (killed, out of time, or the job was cancelled).")
