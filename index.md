@@ -1,7 +1,7 @@
 # MitoPilot
 
 Please see the [documentation
-website](https://smithsonian.github.io/MitoPilot/) for more details.
+website](https://nmnh-oceandna.github.io/MitoPilot/) for more details.
 
 MitoPilot is a product of the [NMNH Ocean DNA
 initiative](https://naturalhistory.si.edu/initiatives/oceans/ocean-science-center/ocean-dna)
@@ -24,7 +24,7 @@ raw input and performs the following steps.
     - [GetOrganelle](https://github.com/Kinggerm/GetOrganelle)
       (default), [MitoFinder](https://github.com/RemiAllio/MitoFinder),
       or MapToRef for mitogenome assembly (see [choosing an assembly
-      method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.html))
+      method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.html))
     - [bowtie2](https://github.com/BenLangmead/bowtie2) for read mapping
       to calculate coverage and error rates.
     - [NCBI BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi) against a
@@ -55,7 +55,7 @@ raw input and performs the following steps.
 
 Optionally, MitoPilot can proceed straight to annotation and curation if
 the user supplies mitogenome assemblies with the
-[`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md)
+[`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
 function.
 
 ![](reference/figures/workflow_overview.png)
@@ -65,7 +65,7 @@ function.
 MitoPilot needs R (\>= 4.4.0), Java 17+, Nextflow (24.10.x - 25.10.x),
 and a container runtime (Docker locally, or Singularity/Apptainer on a
 cluster). Clusters that forbid containers can use the [native
-install](https://smithsonian.github.io/MitoPilot/articles/Native-Install.html)
+install](https://nmnh-oceandna.github.io/MitoPilot/articles/Native-Install.html)
 instead.
 
 ``` r
@@ -77,15 +77,15 @@ BiocManager::install("Smithsonian/MitoPilot")
 ```
 
 See [Installation and
-Requirements](https://smithsonian.github.io/MitoPilot/articles/Installation.html)
+Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html)
 for the full requirements, disk space, updating and version pinning, and
 container cache setup. Cluster-specific instructions are available for
 [Smithsonian
-Hydra](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.html)
+Hydra](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.html)
 and [NOAA
-SEDNA](https://smithsonian.github.io/MitoPilot/articles/NOAA-SEDNA.html);
+SEDNA](https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.html);
 for any other cluster see [HPC cluster
-support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html).
+support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html).
 
 # Quick start
 
@@ -94,16 +94,16 @@ is the recommended way to verify your installation and learn the
 interface before using your own data.
 
 The [Get
-Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.html)
+Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html)
 tutorial walks the whole pipeline using this test project.
 
 Want to skip straight to using MitoPilot with your own data? Head on
 over to [Starting Your Own
-Project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.html).
+Project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.html).
 
 Sample metadata can be imported directly from GEOME, GBIF, or NCBI
 BioSample records; see [Sample
-Metadata](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.html).
+Metadata](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.html).
 
 # Taxonomic Scope
 
@@ -147,7 +147,7 @@ below.
 | [Thecostraca](https://www.ncbi.nlm.nih.gov/datasets/taxonomy/116172/) | Barnacles | `thecostraca_mito` | Untested |
 
 See the [curation ruleset
-browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.html)
+browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.html)
 for details about each curation ruleset. The curation ruleset can be set
 individually for each sample in the `Curate Opts.` window in the
 MitoPilot app.
@@ -163,18 +163,18 @@ appropriate reference databases. There are three independent kinds of
 databases:
 
 - **Assembly** references for GetOrganelle, MitoFinder, or MapToRef.
-  [`MitoPilot::custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+  [`MitoPilot::custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
   builds a clade-wide database for GetOrganelle and MitoFinder
   automatically, with no external tools required; MapToRef instead uses
   a single reference mitogenome you supply yourself. Each sample carries
   its own: add a `Reference` column (and, for a FASTA, a
   `Reference_topology` column) to your mapping CSV, call
-  [`MitoPilot::set_maptoref_refs()`](https://smithsonian.github.io/MitoPilot/reference/set_maptoref_refs.md),
+  [`MitoPilot::set_maptoref_refs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_maptoref_refs.md),
   or click the sample’s MapToRef ref cell in the Assemble table. A
   reference may be a file path, a URL, or an NCBI accession; the mapper
   and its options come from the sample’s parameter set. See [building
   custom
-  databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html).
+  databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html).
 - **Annotation** references for MITOS2. MitoPilot includes Chordata and
   Metazoa databases, selectable in the `Annotate Opts.` window.
 - **Curation** references, chosen independently of the annotation
@@ -187,12 +187,12 @@ databases:
 
 | Page | What it covers |
 |----|----|
-| [Get Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.html) | Full walkthrough, then starting your own project |
-| [Installation and Requirements](https://smithsonian.github.io/MitoPilot/articles/Installation.html) | Prerequisites, installing, updating, container cache |
-| [HPC cluster support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html) | Executors, cluster profiles, SSH tunnel, submitting runs |
-| [Curation ruleset browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.html) | What each clade ruleset enforces |
-| [Building custom databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html) | Assembly and curation reference databases |
-| [Handling difficult assemblies](https://smithsonian.github.io/MitoPilot/articles/Difficult-Assemblies.html) | Resolving competing assemblies and fragmented scaffolds |
-| [FAQ](https://smithsonian.github.io/MitoPilot/articles/FAQ.html) and [Troubleshooting](https://smithsonian.github.io/MitoPilot/articles/Troubleshooting.html) | Common questions and pipeline failures |
-| [Reference](https://smithsonian.github.io/MitoPilot/reference/index.html) | All functions |
-| [Changelog](https://smithsonian.github.io/MitoPilot/news/index.html) | Release notes and container tags |
+| [Get Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html) | Full walkthrough, then starting your own project |
+| [Installation and Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html) | Prerequisites, installing, updating, container cache |
+| [HPC cluster support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html) | Executors, cluster profiles, SSH tunnel, submitting runs |
+| [Curation ruleset browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.html) | What each clade ruleset enforces |
+| [Building custom databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html) | Assembly and curation reference databases |
+| [Handling difficult assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.html) | Resolving competing assemblies and fragmented scaffolds |
+| [FAQ](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.html) and [Troubleshooting](https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.html) | Common questions and pipeline failures |
+| [Reference](https://nmnh-oceandna.github.io/MitoPilot/reference/index.html) | All functions |
+| [Changelog](https://nmnh-oceandna.github.io/MitoPilot/news/index.html) | Release notes and container tags |

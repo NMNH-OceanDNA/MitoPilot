@@ -13,7 +13,7 @@ NCBI RefSeq.
 
 - GetOrganelle, MitoFinder, or MapToRef (Assemble module; see [choosing
   an assembly
-  method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.md))
+  method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md))
 - Mitos2 (Annotate module)
 - Automatic and manual curation of protein-coding genes (Annotate
   module)
@@ -34,7 +34,7 @@ GetOrganelle uses two databases, both in FASTA format:
 ### Recommended: `MitoPilot::custom_assembly_db()`
 
 The easiest way to build custom assembly databases is the
-[`MitoPilot::custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+[`MitoPilot::custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
 function. It queries NCBI GenBank for all mitochondrial records in your
 clade, downloads them, and builds the GetOrganelle “seed” and “label”
 databases (and/or a MitoFinder database) for you.
@@ -84,7 +84,7 @@ new database with MitoPilot,
 
 You can provide the path to your GetOrganelle databases with the
 `custom_seeds_db` and `custom_labels_db` arguments of
-[`MitoPilot::new_project`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`MitoPilot::new_project`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 function when initializing a project. Alternatively, you can specify the
 GetOrganelle database in the assembly options section of the MitoPilot
 GUI.
@@ -92,7 +92,7 @@ GUI.
 **Note on un-annotated sequences:** Some mitochondrial records have no
 annotated genes (e.g. D-loop or poorly annotated sequences). Rather than
 requiring manual review,
-[`custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+[`custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
 automatically adds such a sequence to the seed database if it is long
 enough to likely be a near-complete mitogenome (by default, at least
 0.8x the median length of the complete mitogenomes in the download).
@@ -157,14 +157,14 @@ has instructions on how to build a reference database.
 The MitoFinder reference database is simple: a GenBank formatted file
 (`.gb`) containing one or more annotated mitogenomes. The easiest way to
 build one is
-[`MitoPilot::custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+[`MitoPilot::custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
 with `db_type = "mitofinder"` (see
 [above](#recommended-mitopilotcustom_assembly_db)). Alternatively, this
 file can be downloaded from a GenBank query in a web browser.
 
 You can provide the path to your MitoFinder database with the
 `mitofinder_db` argument of
-[`MitoPilot::new_project`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`MitoPilot::new_project`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 function when initializing a project. Alternatively, you can specify the
 MitoFinder database in the assembly options section of the MitoPilot
 GUI.
@@ -179,7 +179,7 @@ be fairly distant relatives of your samples.
 MapToRef needs exactly one complete mitogenome record to map reads
 against, not a multi-record database. The reference is set per sample,
 through the mapping CSV’s `Reference` column,
-[`set_maptoref_refs()`](https://smithsonian.github.io/MitoPilot/reference/set_maptoref_refs.md),
+[`set_maptoref_refs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_maptoref_refs.md),
 or the sample’s **MapToRef Ref** cell in the app’s Assemble table.
 
 The best option is to provide a GenBank accession number, which
@@ -203,7 +203,7 @@ database is specified by the `ref_dir` and `ref_db` sections of the
 Curation Opt. panel in the Shiny app.
 
 We have provided a helper function
-[`MitoPilot::custom_curation_db`](https://smithsonian.github.io/MitoPilot/reference/custom_curation_db.md),
+[`MitoPilot::custom_curation_db`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_curation_db.md),
 which will allow you to supplement the RefSeq databases with your own
 gene sequences. Using a custom database can greatly improve automatic
 curation if your focal clade is poorly represented in RefSeq.
@@ -215,5 +215,5 @@ sequences, as poor quality reference data will result in poorly curated
 gene models.
 
 Please see the
-[`MitoPilot::custom_curation_db`](https://smithsonian.github.io/MitoPilot/reference/custom_curation_db.md)
+[`MitoPilot::custom_curation_db`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_curation_db.md)
 documentation for further instructions.

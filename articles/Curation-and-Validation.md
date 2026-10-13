@@ -64,7 +64,7 @@ their existing gene models until you reset their state and re-run the
 Annotate module.
 
 The [curation ruleset
-browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.md)
+browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md)
 lists every ruleset with its testing status and parameter values.
 
 ### If there is no ruleset for your clade
@@ -88,7 +88,7 @@ the wrong expectations.
 ## Curation parameters
 
 Every ruleset is produced by a `params_*()` function, for example
-[`params_fish_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_fish_mito.md).
+[`params_fish_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_fish_mito.md).
 Customize it either by supplying a complete named list, or by passing
 just the modifications you want. The example below raises the expected
 `trnW` count to 2 and lowers the accepted reference similarity to 85%:
@@ -159,9 +159,9 @@ your sample is always among the sequences its boundaries are compared
 against.
 
 To supply your own, use
-[`custom_curation_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_curation_db.md),
+[`custom_curation_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_curation_db.md),
 described in [building custom
-databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md).
+databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md).
 
 The `ref_db` property of the curation parameters sets the paths
 directly, if you need per-gene control. Its default is
@@ -230,7 +230,7 @@ rest.
 **Warning.** Warnings do not clear themselves after you edit an
 annotation by hand. They are written when validation runs, so re-run
 validation for the sample to refresh them. See the
-[FAQ](https://smithsonian.github.io/MitoPilot/articles/FAQ.md) for the
+[FAQ](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.md) for the
 procedure.
 
 ## What MitoPilot does not check
@@ -245,11 +245,11 @@ after you submit.
 ## See also
 
 - [Curation ruleset
-  browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.md),
+  browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md),
   every ruleset and parameter
 - [Building custom
-  databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md),
+  databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md),
   including custom curation references
 - [Get
-  Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.md),
+  Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md),
   for the annotation and manual editing workflow

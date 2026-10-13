@@ -11,7 +11,7 @@ pileup.
 The method is chosen per sample in the **Assembly Opts.** window of the
 Assemble module, or for the whole project with the `assembler` argument
 of
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md).
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md).
 Everything downstream (annotation, curation, export) works the same
 whichever you pick.
 
@@ -42,9 +42,9 @@ genes then identifies which parts of the assembly graph are
 mitochondrial. Because it only assembles the reads it recruits, it is
 fast and light on memory, but it is only as good as its seed database.
 You can build your own with
-[`custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+[`custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
 (see [building custom
-databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md)).
+databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md)).
 
 The **GetOrganelle options** box carries the command-line flags. The
 defaults (`-R 10`, a k-mer series of 21 to 115, an expected genome size
@@ -56,7 +56,7 @@ guidance on the assembly parameters. For example, you can raise `-R`
 GetOrganelle is the only method that can return **several assembly
 paths**: alternative traversals of a tangled assembly graph, usually
 differing at a few sites. See [handling difficult
-assemblies](https://smithsonian.github.io/MitoPilot/articles/Difficult-Assemblies.md)
+assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.md)
 for how to resolve them.
 
 ## MitoFinder
@@ -74,7 +74,7 @@ Two things to set:
 - **MitoFinder database.** The default is a small sampler of fish
   mitogenomes. For anything else, supply a `.gb` file of mitogenomes
   from your group, built with
-  [`custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+  [`custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
   or downloaded from GenBank. It only needs to be similar enough for
   MitoFinder to identify the mitochondrial contigs by sequence
   similarity.
@@ -115,11 +115,11 @@ samples and compare.
 complete mitogenome given as a file path (GenBank `.gb` preferred, one
 record per file), a URL, or an NCBI accession such as `NC_002333`,
 through the mapping file’s `Reference` column,
-[`set_maptoref_refs()`](https://smithsonian.github.io/MitoPilot/reference/set_maptoref_refs.md),
+[`set_maptoref_refs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_maptoref_refs.md),
 or the sample’s **MapToRef Ref** cell in the Assemble table. A FASTA
 reference also needs its topology info (`circular` or `linear`). See
 [starting your own
-project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.md)
+project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md)
 for the mapping-file format. The closer the reference the better:
 MitoPilot flags the result when more than 10% of called sites differ
 from the reference, and when more than half of the reference could not
@@ -165,5 +165,5 @@ for the difficult ones. Make a second set in the Assembly options (tick
 **Edit**, change the assembler, give the set a new **Parameter set
 name**, click **Save**), then assign it to the samples that need it. The
 MapToRef reference is still set per sample. See the [Assemble
-walkthrough](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Assemble.html#set-the-options)
+walkthrough](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.html#set-the-options)
 for the options window.

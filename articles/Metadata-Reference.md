@@ -1,7 +1,7 @@
 # Metadata field reference
 
 Look-up tables for [Sample
-metadata](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.md).
+metadata](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.md).
 
 ## GenBank-ready fields
 
@@ -77,7 +77,7 @@ submitting:
 
 The Compare tab finds your mapping-file columns by name, ignoring case.
 The first match wins. Use
-[`set_metadata_columns()`](https://smithsonian.github.io/MitoPilot/reference/set_metadata_columns.md)
+[`set_metadata_columns()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_metadata_columns.md)
 or **Mapfile columns…** when yours differ.
 
 | Item | Columns tried |
@@ -98,7 +98,7 @@ and its taxon from the BioSample organism.
 ## Voucher search fields
 
 When
-[linking](https://smithsonian.github.io/MitoPilot/articles/Metadata-Linking.html#matching-a-voucher-to-a-gbif-record)
+[linking](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Linking.html#matching-a-voucher-to-a-gbif-record)
 searches GBIF for a voucher, it reads:
 
 | Record | Fields |

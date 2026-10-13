@@ -66,9 +66,9 @@ If install was successful, you can exit the R session using
 ### Updating MitoPilot
 
 See [updating, pinning, and rolling
-back](https://smithsonian.github.io/MitoPilot/articles/Installation.html#updating-pinning-and-rolling-back).
+back](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html#updating-pinning-and-rolling-back).
 Note that some releases change the project database schema and require
-[`backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.md)
+[`backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.md)
 before existing projects will open.
 
 On SEDNA, activate the `MitoPilot_deps` environment first, and remember
@@ -80,7 +80,7 @@ pipeline code.
 > **Note:** If you only need the MitoPilot GUI (not a full RStudio
 > session), you can skip RStudio Server entirely and run the GUI
 > headless over an SSH tunnel. See [Headless GUI over an SSH
-> tunnel](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html#accessing-the-mitopilot-app-over-an-ssh-tunnel)
+> tunnel](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html#accessing-the-mitopilot-app-over-an-ssh-tunnel)
 > in the Custom HPC vignette.
 
 Next we need to set up RStudio server. The version of RStudio server
@@ -233,6 +233,6 @@ so the next run pre-fills them.
 Monitor the job with `squeue` and the log files. When it finishes,
 relaunch the GUI to inspect the results. The same approach works for the
 annotate module. See [Running the
-pipeline](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html#running-the-pipeline)
+pipeline](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html#running-the-pipeline)
 in the Custom HPC vignette for the full description of the submission
 window.

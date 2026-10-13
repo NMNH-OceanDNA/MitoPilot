@@ -2,7 +2,7 @@
 
 This page collects common error messages and how to resolve them. For
 general usage questions, see the
-[FAQ](https://smithsonian.github.io/MitoPilot/articles/FAQ.md).
+[FAQ](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.md).
 
 ## Nextflow process exit codes
 

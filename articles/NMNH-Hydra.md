@@ -2,7 +2,7 @@
 
 This page covers what is specific to the Smithsonian Hydra cluster. Once
 you are set up here, the rest of MitoPilot works exactly as in the [Get
-Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.md)
+Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 walkthrough, with `executor = "NMNH_Hydra"`.
 
 Smithsonian users can also check out the [2025 workshop
@@ -66,7 +66,7 @@ Server session.
 An RStudio Server session on Hydra starts with a stripped `PATH` that
 leaves out the job scheduler, Java, and your `~/bin`, so Nextflow cannot
 find `qsub` and job submission fails.
-[`hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+[`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
 fixes that, and MitoPilot runs it for you when you load the package and
 when you open the app:
 
@@ -80,7 +80,7 @@ your `PATH`, checks your Nextflow version, and pins a compatible one for
 the session. If you use `MitoPilot::` functions without
 [`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot), or the
 setup message does not appear, call
-[`hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+[`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
 yourself. It warns and changes nothing if you are not on Hydra, so it is
 safe to leave in a script you also run elsewhere.
 
@@ -95,14 +95,14 @@ new_test_project(
 ```
 
 Use the same `executor = "NMNH_Hydra"` with
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 for your own data. Work under `/pool` or `/scratch`. Home directories
 are too small for pipeline work directories, and projects cannot be run
 from `/store`.
 
 The full walkthrough, with Hydra-specific notes at each step, is on the
 [Get
-Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.md)
+Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 page.
 
 ## Running jobs
@@ -115,7 +115,7 @@ running from the app ties the pipeline to your session.
 
 The generic mechanics of job scripts, resources, and the SSH tunnel are
 covered in [HPC cluster
-support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md).
+support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md).
 
 **Tip.** Clear your Singularity cache with `singularity cache clean`
 after updating MitoPilot, so the matching container image is pulled.

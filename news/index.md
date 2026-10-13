@@ -10,7 +10,7 @@ Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
   `fetch_ncbi` (were `mapping_biosample` and `fetch_biosample`), since
   they take SRA accessions as well as BioSamples. `fetch_biosample()` is
   now
-  [`fetch_ncbi()`](https://smithsonian.github.io/MitoPilot/reference/fetch_ncbi.md),
+  [`fetch_ncbi()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_ncbi.md),
   and its `biosamples` argument is now `ncbi_ids`. The mapping-file
   column still defaults to `BioSample`, and existing projects need no
   changes.
@@ -33,9 +33,9 @@ Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
   folder. Older projects keep working; their existing logs stay where
   they are.
 - **Test projects come with sample metadata.**
-  [`new_test_project()`](https://smithsonian.github.io/MitoPilot/reference/new_test_project.md)
+  [`new_test_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project.md)
   and
-  [`new_test_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
+  [`new_test_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
   now fetch each sample’s NCBI metadata from its SRA run and follow
   links to GBIF and GEOME.
 - **One window for metadata fields.** The **Metadata** button now picks
@@ -57,7 +57,7 @@ Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
   checks the voucher codes and EZIDs (a tissue EZID is replaced with its
   parent specimen), and reports samples that are missing or wrong. Fix
   them in the report or with a CSV upload. See
-  [`vignette("Specimen-Metadata")`](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.md).
+  [`vignette("Specimen-Metadata")`](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.md).
 - **Sample metadata from the voucher report.** Click a sample ID in the
   NMNH voucher report to open its metadata, then return to the report.
   The metadata window now has a copy button on every value and **Export
@@ -74,9 +74,9 @@ Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
 - **Hydra setup runs automatically.** On the NMNH Hydra cluster,
   [`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) and
   opening the app with
-  [`MitoPilot::MitoPilot()`](https://smithsonian.github.io/MitoPilot/reference/MitoPilot.md)
+  [`MitoPilot::MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
   run
-  [`hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+  [`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
   when the job scheduler is not yet on `PATH`, so you no longer need to
   call it yourself.
 - **Empty source modifiers are left out of FASTA headers.** When a
@@ -132,7 +132,7 @@ Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
   project) failed with “replacement has 1 row, data has 0”.
 
 **Note** Run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html)
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html)
 on older projects to move the `container` line in `.config` to
 `macguigand/mitopilot:1.5.9`. Scripts that call `fetch_biosample()` or
 pass `mapping_biosample` or `fetch_biosample` need the new names.
@@ -153,7 +153,7 @@ Released 2026-09-29. Container: `macguigand/mitopilot:1.5.8`
   BioSample attribute plus the linked BioProjects, adds NCBI to the
   Compare tab and the export conflict warning, and offers GenBank-ready
   `ncbi_*` fields at export. See [Sample
-  metadata](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.html).
+  metadata](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.html).
 - **Follow links between GEOME, GBIF, and NCBI.** With
   `link_sources = TRUE` at setup (or **Follow links between databases**
   in the sample metadata viewer), each fetched record is read for IDs of
@@ -165,7 +165,7 @@ Released 2026-09-29. Container: `macguigand/mitopilot:1.5.8`
   linked ID shows where it came from.
 - **Remove fetched metadata.** **Remove fetched data…** in the sample
   metadata viewer, or
-  [`remove_metadata()`](https://smithsonian.github.io/MitoPilot/reference/remove_metadata.md),
+  [`remove_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/remove_metadata.md),
   deletes fetched GEOME, GBIF, or NCBI records for one sample or all.
   Mapping-file columns and the IDs you supplied are always kept.
 - **Curation ruleset browser tweaks.** Each clade now shows a
@@ -188,7 +188,7 @@ Released 2026-09-29. Container: `macguigand/mitopilot:1.5.8`
   annotation on affected samples and re-export them.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -207,19 +207,19 @@ Released 2026-09-25. Container: `macguigand/mitopilot:1.5.7`
 - **Link samples to GEOME and GBIF records.** Add a column of GEOME
   BCIDs or GBIF occurrence IDs to the mapping file and name it with
   `mapping_geome` or `mapping_gbif` in
-  [`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md),
-  [`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md),
-  [`add_samples()`](https://smithsonian.github.io/MitoPilot/reference/add_samples.md),
+  [`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md),
+  [`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md),
+  [`add_samples()`](https://nmnh-oceandna.github.io/MitoPilot/reference/add_samples.md),
   or
-  [`update_sample_metadata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_metadata.md).
+  [`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md).
   Records are fetched at setup, or later with
-  [`fetch_geome()`](https://smithsonian.github.io/MitoPilot/reference/fetch_geome.md)
+  [`fetch_geome()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_geome.md)
   and
-  [`fetch_gbif()`](https://smithsonian.github.io/MitoPilot/reference/fetch_gbif.md).
+  [`fetch_gbif()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_gbif.md).
   Smithsonian NMNH records can be linked by their EZID (an
   `ark:/65665/...` identifier or a `collections.nmnh.si.edu` link) in
   place of a gbifID. See the new article [Sample metadata: GEOME and
-  GBIF](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.html).
+  GBIF](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.html).
 - **Metadata column.** The Assemble, Annotate, and Export tables have a
   Metadata column with a GEOME or GBIF logo per linked source and a flag
   when sources disagree. Click it to open the sample metadata viewer:
@@ -227,7 +227,7 @@ Released 2026-09-25. Container: `macguigand/mitopilot:1.5.7`
   tab that checks your mapping file, GEOME, and GBIF against each other
   (coordinates, dates, country, voucher, taxon, and more). MitoPilot
   flags disagreements but never merges values.
-  [`set_metadata_columns()`](https://smithsonian.github.io/MitoPilot/reference/set_metadata_columns.md)
+  [`set_metadata_columns()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_metadata_columns.md)
   or **Mapfile columns…** in the Compare tab picks which mapping-file
   columns are compared.
 - **Show any metadata field as a table column.** A new **Metadata**
@@ -303,12 +303,12 @@ Released 2026-09-25. Container: `macguigand/mitopilot:1.5.7`
   annotation on affected samples to correct them.
 - **The app launches from RStudio Server.** 1.5.6 stopped with
   `cannot coerce type 'closure' to vector of type 'character'` when
-  [`MitoPilot()`](https://smithsonian.github.io/MitoPilot/reference/MitoPilot.md)
+  [`MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
   was run inside RStudio, which sets its own browser handler.
 
 **Note** Existing projects work as they are: the app creates the new
 sample metadata tables and columns the first time it opens a project.
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html)
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html)
 adds them too and moves the `container` line in `.config` to
 `macguigand/mitopilot:1.5.7`.
 
@@ -327,9 +327,9 @@ Released 2026-09-23. Container: `macguigand/mitopilot:1.5.6`
   pixi, and
   `generate_config(container_engine = "none", native_prefix = ...)`
   writes a config whose tasks use it.
-  [`native_setup()`](https://smithsonian.github.io/MitoPilot/reference/native_setup.md)
+  [`native_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.md)
   and
-  [`native_check()`](https://smithsonian.github.io/MitoPilot/reference/native_check.md)
+  [`native_check()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_check.md)
   wire up and verify an R session. Works for a single user or as a
   shared install by a cluster administrator. See the new article
   *Installing without containers*.
@@ -338,7 +338,7 @@ Released 2026-09-23. Container: `macguigand/mitopilot:1.5.6`
 
 ### Bug Fixes
 
-- **[`export_files()`](https://smithsonian.github.io/MitoPilot/reference/export_files.md)
+- **[`export_files()`](https://nmnh-oceandna.github.io/MitoPilot/reference/export_files.md)
   summary CSV covers every exported unit.** The per-sample `sample_info`
   CSV was built from the Export tab’s locked view, so a direct call that
   exported samples never locked in Annotate wrote the files but a
@@ -350,11 +350,11 @@ Released 2026-09-23. Container: `macguigand/mitopilot:1.5.6`
   the Columns picker.
 
 **Note** Projects created with 1.5.5 need no migration; run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html)
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html)
 or edit the `container` line in `.config` to
 `macguigand/mitopilot:1.5.6`. Native-install configs are kept as they
 are by
-[`backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.md).
+[`backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.md).
 
 **Full Changelog**:
 <https://github.com/Smithsonian/MitoPilot/compare/1.5.5>…1.5.6
@@ -378,7 +378,7 @@ interface**, and a **sequence viewer** in the annotation window.
 - **One reference per sample.** Add a `Reference` column to the mapping
   file (a file path, a URL, or an NCBI accession, which is downloaded
   for you), set references later with
-  [`set_maptoref_refs()`](https://smithsonian.github.io/MitoPilot/reference/set_maptoref_refs.md),
+  [`set_maptoref_refs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_maptoref_refs.md),
   or click a sample’s **MapToRef Ref** cell in the Assemble table. A
   FASTA reference also needs a `Reference_topology`. References are
   checked when they are set, and every problem is reported at once.
@@ -395,7 +395,7 @@ interface**, and a **sequence viewer** in the annotation window.
   reference’s genes, the reference and consensus with differences
   outlined, and, zoomed in, the individual reads.
 - See the new [Choosing an assembly
-  method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.html)
+  method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.html)
   article for a comparison of GetOrganelle, MitoFinder, and MapToRef.
 
 #### Redesigned app interface
@@ -452,9 +452,9 @@ interface**, and a **sequence viewer** in the annotation window.
 #### Project setup
 
 - **Pre-flight checks.**
-  [`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+  [`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
   and
-  [`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md)
+  [`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
   check the mapping file, read and assembly files, reference databases,
   and every parameter before creating anything, and report all problems
   together.
@@ -494,14 +494,14 @@ interface**, and a **sequence viewer** in the annotation window.
 - Every app screenshot is refreshed for the new interface, and the
   walkthroughs use the new names for buttons, columns, and states.
 - New article: [Choosing an assembly
-  method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.html).
+  method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.html).
 - The [Your Own
-  Project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.html)
+  Project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.html)
   arguments are grouped by topic, and the MapToRef reference columns are
   documented with the mapping file.
 
 **Note** Projects created with an earlier release should be updated with
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html),
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html),
 which adds the MapToRef columns; the app refuses to open an un-migrated
 project and tells you so. Pass `update_config = FALSE` to leave your
 `.config` alone, then change its `container` line to
@@ -614,7 +614,7 @@ present.
 
 #### Test project for user assemblies
 
-- **[`new_test_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_test_project_userAsmb.md)**
+- **[`new_test_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAsmb.md)**
   builds a ready-to-run project from nine user-supplied assemblies cut
   from real data, with examples of linear, circular,
   not-yet-circularized, and multi-contig assemblies.
@@ -698,7 +698,7 @@ present.
   and reference index updated to match.
 
 **Note** Projects created with an earlier release should be updated with
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 Give it your executor, for example
 `backwards_compatibility(executor = "slurm")`. It adds the new database
 fields and rebuilds your project `.config` from that executor’s
@@ -707,7 +707,7 @@ a cluster: the new mitogenome-search and circularization steps have
 their own memory and scheduler settings, and a `.config` written by an
 earlier release does not have them. A project pinned to a custom
 container image is left alone by the update; run
-[`backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.md)
+[`backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.md)
 first, then edit the `container` line in the project `.config` by hand.
 The new Assemble steps will not run until you do.
 
@@ -797,14 +797,14 @@ outright.
 ### Internal
 
 - `run_app()` is no longer exported.
-  [`MitoPilot()`](https://smithsonian.github.io/MitoPilot/reference/MitoPilot.md)
+  [`MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
   is the documented way to start the app and passes everything through,
   so nothing changes for users.
 - The documentation build is capped at 20 minutes so a stalled runner
   fails fast instead of hanging for over an hour.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -934,7 +934,7 @@ Released 2026-08-14. Container: `macguigand/mitopilot:1.5.2`
   annotation steps rather than one that scaled with the retry attempt.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database (including the new
 `assembly_backup` table) and attempt to update the Docker/Singularity
 container version in your project `.config` file.
@@ -991,7 +991,7 @@ Released 2026-07-29. Container: `macguigand/mitopilot:1.5.1`
 - `ANNOTATE` additionally logs a warning naming the parameter-set
   directories that *do* exist for the sample. The unit is still emitted
   either way, so
-  [`annotate()`](https://smithsonian.github.io/MitoPilot/reference/annotate.md)
+  [`annotate()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate.md)
   fails as loudly as it always has.
 - Coverage-details reads and writes are checked **before** anything is
   written, so a missing output can no longer leave a half-written Path 0
@@ -1143,7 +1143,7 @@ Released 2026-07-29. Container: `macguigand/mitopilot:1.5.1`
   per-attempt scaling.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database (including the new
 `assembly_backup` table) and attempt to update the Docker/Singularity
 container version in your project `.config` file.
@@ -1214,7 +1214,7 @@ Released 2026-07-16. Container: `macguigand/mitopilot:1.5.0`
   assemblies; now `baseOnly=FALSE`.
 
 **Warning** **1.5.0 is a major database rework, not a routine update.**
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html)
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html)
 migrates existing projects **in place and irreversibly**: it re-keys the
 `annotate` table to `(ID, path, scaffold)`, rebuilds
 `blast_ref_alignment` (dropping legacy per-path alignment rows, which
@@ -1227,7 +1227,7 @@ project with an actionable message instead of a raw error. **Back up
 your projects before upgrading.**
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will migrate the SQL database to the new multi-unit schema and
 attempt to update the Docker/Singularity container version in your
 project `.config` file.
@@ -1243,12 +1243,12 @@ Released 2026-07-14. Container: `macguigand/mitopilot:1.4.12`
 
 #### Run the user-assembly pipeline without raw reads
 
-- **[`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md)
+- **[`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
   gains a `no_raw_data` mode** so user-supplied assemblies can be
   annotated with **no sequencing reads at all**. Read mapping and
   coverage calculation are skipped, and `RAW_DIR="NA"` is pinned in the
   project `.config`.
-- [`coverage()`](https://smithsonian.github.io/MitoPilot/reference/coverage.md)
+- [`coverage()`](https://nmnh-oceandna.github.io/MitoPilot/reference/coverage.md)
   gains a no-reads branch that **synthesizes a schema-identical
   `coverageStats.csv` straight from the assembly** (GC computed from the
   sequence; depth / error left empty), so all downstream WF2 machinery
@@ -1297,7 +1297,7 @@ Released 2026-07-14. Container: `macguigand/mitopilot:1.4.12`
   threshold.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -1406,7 +1406,7 @@ Released 2026-07-08. Container: `macguigand/mitopilot:1.4.11`
   to update” guard), so existing projects self-migrate on open.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -1507,7 +1507,7 @@ Released 2026-07-06. Container: `macguigand/mitopilot:1.4.10`
   re-translation on re-run).
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -1682,7 +1682,7 @@ Released 2026-06-29. Container: `macguigand/mitopilot:1.4.9`
 - Show a “hold tight” message while submitting a cluster job.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -1727,7 +1727,7 @@ Released 2026-06-23. Container: `macguigand/mitopilot:1.4.8`
 - New **Export Selected/All to CSV** buttons on the Export tab (matching
   Assemble/Annotate tabs).
 - Every
-  [`export_files()`](https://smithsonian.github.io/MitoPilot/reference/export_files.md)
+  [`export_files()`](https://nmnh-oceandna.github.io/MitoPilot/reference/export_files.md)
   run auto-writes a per-sample summary CSV (`<group>_sample_info.csv`,
   or `sample_info_<date>.csv` for direct ID calls; gated by new
   `summary_csv` arg, default on). Now includes assembly length.
@@ -1735,7 +1735,7 @@ Released 2026-06-23. Container: `macguigand/mitopilot:1.4.8`
 #### Hydra HPC support
 
 - New
-  [`hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+  [`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
   replaces the [manual path
   modification](https://smithsonianworkshops.github.io/MitoPilot_workshop_2025/qmd/setup/05_load.html)
   required for Hydra R Studio server
@@ -1785,7 +1785,7 @@ Released 2026-06-23. Container: `macguigand/mitopilot:1.4.8`
   stripped on WF2 regeneration; user-typed notes preserved.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -1814,12 +1814,12 @@ only the interface is forwarded to you.
 
 See the documentation for the complete walkthrough: **[Running MitoPilot
 headless over an SSH
-tunnel](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html)**.
+tunnel](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html)**.
 
 ##### New features
 
 - **Headless / SSH-tunnel launch.**
-  [`MitoPilot()`](https://smithsonian.github.io/MitoPilot/reference/MitoPilot.md)
+  [`MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
   now accepts `host`, `port`, and `launch.browser` so you can bind the
   app to a fixed host and port and tell it not to open a local browser
   (`launch.browser = FALSE`). On startup the server prints the exact
@@ -1842,11 +1842,11 @@ tunnel](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html)**.
 
 #### Hydra setup helper function
 
-- **[`hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+- **[`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
   helper for NMNH Hydra.** RStudio Server sessions on Hydra start with a
   stripped `PATH` that omits the Univa Grid Engine binaries, so Nextflow
   cannot find `qsub` and job submission silently fails. Call
-  [`MitoPilot::hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+  [`MitoPilot::hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
   once per session, before launching the app, to prepend the UGE, Java,
   and `~/bin` directories to `PATH`. Has no effect (and warns) when not
   running on Hydra.
@@ -1858,7 +1858,7 @@ tunnel](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html)**.
   order.
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -1888,7 +1888,7 @@ Pycnogonida, Sipuncula, Thaliacea, Thecostraca.
 - Curate/annotate target dropdown now shows
   `Scientific name (Common name)` labels
 - [Curation ruleset
-  browser](https://smithsonian.github.io/MitoPilot/ruleset-browser.html)
+  browser](https://nmnh-oceandna.github.io/MitoPilot/ruleset-browser.html)
   updated with all 19 new clades
 
 ##### Build assembly reference databases in R with `custom_assembly_db()`
@@ -1931,7 +1931,7 @@ frames (ORFs) in unannotated regions.
 - New `orf_opts` parameter set (window and DB table) with configurable
   CPUs, memory, min ORF length, max overlap fraction, strand, and
   nested-ORF toggle
-- [`orf_finder()`](https://smithsonian.github.io/MitoPilot/reference/orf_finder.md):
+- [`orf_finder()`](https://nmnh-oceandna.github.io/MitoPilot/reference/orf_finder.md):
   runs NCBI ORFfinder, filters to unannotated regions (configurable
   overlap fraction), deduplicates by longest-per-region, names surviving
   ORFs `ORF.1..N`, and BLASTs each against the combined featureProt
@@ -1990,10 +1990,10 @@ via `split_wrapped_genes()` with the label placed on the longer arc.
 
 The multi-path “Build resolved assembly” (Path 0) wrote a raw coverage
 CSV incompatible with
-[`annotate()`](https://smithsonian.github.io/MitoPilot/reference/annotate.md),
+[`annotate()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate.md),
 causing a crash when moving a consensus assembly to the Annotate step.
 Fixed by sharing the rolling-stats helpers between
-[`coverage()`](https://smithsonian.github.io/MitoPilot/reference/coverage.md)
+[`coverage()`](https://nmnh-oceandna.github.io/MitoPilot/reference/coverage.md)
 and `persist_path0()`.
 
 ##### Alignment-edit save performance
@@ -2015,7 +2015,7 @@ identical; substantially faster.
 ------------------------------------------------------------------------
 
 **Note** To update older MitoPilot projects, please run
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2032,7 +2032,7 @@ Released 2026-06-08. Container: `macguigand/mitopilot:1.4.5`
 ##### Interactive curation ruleset browser
 
 New
-[`ruleset_browser()`](https://smithsonian.github.io/MitoPilot/reference/ruleset_browser.md)
+[`ruleset_browser()`](https://nmnh-oceandna.github.io/MitoPilot/reference/ruleset_browser.md)
 function generates a self-contained interactive HTML visualization of
 MitoPilot’s taxon-specific curation rulesets.
 
@@ -2099,7 +2099,7 @@ The START `-`/`+` buttons were swapped; corrected so order is intuitive
 (left=decrease, right=increase).
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2132,10 +2132,10 @@ validation with a `low-confidence tRNA (NNN anticodon)` warning,
 surfaced in the Annotate table’s warnings column.
 
 Available as the `retain_low_conf_trna` parameter of
-[`annotate()`](https://smithsonian.github.io/MitoPilot/reference/annotate.md)
+[`annotate()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate.md)
 and plumbed through the Nextflow annotate workflow. Existing projects
 gain the new option automatically via a database migration with
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html)
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html)
 (default: off).
 
 #### Performance
@@ -2168,7 +2168,7 @@ gain the new option automatically via a database migration with
   dependency and the annotation fix.
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2188,7 +2188,7 @@ Released 2026-05-27. Container: `macguigand/mitopilot:1.4.3`
 
 MitoPilot now ships built-in Nextflow config templates for generic job
 schedulers: `slurm`, `sge`, `pbs`, and `lsf`. A new
-[`generate_config()`](https://smithsonian.github.io/MitoPilot/reference/generate_config.md)
+[`generate_config()`](https://nmnh-oceandna.github.io/MitoPilot/reference/generate_config.md)
 helper saves a named cluster profile (queue, account, container engine,
 etc.) to the user config directory for reuse across projects:
 
@@ -2214,7 +2214,7 @@ Custom Nextflow configs can still be passed directly via config =
 “path/to/.config”.
 
 See the new [Custom HPC
-vignette](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html)
+vignette](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html)
 for details.
 
 ##### CSV export for Assemble and Annotate tables
@@ -2239,7 +2239,7 @@ tables for improved readability. Selection highlighting is preserved.
 
 ##### `BLAST_REF_FETCH` silent failures
 
-[`fetch_blast_ref()`](https://smithsonian.github.io/MitoPilot/reference/fetch_blast_ref.md)
+[`fetch_blast_ref()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_blast_ref.md)
 was calling `write_empty_ref()` and returning exitcode 0 on empty or
 malformed NCBI GFF3 responses. Nextflow’s retry and failure-detection
 machinery therefore never fired, and affected samples were falsely
@@ -2267,7 +2267,7 @@ renderer but stored as `NULL` in the data, so filtering the column for
 `fetch_annotate_data()`.
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2282,9 +2282,9 @@ Released 2026-05-26. Container: `macguigand/mitopilot:1.4.2`
 #### New Features
 
 \### Optional NCBI API key - New `ncbi_api_key` argument on
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 and
-[`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md),
+[`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md),
 substituted into all config templates as `params.ncbi_api_key`. -
 `blast_genbank` and `blast_ref_fetch` export `NCBI_API_KEY`, raising the
 remote BLAST and eutils rate limits. The key is redacted from logs. An
@@ -2327,7 +2327,7 @@ needed for existing projects.
 - Adjusted Hydra controller and SGE job memory requests.
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2411,7 +2411,7 @@ Released 2026-05-12. Container: `macguigand/mitopilot:1.4.0`
   colors in annotation details table
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2436,7 +2436,7 @@ Released 2026-04-28. Container: `macguigand/mitopilot:1.3.10`
   easily restore annotations deleted by the user
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2452,7 +2452,7 @@ Released 2025-12-17. Container: `macguigand/mitopilot:1.3.9`
 - bugfix for validation step
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2471,7 +2471,7 @@ Released 2025-12-15. Container: `macguigand/mitopilot:1.3.8`
 - minor app bugfixes
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2490,7 +2490,7 @@ Released 2025-12-03. Container: `macguigand/mitopilot:1.3.7`
 - bugfix for validating annotations with introns
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2506,7 +2506,7 @@ Released 2025-11-21. Container: `macguigand/mitopilot:1.3.6`
 - handle annotation and export of genes with introns
 - updated the NOAA SEDNA cluster documentation   **Note** To update
   older MitoPilot projects, please run the R function
-  [`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+  [`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
   This will add any missing fields to the SQL database and attempt to
   update the Docker/Singularity container version in your project
   `.config` file.
@@ -2522,7 +2522,7 @@ Changed Nextflow implementation to skip samples that fail during the
 pipeline, allowing good samples to continue running.
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2537,7 +2537,7 @@ Released 2025-08-20. Container: `macguigand/mitopilot:1.3.4`
 - added curation ruleset for turtles
 - clarified help documentation for `new_project` argument `min_depth`  
   **Note** To update older MitoPilot projects, please run the R function
-  [`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+  [`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
   This will add any missing fields to the SQL database and attempt to
   update the Docker/Singularity container version in your project
   `.config` file.
@@ -2555,7 +2555,7 @@ Released 2025-08-15. Container: `macguigand/mitopilot:1.3.3`
 - Bugfix for switching between curate option sets in Shiny app
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2572,7 +2572,7 @@ Released 2025-08-08. Container: `macguigand/mitopilot:1.3.2`
 - bugfix for “add_samples” function
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2589,7 +2589,7 @@ Released 2025-07-31. Container: `macguigand/mitopilot:1.3.1`
   copepods
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2607,7 +2607,7 @@ Released 2025-07-22. Container: `macguigand/mitopilot:1.3.0`
 - NMNH users can submit MitoPilot Hydra jobs directly from the app
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2632,7 +2632,7 @@ Released 2025-07-15. Container: `macguigand/mitopilot:1.2.8`
 - “problematic” field defaults to “no” when initializing a project
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2658,7 +2658,7 @@ Released 2025-06-27. Container: `macguigand/mitopilot:1.2.7`
 unless you rerun the Annotate module.
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the Docker/Singularity container version in your project
 `.config` file.
@@ -2677,7 +2677,7 @@ Released 2025-06-20. Container: `macguigand/mitopilot:1.2.6`
 <https://github.com/Smithsonian/MitoPilot/compare/1.2.5>…1.2.6
 
 **Note** To update older MitoPilot projects, please run the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database and attempt to
 update the container version in your project `.config` file.
 
@@ -2692,7 +2692,7 @@ Released 2025-06-17. Container: `macguigand/mitopilot:1.2.5`
 
 **Note** To update older MitoPilot projects for this release, please run
 the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database. You should also
 make sure your project’s `.config` file lists the matching container
 (`container = 'macguigand/mitopilot:1.2.5'`).
@@ -2710,7 +2710,7 @@ Released 2025-06-03. Container: `macguigand/mitopilot:1.2.4`
 
 **Note** To update older MitoPilot projects for this release, please run
 the R function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will add any missing fields to the SQL database. You should also
 make sure your project’s `.config` file lists the matching container
 (`container = 'macguigand/mitopilot:1.2.4'`).
@@ -2728,7 +2728,7 @@ mitogenome annotations.
 
 **Note** To use old projects with the latest MitoPilot release, please
 run the function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will update the SQL database with any missing fields (columns).
 
 ## MitoPilot 1.2.2
@@ -2743,7 +2743,7 @@ app.
 
 **Note** To use old projects with the latest MitoPilot release, please
 run the function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will update the SQL database with any missing fields (columns).
 
 ## MitoPilot 1.2.1
@@ -2751,17 +2751,17 @@ This will update the SQL database with any missing fields (columns).
 Released 2025-05-08. Container: `macguigand/mitopilot:1.2.1`
 
 Fixed the following R functions to work with user-assembly projects -
-[`update_sample_metadata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_metadata.md) -
-[`update_sample_seqdata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_seqdata.md) -
-[`add_samples()`](https://smithsonian.github.io/MitoPilot/reference/add_samples.md) -
-[`export_db_to_csv()`](https://smithsonian.github.io/MitoPilot/reference/export_db_to_csv.md)
+[`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md) -
+[`update_sample_seqdata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_seqdata.md) -
+[`add_samples()`](https://nmnh-oceandna.github.io/MitoPilot/reference/add_samples.md) -
+[`export_db_to_csv()`](https://nmnh-oceandna.github.io/MitoPilot/reference/export_db_to_csv.md)
 
 **Full Changelog**:
 <https://github.com/Smithsonian/MitoPilot/compare/1.2.0>…1.2.1
 
 **Note** To use old projects with the latest MitoPilot release, please
 run the function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will update the SQL database with any missing fields (columns).
 
 ## MitoPilot 1.2.0
@@ -2771,7 +2771,7 @@ Released 2025-05-07. Container: `macguigand/mitopilot:1.2.0`
 #### What’s Changed
 
 - New R function
-  [`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md)
+  [`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
   allows users to create a project with their own mitogenome assemblies
 
 **Full Changelog**:
@@ -2779,7 +2779,7 @@ Released 2025-05-07. Container: `macguigand/mitopilot:1.2.0`
 
 **Note** To use old projects with the latest MitoPilot release, please
 run the function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will update the SQL database with any missing fields (columns).
 
 ## MitoPilot 1.1.0
@@ -2797,7 +2797,7 @@ Released 2025-05-05. Container: `macguigand/mitopilot:1.1.0`
 
 **Note** To use old projects with the latest MitoPilot release, please
 run the function
-[`MitoPilot::backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.html).
+[`MitoPilot::backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.html).
 This will update the SQL database with any missing fields (columns).
 
 ## MitoPilot 1.0.0

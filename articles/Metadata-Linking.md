@@ -4,7 +4,7 @@ GEOME, GBIF, and NCBI records often point to each other. With linking
 on, one ID per sample is enough: from a column of SRA accessions, for
 example, MitoPilot can also find and fetch the matching GEOME and GBIF
 records. This page builds on [Sample
-metadata](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.md).
+metadata](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.md).
 
 ## Turning linking on
 
@@ -66,7 +66,7 @@ voucher, written as GenBank and museums write it:
 `institution:catalog` (`UW:157636`), either with a `urn:catalog:`
 prefix, or `institution catalog` (`USNM 419933`). It searches in the
 fields listed in the [field
-reference](https://smithsonian.github.io/MitoPilot/articles/Metadata-Reference.html#voucher-search-fields),
+reference](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Reference.html#voucher-search-fields),
 filters the hits, and links only when exactly one specimen is left:
 
 ![How a voucher is matched to one GBIF
@@ -99,4 +99,4 @@ published to GBIF cannot be matched.
     other database.
 5.  **Did the linked fetch fail?** Hover the faded logo in the Metadata
     column, or see the [fetch
-    messages](https://smithsonian.github.io/MitoPilot/articles/Metadata-Reference.html#fetch-messages).
+    messages](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Reference.html#fetch-messages).

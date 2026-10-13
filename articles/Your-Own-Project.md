@@ -25,7 +25,7 @@ Four columns are required:
 Any other columns you add are carried along: they show in the Assemble,
 Annotate, and Export tables (the **Metadata** button picks which ones,
 see [Sample
-Metadata](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.html#showing-metadata-in-the-tables))
+Metadata](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.html#showing-metadata-in-the-tables))
 and can be pulled into GenBank FASTA headers at export, so this is the
 place to put voucher numbers, BioSample accessions, collection data, and
 anything else your submission needs.
@@ -36,10 +36,10 @@ BioSamples](https://www.ncbi.nlm.nih.gov/biosample), add a column of
 GEOME BCIDs, gbifIDs (Smithsonian NMNH EZIDs work there too), or
 BioSample/SRA accessions, and name those columns with the
 `mapping_geome`, `mapping_gbif`, and `mapping_ncbi` arguments of
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md).
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md).
 Add `link_sources = TRUE` to fill in the other databases from whichever
 ID you have; see [Linking records across
-databases](https://smithsonian.github.io/MitoPilot/articles/Metadata-Linking.md).
+databases](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Linking.md).
 
     ID,Taxon,R1,R2,Voucher,BioSample
     OCT001,Muricea elongata,OCT001_R1.fastq.gz,OCT001_R2.fastq.gz,USNM:1234567,SAMN00000001
@@ -48,7 +48,7 @@ databases](https://smithsonian.github.io/MitoPilot/articles/Metadata-Linking.md)
 Two column names are reserved for the MapToRef assembler, which maps
 reads to a reference mitogenome chosen per sample (see [choosing an
 assembly
-method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.md)).
+method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md)).
 `Reference` holds a file path, a URL, or an NCBI nucleotide accession
 (MitoPilot will automatically download when needed) A FASTA reference
 also needs a `Reference_topology` column (`circular` or `linear`), since
@@ -60,7 +60,7 @@ a FASTA header carries no topology.
 
 If your reference list is not ready at project creation, leave the
 columns out and supply them later with
-[`set_maptoref_refs()`](https://smithsonian.github.io/MitoPilot/reference/set_maptoref_refs.md),
+[`set_maptoref_refs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_maptoref_refs.md),
 using a CSV with an ID column, a reference column, and an optional
 topology column.
 
@@ -73,7 +73,7 @@ Or you can set references using the **MapToRef Ref** cell in the app’s
 Assemble table.
 
 You do not have to get the mapping file columns right the first time.
-[`update_sample_metadata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_metadata.md)
+[`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md)
 adds new columns or revises the values in existing projects. Close the
 app before updating the metadata, since this function needs sole access
 to the project database.
@@ -114,7 +114,7 @@ setting them at initialization applies them to every sample at once.
 controls expected gene content, allowed start and stop codons, gene
 naming, and the genetic code. The default is `"fish_mito"`. Browse the
 available rulesets in the [curation ruleset
-browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.md)
+browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md)
 and pass the one matching your clade, for example
 `curate_target = "octocoral_mito"`.
 
@@ -130,7 +130,7 @@ genome” rather than “partial”.
 
 **`assembler`** chooses `"GetOrganelle"` (default), `"MitoFinder"`, or
 `"MapToRef"`. See [choosing an assembly
-method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.md)
+method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md)
 for more info. MapToRef sets the reference per sample through the
 mapping file, as described [above](#the-mapping-file), so it has no
 database argument here.
@@ -138,9 +138,9 @@ database argument here.
 **`custom_seeds_db` and `custom_labels_db`** point GetOrganelle at
 reference sequences for your group. The defaults are for fishes, but you
 can build databases for any clade with
-[`custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md),
+[`custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md),
 see [building custom
-databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md).
+databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md).
 Give absolute paths, not paths starting with `~`.
 
 **`mitofinder_db`** points MitoFinder at a GenBank-format (`.gb`)
@@ -158,9 +158,9 @@ have already been filtered or baited.
 generic cluster templates (`"slurm"`, `"sge"`, `"pbs"`, `"lsf"`,
 `"awsbatch"`), a site profile (`"NMNH_Hydra"`, `"NOAA_SEDNA"`), or a
 profile you saved yourself with
-[`generate_config()`](https://smithsonian.github.io/MitoPilot/reference/generate_config.md).
+[`generate_config()`](https://nmnh-oceandna.github.io/MitoPilot/reference/generate_config.md).
 See [HPC cluster
-support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md).
+support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md).
 
 **`ncbi_api_key`** raises your NCBI request limits. Worth setting even
 though the BLAST search itself is local, because MitoPilot fetches
@@ -172,7 +172,7 @@ Sample metadata fetches use it too. Get an API key from
 
 Every processing parameter shown in the app’s options windows can also
 be passed to
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md),
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md),
 which overrides the stored default for every sample in the new project:
 
 ``` r
@@ -186,7 +186,7 @@ new_project(
 ```
 
 For the complete list, see the
-[`new_db()`](https://smithsonian.github.io/MitoPilot/reference/new_db.md)
+[`new_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_db.md)
 documentation.
 
 #### A complete example
@@ -247,13 +247,13 @@ rather than in your home directory.
 
 ### Adding samples later
 
-[`add_samples()`](https://smithsonian.github.io/MitoPilot/reference/add_samples.md)
+[`add_samples()`](https://nmnh-oceandna.github.io/MitoPilot/reference/add_samples.md)
 appends new rows to an existing project from an additional mapping file,
 so a project can grow as sequencing comes in rather than being
 re-created from scratch.
-[`update_sample_metadata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_metadata.md)
+[`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md)
 revises or adds metadata columns, and
-[`update_sample_seqdata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_seqdata.md)
+[`update_sample_seqdata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_seqdata.md)
 updates the raw-data file names.
 
 Close the app before using any of them, since they need sole access to
@@ -264,12 +264,12 @@ revert.
 
 If your mitogenomes were assembled elsewhere, for example by mapping to
 a reference in Geneious, use
-[`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md)
+[`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
 instead. MitoPilot will skip assembly and let you perform annotation,
 curation, and export.
 
 [Using Your Own
-Assemblies](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Assemblies.md)
+Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.md)
 covers the extra mapping columns, projects with no raw reads, and the
 optional steps for whole-genome assemblies: finding the mitochondrial
 contigs, circularizing linear ones, and joining a mitogenome that
@@ -283,8 +283,8 @@ If you have not run the test project yet, it is the fastest way to learn
 the interface before committing your own data:
 
 [1.
-Assemble](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Assemble.md)
+Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md)
 [2.
-Annotate](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Annotate.md)
+Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)
 [3.
-Export](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.md)
+Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md)

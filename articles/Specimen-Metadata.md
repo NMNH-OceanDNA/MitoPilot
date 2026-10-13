@@ -22,22 +22,22 @@ supported.
 Related pages:
 
 - [Linking records across
-  databases](https://smithsonian.github.io/MitoPilot/articles/Metadata-Linking.md):
+  databases](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Linking.md):
   fill in the other databases from one ID.
 - [NMNH voucher
-  submissions](https://smithsonian.github.io/MitoPilot/articles/NMNH-Vouchers.md):
+  submissions](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Vouchers.md):
   NMNH metadata requirements for GenBank records.
 - [Metadata field
-  reference](https://smithsonian.github.io/MitoPilot/articles/Metadata-Reference.md):
+  reference](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Reference.md):
   every export field, the column names MitoPilot recognizes, and fetch
   messages.
 
 ## Quick start
 
 1.  Add a column of IDs to your [mapping
-    file](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.html#the-mapping-file).
+    file](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.html#the-mapping-file).
 2.  Name it in
-    [`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+    [`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
     (for example `mapping_gbif = "Occurrence"`). MitoPilot fetches the
     records during setup.
 3.  In the app, check the **Metadata** column: one logo per fetched
@@ -53,12 +53,12 @@ Related pages:
 | Task | In R | In the app |
 |----|----|----|
 | Link IDs at setup | `new_project(mapping_geome =, mapping_gbif =, mapping_ncbi =)` | NA |
-| Add or change IDs | [`update_sample_metadata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_metadata.md), or `fetch_*(ids =, gbifs = / bcids = / ncbi_ids =)` | Click an icon in Metadata column to open the metadata selector, edit the ID, **Fetch** |
-| Refresh records | [`fetch_geome()`](https://smithsonian.github.io/MitoPilot/reference/fetch_geome.md), [`fetch_gbif()`](https://smithsonian.github.io/MitoPilot/reference/fetch_gbif.md), [`fetch_ncbi()`](https://smithsonian.github.io/MitoPilot/reference/fetch_ncbi.md) | **Refresh all** in metadata selector |
+| Add or change IDs | [`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md), or `fetch_*(ids =, gbifs = / bcids = / ncbi_ids =)` | Click an icon in Metadata column to open the metadata selector, edit the ID, **Fetch** |
+| Refresh records | [`fetch_geome()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_geome.md), [`fetch_gbif()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_gbif.md), [`fetch_ncbi()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_ncbi.md) | **Refresh all** in metadata selector |
 | Fill in other databases | `link_sources = TRUE` | **Follow links between databases** in metadata selector |
-| Pick which mapping-file columns are compared | [`set_metadata_columns()`](https://smithsonian.github.io/MitoPilot/reference/set_metadata_columns.md) | **Mapfile columns…** on the Compare tab |
+| Pick which mapping-file columns are compared | [`set_metadata_columns()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_metadata_columns.md) | **Mapfile columns…** on the Compare tab |
 | Use fields in FASTA headers | NA | **Metadata** button, then toggle **Export Data** |
-| Remove fetched data | [`remove_metadata()`](https://smithsonian.github.io/MitoPilot/reference/remove_metadata.md) | **Remove fetched data…** in metadata selector |
+| Remove fetched data | [`remove_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/remove_metadata.md) | **Remove fetched data…** in metadata selector |
 
 ## Finding the identifiers
 
@@ -111,16 +111,16 @@ new_project(path = "my_project", mapping_fn = "mapping.csv",
   `fetch_geome = FALSE`, `fetch_gbif = FALSE`, and `fetch_ncbi = FALSE`,
   and fetch later. Pipeline jobs on compute nodes never contact these
   databases.
-- [`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md)
+- [`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
   takes the same arguments.
 
 ### Later
 
-[`add_samples()`](https://smithsonian.github.io/MitoPilot/reference/add_samples.md)
+[`add_samples()`](https://nmnh-oceandna.github.io/MitoPilot/reference/add_samples.md)
 and
-[`update_sample_metadata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_metadata.md)
+[`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md)
 take the same `mapping_*`, `fetch_*`, and `link_sources` arguments. With
-[`update_sample_metadata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_metadata.md),
+[`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md),
 samples whose ID changed or was added are fetched again, and a blank
 cell removes that sample’s link and data for that source only.
 
@@ -140,15 +140,15 @@ When some fetches fail, the rest still finish and one warning lists each
 failed sample with the reason. A failed refresh keeps the data fetched
 before; changing to a different ID clears the old record right away. The
 [fetch
-messages](https://smithsonian.github.io/MitoPilot/articles/Metadata-Reference.html#fetch-messages)
+messages](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Reference.html#fetch-messages)
 table explains each reason.
 
 NCBI allows three requests per second, or ten with a free [NCBI API
 key](https://www.ncbi.nlm.nih.gov/books/NBK25497/). Metadata fetches use
 the same key as the rest of the project: the `ncbi_api_key` you set in
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 (see [Running Your Own
-Project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.md)),
+Project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md)),
 or else the `NCBI_API_KEY` environment variable.
 
 ## Viewing records in the app
@@ -227,7 +227,7 @@ locality, voucher, collector, sex, life stage, and taxon.
 Blanks never conflict, and placeholders such as `missing` or
 `not collected` count as blank. MitoPilot finds your mapping-file
 columns by [common
-names](https://smithsonian.github.io/MitoPilot/articles/Metadata-Reference.html#mapping-file-columns-used-by-compare).
+names](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Reference.html#mapping-file-columns-used-by-compare).
 If yours differ, pick them under **Mapfile columns…** or in R:
 
 ``` r
@@ -275,7 +275,7 @@ Export Data window with grouped column chips
 - **Check GBIF values.** GBIF’s `country` is its own English name
   (`United States of America`, where GenBank expects `USA`), and GBIF
   may have adjusted or generalized coordinates. See the [GBIF
-  notes](https://smithsonian.github.io/MitoPilot/articles/Metadata-Reference.html#gbif-notes).
+  notes](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Reference.html#gbif-notes).
 
 When you click **Export**, MitoPilot checks the items your templates
 use. If any sample in the export group has a metadata **conflict**, a
@@ -290,7 +290,7 @@ Export warning listing a country conflict
 ## Removing fetched data
 
 **Remove fetched data…** under the sample list in the viewer, or
-[`remove_metadata()`](https://smithsonian.github.io/MitoPilot/reference/remove_metadata.md),
+[`remove_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/remove_metadata.md),
 deletes fetched records for one sample or all:
 
 ``` r

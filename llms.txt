@@ -1,7 +1,7 @@
 # MitoPilot
 
 Please see the [documentation
-website](https://smithsonian.github.io/MitoPilot/) for more details.
+website](https://nmnh-oceandna.github.io/MitoPilot/) for more details.
 
 MitoPilot is a product of the [NMNH Ocean DNA
 initiative](https://naturalhistory.si.edu/initiatives/oceans/ocean-science-center/ocean-dna)
@@ -24,7 +24,7 @@ raw input and performs the following steps.
     - [GetOrganelle](https://github.com/Kinggerm/GetOrganelle)
       (default), [MitoFinder](https://github.com/RemiAllio/MitoFinder),
       or MapToRef for mitogenome assembly (see [choosing an assembly
-      method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.html))
+      method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.html))
     - [bowtie2](https://github.com/BenLangmead/bowtie2) for read mapping
       to calculate coverage and error rates.
     - [NCBI BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi) against a
@@ -55,7 +55,7 @@ raw input and performs the following steps.
 
 Optionally, MitoPilot can proceed straight to annotation and curation if
 the user supplies mitogenome assemblies with the
-[`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md)
+[`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
 function.
 
 ![](reference/figures/workflow_overview.png)
@@ -65,7 +65,7 @@ function.
 MitoPilot needs R (\>= 4.4.0), Java 17+, Nextflow (24.10.x - 25.10.x),
 and a container runtime (Docker locally, or Singularity/Apptainer on a
 cluster). Clusters that forbid containers can use the [native
-install](https://smithsonian.github.io/MitoPilot/articles/Native-Install.html)
+install](https://nmnh-oceandna.github.io/MitoPilot/articles/Native-Install.html)
 instead.
 
 ``` r
@@ -77,15 +77,15 @@ BiocManager::install("Smithsonian/MitoPilot")
 ```
 
 See [Installation and
-Requirements](https://smithsonian.github.io/MitoPilot/articles/Installation.html)
+Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html)
 for the full requirements, disk space, updating and version pinning, and
 container cache setup. Cluster-specific instructions are available for
 [Smithsonian
-Hydra](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.html)
+Hydra](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.html)
 and [NOAA
-SEDNA](https://smithsonian.github.io/MitoPilot/articles/NOAA-SEDNA.html);
+SEDNA](https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.html);
 for any other cluster see [HPC cluster
-support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html).
+support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html).
 
 # Quick start
 
@@ -94,16 +94,16 @@ is the recommended way to verify your installation and learn the
 interface before using your own data.
 
 The [Get
-Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.html)
+Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html)
 tutorial walks the whole pipeline using this test project.
 
 Want to skip straight to using MitoPilot with your own data? Head on
 over to [Starting Your Own
-Project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.html).
+Project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.html).
 
 Sample metadata can be imported directly from GEOME, GBIF, or NCBI
 BioSample records; see [Sample
-Metadata](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.html).
+Metadata](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.html).
 
 # Taxonomic Scope
 
@@ -147,7 +147,7 @@ below.
 | [Thecostraca](https://www.ncbi.nlm.nih.gov/datasets/taxonomy/116172/) | Barnacles | `thecostraca_mito` | Untested |
 
 See the [curation ruleset
-browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.html)
+browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.html)
 for details about each curation ruleset. The curation ruleset can be set
 individually for each sample in the `Curate Opts.` window in the
 MitoPilot app.
@@ -163,18 +163,18 @@ appropriate reference databases. There are three independent kinds of
 databases:
 
 - **Assembly** references for GetOrganelle, MitoFinder, or MapToRef.
-  [`MitoPilot::custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+  [`MitoPilot::custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
   builds a clade-wide database for GetOrganelle and MitoFinder
   automatically, with no external tools required; MapToRef instead uses
   a single reference mitogenome you supply yourself. Each sample carries
   its own: add a `Reference` column (and, for a FASTA, a
   `Reference_topology` column) to your mapping CSV, call
-  [`MitoPilot::set_maptoref_refs()`](https://smithsonian.github.io/MitoPilot/reference/set_maptoref_refs.md),
+  [`MitoPilot::set_maptoref_refs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_maptoref_refs.md),
   or click the sample’s MapToRef ref cell in the Assemble table. A
   reference may be a file path, a URL, or an NCBI accession; the mapper
   and its options come from the sample’s parameter set. See [building
   custom
-  databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html).
+  databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html).
 - **Annotation** references for MITOS2. MitoPilot includes Chordata and
   Metazoa databases, selectable in the `Annotate Opts.` window.
 - **Curation** references, chosen independently of the annotation
@@ -187,15 +187,15 @@ databases:
 
 | Page | What it covers |
 |----|----|
-| [Get Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.html) | Full walkthrough, then starting your own project |
-| [Installation and Requirements](https://smithsonian.github.io/MitoPilot/articles/Installation.html) | Prerequisites, installing, updating, container cache |
-| [HPC cluster support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html) | Executors, cluster profiles, SSH tunnel, submitting runs |
-| [Curation ruleset browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.html) | What each clade ruleset enforces |
-| [Building custom databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html) | Assembly and curation reference databases |
-| [Handling difficult assemblies](https://smithsonian.github.io/MitoPilot/articles/Difficult-Assemblies.html) | Resolving competing assemblies and fragmented scaffolds |
-| [FAQ](https://smithsonian.github.io/MitoPilot/articles/FAQ.html) and [Troubleshooting](https://smithsonian.github.io/MitoPilot/articles/Troubleshooting.html) | Common questions and pipeline failures |
-| [Reference](https://smithsonian.github.io/MitoPilot/reference/index.html) | All functions |
-| [Changelog](https://smithsonian.github.io/MitoPilot/news/index.html) | Release notes and container tags |
+| [Get Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html) | Full walkthrough, then starting your own project |
+| [Installation and Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html) | Prerequisites, installing, updating, container cache |
+| [HPC cluster support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html) | Executors, cluster profiles, SSH tunnel, submitting runs |
+| [Curation ruleset browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.html) | What each clade ruleset enforces |
+| [Building custom databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html) | Assembly and curation reference databases |
+| [Handling difficult assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.html) | Resolving competing assemblies and fragmented scaffolds |
+| [FAQ](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.html) and [Troubleshooting](https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.html) | Common questions and pipeline failures |
+| [Reference](https://nmnh-oceandna.github.io/MitoPilot/reference/index.html) | All functions |
+| [Changelog](https://nmnh-oceandna.github.io/MitoPilot/news/index.html) | Release notes and container tags |
 
 # Package index
 
@@ -203,76 +203,76 @@ databases:
 
 Create a project and launch the app.
 
-- [`MitoPilot()`](https://smithsonian.github.io/MitoPilot/reference/MitoPilot.md)
+- [`MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
   : Open The MitoPilot GUI
-- [`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+- [`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
   : Initialize new MitoPilot Project
-- [`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md)
+- [`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
   : Initialize new MitoPilot Project with user-provided mitogenome
   assemblies
-- [`new_test_project()`](https://smithsonian.github.io/MitoPilot/reference/new_test_project.md)
+- [`new_test_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project.md)
   : Initialize a test project
-- [`new_test_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
+- [`new_test_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
   : Initialize a test project for user-supplied assemblies
 
 ## Project database
 
 Create, migrate, edit, and export the project SQLite database.
 
-- [`new_db()`](https://smithsonian.github.io/MitoPilot/reference/new_db.md)
+- [`new_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_db.md)
   : Initialize a new project database
-- [`new_db_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_db_userAsmb.md)
+- [`new_db_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_db_userAsmb.md)
   : Initialize a new project database
-- [`add_samples()`](https://smithsonian.github.io/MitoPilot/reference/add_samples.md)
+- [`add_samples()`](https://nmnh-oceandna.github.io/MitoPilot/reference/add_samples.md)
   : Add samples to project database
-- [`update_sample_metadata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_metadata.md)
+- [`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md)
   : Update project database metadata.
-- [`fetch_geome()`](https://smithsonian.github.io/MitoPilot/reference/fetch_geome.md)
+- [`fetch_geome()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_geome.md)
   : Fetch GEOME metadata for project samples
-- [`fetch_gbif()`](https://smithsonian.github.io/MitoPilot/reference/fetch_gbif.md)
+- [`fetch_gbif()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_gbif.md)
   : Fetch GBIF occurrence metadata for project samples
-- [`fetch_ncbi()`](https://smithsonian.github.io/MitoPilot/reference/fetch_ncbi.md)
+- [`fetch_ncbi()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_ncbi.md)
   : Fetch NCBI BioSample and BioProject metadata for project samples
-- [`remove_metadata()`](https://smithsonian.github.io/MitoPilot/reference/remove_metadata.md)
+- [`remove_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/remove_metadata.md)
   : Remove fetched GEOME, GBIF, and NCBI metadata
-- [`set_metadata_columns()`](https://smithsonian.github.io/MitoPilot/reference/set_metadata_columns.md)
+- [`set_metadata_columns()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_metadata_columns.md)
   : Choose which mapping-file columns are compared with GEOME, GBIF, and
   NCBI
-- [`geome_normalize_bcid()`](https://smithsonian.github.io/MitoPilot/reference/geome_normalize_bcid.md)
+- [`geome_normalize_bcid()`](https://nmnh-oceandna.github.io/MitoPilot/reference/geome_normalize_bcid.md)
   : Normalize GEOME BCIDs to bare ARKs
-- [`gbif_normalize_id()`](https://smithsonian.github.io/MitoPilot/reference/gbif_normalize_id.md)
+- [`gbif_normalize_id()`](https://nmnh-oceandna.github.io/MitoPilot/reference/gbif_normalize_id.md)
   : Normalize GBIF occurrence IDs
-- [`ncbi_normalize_id()`](https://smithsonian.github.io/MitoPilot/reference/ncbi_normalize_id.md)
+- [`ncbi_normalize_id()`](https://nmnh-oceandna.github.io/MitoPilot/reference/ncbi_normalize_id.md)
   : Normalize NCBI BioSample or SRA accessions
-- [`update_sample_seqdata()`](https://smithsonian.github.io/MitoPilot/reference/update_sample_seqdata.md)
+- [`update_sample_seqdata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_seqdata.md)
   : Update sequence files for existing project
-- [`set_maptoref_refs()`](https://smithsonian.github.io/MitoPilot/reference/set_maptoref_refs.md)
+- [`set_maptoref_refs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/set_maptoref_refs.md)
   : Set per-sample MapToRef references
-- [`backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.md)
+- [`backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.md)
   : Update old project database for backwards compatibility
-- [`export_db_to_csv()`](https://smithsonian.github.io/MitoPilot/reference/export_db_to_csv.md)
+- [`export_db_to_csv()`](https://nmnh-oceandna.github.io/MitoPilot/reference/export_db_to_csv.md)
   : Export project database to CSV
 
 ## Cluster configuration
 
 Nextflow executor profiles and remote access.
 
-- [`generate_config()`](https://smithsonian.github.io/MitoPilot/reference/generate_config.md)
+- [`generate_config()`](https://nmnh-oceandna.github.io/MitoPilot/reference/generate_config.md)
   : Generate and save a reusable cluster config profile
-- [`list_configs()`](https://smithsonian.github.io/MitoPilot/reference/list_configs.md)
+- [`list_configs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/list_configs.md)
   : List available executor configs
-- [`mitopilot_config_dir()`](https://smithsonian.github.io/MitoPilot/reference/mitopilot_config_dir.md)
+- [`mitopilot_config_dir()`](https://nmnh-oceandna.github.io/MitoPilot/reference/mitopilot_config_dir.md)
   : MitoPilot user config directory
-- [`nextflow_cmd()`](https://smithsonian.github.io/MitoPilot/reference/nextflow_cmd.md)
+- [`nextflow_cmd()`](https://nmnh-oceandna.github.io/MitoPilot/reference/nextflow_cmd.md)
   : Generate Nextflow command to run pipline
-- [`tunnel_instructions()`](https://smithsonian.github.io/MitoPilot/reference/tunnel_instructions.md)
+- [`tunnel_instructions()`](https://nmnh-oceandna.github.io/MitoPilot/reference/tunnel_instructions.md)
   : Print SSH tunnel instructions for a headless GUI session
-- [`hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+- [`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
   : Configure the R session environment for the Smithsonian Hydra
   cluster
-- [`native_setup()`](https://smithsonian.github.io/MitoPilot/reference/native_setup.md)
+- [`native_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.md)
   : Use a native (no-container) MitoPilot environment in this R session
-- [`native_check()`](https://smithsonian.github.io/MitoPilot/reference/native_check.md)
+- [`native_check()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_check.md)
   : Check a native (no-container) MitoPilot environment
 
 ## Reference databases
@@ -280,309 +280,309 @@ Nextflow executor profiles and remote access.
 Custom assembly and curation databases, and reference selection by
 BLAST.
 
-- [`custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+- [`custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
   : Build custom GetOrganelle and/or MitoFinder reference databases
 
-- [`custom_curation_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_curation_db.md)
+- [`custom_curation_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_curation_db.md)
   : Generate a custom curation database
 
-- [`fetch_blast_ref()`](https://smithsonian.github.io/MitoPilot/reference/fetch_blast_ref.md)
+- [`fetch_blast_ref()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_blast_ref.md)
   : Fetch and parse NCBI GFF3 annotations and FASTA sequence for a BLAST
   top hit
 
-- [`fetch_blast_refs()`](https://smithsonian.github.io/MitoPilot/reference/fetch_blast_refs.md)
+- [`fetch_blast_refs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/fetch_blast_refs.md)
   : Fetch NCBI references for many accessions using batched EFetch
   requests
 
-- [`patch_blast_ref_meta()`](https://smithsonian.github.io/MitoPilot/reference/patch_blast_ref_meta.md)
+- [`patch_blast_ref_meta()`](https://nmnh-oceandna.github.io/MitoPilot/reference/patch_blast_ref_meta.md)
   : Re-stamp per-sample BLAST hit metadata onto a cached reference JSON
 
-- [`compute_blast_ref_alignment()`](https://smithsonian.github.io/MitoPilot/reference/compute_blast_ref_alignment.md)
+- [`compute_blast_ref_alignment()`](https://nmnh-oceandna.github.io/MitoPilot/reference/compute_blast_ref_alignment.md)
   :
 
   Pre-compute a whole-genome pairwise alignment of a sample against its
   BLAST reference and write the result for ingestion into the
   `blast_ref_alignment` SQLite table.
 
-- [`get_top_hits_local()`](https://smithsonian.github.io/MitoPilot/reference/get_top_hits_local.md)
+- [`get_top_hits_local()`](https://nmnh-oceandna.github.io/MitoPilot/reference/get_top_hits_local.md)
   : Get top BLASTP hits
 
 ## Export and quality control
 
 Build submission files and review protein-coding gene outliers.
 
-- [`export_files()`](https://smithsonian.github.io/MitoPilot/reference/export_files.md)
+- [`export_files()`](https://nmnh-oceandna.github.io/MitoPilot/reference/export_files.md)
   : Generate export NCBI files
-- [`flag_PCG_outliers()`](https://smithsonian.github.io/MitoPilot/reference/flag_PCG_outliers.md)
+- [`flag_PCG_outliers()`](https://nmnh-oceandna.github.io/MitoPilot/reference/flag_PCG_outliers.md)
   : Flag outlier PCG annotations in an export group
-- [`make_PCG_alignments()`](https://smithsonian.github.io/MitoPilot/reference/make_PCG_alignments.md)
+- [`make_PCG_alignments()`](https://nmnh-oceandna.github.io/MitoPilot/reference/make_PCG_alignments.md)
   : Generate HTML report woth PCG alignments
-- [`compare_aa()`](https://smithsonian.github.io/MitoPilot/reference/compare_aa.md)
+- [`compare_aa()`](https://nmnh-oceandna.github.io/MitoPilot/reference/compare_aa.md)
   : Pairwise comparison of AA sequences
 
 ## Curation rulesets
 
 One curate / validate / params triplet per clade. See the [Ruleset
-Browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.md)
+Browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md)
 for what each ruleset enforces.
 
-- [`ruleset_browser()`](https://smithsonian.github.io/MitoPilot/reference/ruleset_browser.md)
+- [`ruleset_browser()`](https://nmnh-oceandna.github.io/MitoPilot/reference/ruleset_browser.md)
   : Interactive browser for MitoPilot curation rulesets
-- [`curate_annelid_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_annelid_mito.md)
+- [`curate_annelid_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_annelid_mito.md)
   : Annotation curation for annelid mitogenomes
-- [`curate_ascidiacea_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_ascidiacea_mito.md)
+- [`curate_ascidiacea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_ascidiacea_mito.md)
   : Annotation curation for ascidian mitogenomes
-- [`curate_bird_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_bird_mito.md)
+- [`curate_bird_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_bird_mito.md)
   : Annotation curation for bird mitogenomes
-- [`curate_bivalvia_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_bivalvia_mito.md)
+- [`curate_bivalvia_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_bivalvia_mito.md)
   : Annotation curation for bivalve mitogenomes
-- [`curate_bryozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_bryozoa_mito.md)
+- [`curate_bryozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_bryozoa_mito.md)
   : Annotation curation for bryozoan mitogenomes
-- [`curate_copepod_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_copepod_mito.md)
+- [`curate_copepod_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_copepod_mito.md)
   : Annotation curation for copepod mitogenomes
-- [`curate_crinoidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_crinoidea_mito.md)
+- [`curate_crinoidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_crinoidea_mito.md)
   : Annotation curation for crinoid mitogenomes
-- [`curate_ctenophore_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_ctenophore_mito.md)
+- [`curate_ctenophore_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_ctenophore_mito.md)
   : Annotation curation for ctenophore mitogenomes
-- [`curate_demospongiae_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_demospongiae_mito.md)
+- [`curate_demospongiae_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_demospongiae_mito.md)
   : Annotation curation for demosponge mitogenomes
-- [`curate_diptera_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_diptera_mito.md)
+- [`curate_diptera_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_diptera_mito.md)
   : Annotation curation for true fly mitogenomes
-- [`curate_echinoidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_echinoidea_mito.md)
+- [`curate_echinoidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_echinoidea_mito.md)
   : Annotation curation for sea urchin mitogenomes
-- [`curate_fish_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_fish_mito.md)
+- [`curate_fish_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_fish_mito.md)
   : Annotation curation for fish mitogenomes
-- [`curate_gastropoda_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_gastropoda_mito.md)
+- [`curate_gastropoda_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_gastropoda_mito.md)
   : Annotation curation for gastropod mitogenomes
-- [`curate_hexacoral_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_hexacoral_mito.md)
+- [`curate_hexacoral_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_hexacoral_mito.md)
   : Annotation curation for hexacoral mitogenomes
-- [`curate_holothuroidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_holothuroidea_mito.md)
+- [`curate_holothuroidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_holothuroidea_mito.md)
   : Annotation curation for sea cucumber mitogenomes
-- [`curate_homoscleromorpha_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_homoscleromorpha_mito.md)
+- [`curate_homoscleromorpha_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_homoscleromorpha_mito.md)
   : Annotation curation for homoscleromorph sponge mitogenomes
-- [`curate_hydrozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_hydrozoa_mito.md)
+- [`curate_hydrozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_hydrozoa_mito.md)
   : Annotation curation for hydrozoan mitogenomes
-- [`curate_lepidosaur_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_lepidosaur_mito.md)
+- [`curate_lepidosaur_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_lepidosaur_mito.md)
   : Annotation curation for lepidosaur mitogenomes
-- [`curate_malacostraca_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_malacostraca_mito.md)
+- [`curate_malacostraca_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_malacostraca_mito.md)
   : Annotation curation for malacostracan mitogenomes
-- [`curate_mammal_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_mammal_mito.md)
+- [`curate_mammal_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_mammal_mito.md)
   : Annotation curation for mammal mitogenomes
-- [`curate_nemertea_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_nemertea_mito.md)
+- [`curate_nemertea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_nemertea_mito.md)
   : Annotation curation for nemertean mitogenomes
-- [`curate_octocoral_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_octocoral_mito.md)
+- [`curate_octocoral_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_octocoral_mito.md)
   : Annotation curation for octocoral mitogenomes
-- [`curate_ophiuroidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_ophiuroidea_mito.md)
+- [`curate_ophiuroidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_ophiuroidea_mito.md)
   : Annotation curation for brittle star mitogenomes
-- [`curate_platyhelminthes_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_platyhelminthes_mito.md)
+- [`curate_platyhelminthes_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_platyhelminthes_mito.md)
   : Annotation curation for flatworm mitogenomes
-- [`curate_polychaeta_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_polychaeta_mito.md)
+- [`curate_polychaeta_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_polychaeta_mito.md)
   : Annotation curation for polychaete mitogenomes
-- [`curate_pycnogonida_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_pycnogonida_mito.md)
+- [`curate_pycnogonida_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_pycnogonida_mito.md)
   : Annotation curation for sea spider mitogenomes
-- [`curate_scyphozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_scyphozoa_mito.md)
+- [`curate_scyphozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_scyphozoa_mito.md)
   : Annotation curation for scyphozoan mitogenomes
-- [`curate_sipuncula_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_sipuncula_mito.md)
+- [`curate_sipuncula_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_sipuncula_mito.md)
   : Annotation curation for peanut worm mitogenomes
-- [`curate_starfish_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_starfish_mito.md)
+- [`curate_starfish_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_starfish_mito.md)
   : Annotation curation for sea star mitogenomes
-- [`curate_thaliacea_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_thaliacea_mito.md)
+- [`curate_thaliacea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_thaliacea_mito.md)
   : Annotation curation for thaliacean mitogenomes
-- [`curate_thecostraca_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_thecostraca_mito.md)
+- [`curate_thecostraca_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_thecostraca_mito.md)
   : Annotation curation for barnacle mitogenomes
-- [`curate_turtle_mito()`](https://smithsonian.github.io/MitoPilot/reference/curate_turtle_mito.md)
+- [`curate_turtle_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/curate_turtle_mito.md)
   : Annotation curation for turtle mitogenomes
-- [`validate_annelid_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_annelid_mito.md)
+- [`validate_annelid_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_annelid_mito.md)
   : Annotation validation for annelid mitogenomes
-- [`validate_ascidiacea_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_ascidiacea_mito.md)
+- [`validate_ascidiacea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_ascidiacea_mito.md)
   : Annotation validation for ascidian mitogenomes
-- [`validate_bird_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_bird_mito.md)
+- [`validate_bird_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_bird_mito.md)
   : Annotation validation for bird mitogenomes
-- [`validate_bivalvia_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_bivalvia_mito.md)
+- [`validate_bivalvia_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_bivalvia_mito.md)
   : Annotation validation for bivalve mitogenomes
-- [`validate_bryozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_bryozoa_mito.md)
+- [`validate_bryozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_bryozoa_mito.md)
   : Annotation validation for bryozoan mitogenomes
-- [`validate_copepod_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_copepod_mito.md)
+- [`validate_copepod_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_copepod_mito.md)
   : Annotation validation for copepod mitogenomes
-- [`validate_crinoidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_crinoidea_mito.md)
+- [`validate_crinoidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_crinoidea_mito.md)
   : Annotation validation for crinoid mitogenomes
-- [`validate_ctenophore_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_ctenophore_mito.md)
+- [`validate_ctenophore_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_ctenophore_mito.md)
   : Annotation validation for ctenophore mitogenomes
-- [`validate_demospongiae_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_demospongiae_mito.md)
+- [`validate_demospongiae_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_demospongiae_mito.md)
   : Annotation validation for demosponge mitogenomes
-- [`validate_diptera_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_diptera_mito.md)
+- [`validate_diptera_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_diptera_mito.md)
   : Annotation validation for true fly mitogenomes
-- [`validate_echinoidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_echinoidea_mito.md)
+- [`validate_echinoidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_echinoidea_mito.md)
   : Annotation validation for sea urchin mitogenomes
-- [`validate_fish_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_fish_mito.md)
+- [`validate_fish_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_fish_mito.md)
   : Annotation validation for fish mitogenomes
-- [`validate_gastropoda_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_gastropoda_mito.md)
+- [`validate_gastropoda_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_gastropoda_mito.md)
   : Annotation validation for gastropod mitogenomes
-- [`validate_hexacoral_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_hexacoral_mito.md)
+- [`validate_hexacoral_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_hexacoral_mito.md)
   : Annotation validation for hexacoral mitogenomes
-- [`validate_holothuroidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_holothuroidea_mito.md)
+- [`validate_holothuroidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_holothuroidea_mito.md)
   : Annotation validation for sea cucumber mitogenomes
-- [`validate_homoscleromorpha_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_homoscleromorpha_mito.md)
+- [`validate_homoscleromorpha_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_homoscleromorpha_mito.md)
   : Annotation validation for homoscleromorph sponge mitogenomes
-- [`validate_hydrozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_hydrozoa_mito.md)
+- [`validate_hydrozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_hydrozoa_mito.md)
   : Annotation validation for hydrozoan mitogenomes
-- [`validate_lepidosaur_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_lepidosaur_mito.md)
+- [`validate_lepidosaur_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_lepidosaur_mito.md)
   : Annotation validation for lepidosaur mitogenomes
-- [`validate_malacostraca_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_malacostraca_mito.md)
+- [`validate_malacostraca_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_malacostraca_mito.md)
   : Annotation validation for malacostracan mitogenomes
-- [`validate_mammal_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_mammal_mito.md)
+- [`validate_mammal_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_mammal_mito.md)
   : Annotation validation for mammal mitogenomes
-- [`validate_nemertea_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_nemertea_mito.md)
+- [`validate_nemertea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_nemertea_mito.md)
   : Annotation validation for nemertean mitogenomes
-- [`validate_octocoral_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_octocoral_mito.md)
+- [`validate_octocoral_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_octocoral_mito.md)
   : Annotation validation for octocoral mitogenomes
-- [`validate_ophiuroidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_ophiuroidea_mito.md)
+- [`validate_ophiuroidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_ophiuroidea_mito.md)
   : Annotation validation for brittle star mitogenomes
-- [`validate_platyhelminthes_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_platyhelminthes_mito.md)
+- [`validate_platyhelminthes_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_platyhelminthes_mito.md)
   : Annotation validation for flatworm mitogenomes
-- [`validate_polychaeta_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_polychaeta_mito.md)
+- [`validate_polychaeta_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_polychaeta_mito.md)
   : Annotation validation for polychaete mitogenomes
-- [`validate_pycnogonida_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_pycnogonida_mito.md)
+- [`validate_pycnogonida_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_pycnogonida_mito.md)
   : Annotation validation for sea spider mitogenomes
-- [`validate_scyphozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_scyphozoa_mito.md)
+- [`validate_scyphozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_scyphozoa_mito.md)
   : Annotation validation for scyphozoan mitogenomes
-- [`validate_sipuncula_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_sipuncula_mito.md)
+- [`validate_sipuncula_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_sipuncula_mito.md)
   : Annotation validation for peanut worm mitogenomes
-- [`validate_starfish_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_starfish_mito.md)
+- [`validate_starfish_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_starfish_mito.md)
   : Annotation validation for sea star mitogenomes
-- [`validate_thaliacea_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_thaliacea_mito.md)
+- [`validate_thaliacea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_thaliacea_mito.md)
   : Annotation validation for thaliacean mitogenomes
-- [`validate_thecostraca_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_thecostraca_mito.md)
+- [`validate_thecostraca_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_thecostraca_mito.md)
   : Annotation validation for barnacle mitogenomes
-- [`validate_turtle_mito()`](https://smithsonian.github.io/MitoPilot/reference/validate_turtle_mito.md)
+- [`validate_turtle_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/validate_turtle_mito.md)
   : Annotation validation for turtle mitogenomes
-- [`params_annelid_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_annelid_mito.md)
+- [`params_annelid_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_annelid_mito.md)
   : Default curation and validation parameters for annelid Mitochondria
-- [`params_ascidiacea_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_ascidiacea_mito.md)
+- [`params_ascidiacea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_ascidiacea_mito.md)
   : Default curation and validation parameters for Ascidiacea
   mitochondria
-- [`params_bird_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_bird_mito.md)
+- [`params_bird_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_bird_mito.md)
   : Default curation and validation parameters for bird Mitochondria
-- [`params_bivalvia_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_bivalvia_mito.md)
+- [`params_bivalvia_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_bivalvia_mito.md)
   : Default curation and validation parameters for Bivalvia mitochondria
-- [`params_bryozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_bryozoa_mito.md)
+- [`params_bryozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_bryozoa_mito.md)
   : Default curation and validation parameters for Bryozoa mitochondria
-- [`params_copepod_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_copepod_mito.md)
+- [`params_copepod_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_copepod_mito.md)
   : Default curation and validation parameters for copepod Mitochondria
-- [`params_crinoidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_crinoidea_mito.md)
+- [`params_crinoidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_crinoidea_mito.md)
   : Default curation and validation parameters for Crinoidea
   mitochondria
-- [`params_ctenophore_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_ctenophore_mito.md)
+- [`params_ctenophore_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_ctenophore_mito.md)
   : Default curation and validation parameters for ctenophore
   Mitochondria
-- [`params_demospongiae_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_demospongiae_mito.md)
+- [`params_demospongiae_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_demospongiae_mito.md)
   : Default curation and validation parameters for Demospongiae
   mitochondria
-- [`params_diptera_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_diptera_mito.md)
+- [`params_diptera_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_diptera_mito.md)
   : Default curation and validation parameters for dipteran Mitochondria
-- [`params_echinoidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_echinoidea_mito.md)
+- [`params_echinoidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_echinoidea_mito.md)
   : Default curation and validation parameters for Echinoidea
   mitochondria
-- [`params_fish_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_fish_mito.md)
+- [`params_fish_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_fish_mito.md)
   : Default curation and validation parameters for Fish Mitochondria
-- [`params_gastropoda_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_gastropoda_mito.md)
+- [`params_gastropoda_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_gastropoda_mito.md)
   : Default curation and validation parameters for Gastropoda
   mitochondria
-- [`params_hexacoral_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_hexacoral_mito.md)
+- [`params_hexacoral_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_hexacoral_mito.md)
   : Default curation and validation parameters for hexacorals
   Mitochondria
-- [`params_holothuroidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_holothuroidea_mito.md)
+- [`params_holothuroidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_holothuroidea_mito.md)
   : Default curation and validation parameters for Holothuroidea
   mitochondria
-- [`params_homoscleromorpha_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_homoscleromorpha_mito.md)
+- [`params_homoscleromorpha_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_homoscleromorpha_mito.md)
   : Default curation and validation parameters for Homoscleromorpha
   mitochondria
-- [`params_hydrozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_hydrozoa_mito.md)
+- [`params_hydrozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_hydrozoa_mito.md)
   : Default curation and validation parameters for Hydrozoa mitochondria
-- [`params_lepidosaur_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_lepidosaur_mito.md)
+- [`params_lepidosaur_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_lepidosaur_mito.md)
   : Default curation and validation parameters for lepidosaur
   Mitochondria
-- [`params_malacostraca_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_malacostraca_mito.md)
+- [`params_malacostraca_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_malacostraca_mito.md)
   : Default curation and validation parameters for Malacostraca
   mitochondria
-- [`params_mammal_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_mammal_mito.md)
+- [`params_mammal_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_mammal_mito.md)
   : Default curation and validation parameters for mammal Mitochondria
-- [`params_nemertea_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_nemertea_mito.md)
+- [`params_nemertea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_nemertea_mito.md)
   : Default curation and validation parameters for Nemertea mitochondria
-- [`params_octocoral_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_octocoral_mito.md)
+- [`params_octocoral_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_octocoral_mito.md)
   : Default curation and validation parameters for octocorals
   Mitochondria
-- [`params_ophiuroidea_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_ophiuroidea_mito.md)
+- [`params_ophiuroidea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_ophiuroidea_mito.md)
   : Default curation and validation parameters for Ophiuroidea
   mitochondria
-- [`params_platyhelminthes_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_platyhelminthes_mito.md)
+- [`params_platyhelminthes_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_platyhelminthes_mito.md)
   : Default curation and validation parameters for Platyhelminthes
   mitochondria
-- [`params_polychaeta_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_polychaeta_mito.md)
+- [`params_polychaeta_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_polychaeta_mito.md)
   : Default curation and validation parameters for Polychaeta
   mitochondria
-- [`params_pycnogonida_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_pycnogonida_mito.md)
+- [`params_pycnogonida_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_pycnogonida_mito.md)
   : Default curation and validation parameters for Pycnogonida
   mitochondria
-- [`params_scyphozoa_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_scyphozoa_mito.md)
+- [`params_scyphozoa_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_scyphozoa_mito.md)
   : Default curation and validation parameters for Scyphozoa
   mitochondria
-- [`params_sipuncula_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_sipuncula_mito.md)
+- [`params_sipuncula_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_sipuncula_mito.md)
   : Default curation and validation parameters for Sipuncula
   mitochondria
-- [`params_starfish_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_starfish_mito.md)
+- [`params_starfish_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_starfish_mito.md)
   : Default curation and validation parameters for Starfish Mitochondria
-- [`params_thaliacea_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_thaliacea_mito.md)
+- [`params_thaliacea_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_thaliacea_mito.md)
   : Default curation and validation parameters for Thaliacea
   mitochondria
-- [`params_thecostraca_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_thecostraca_mito.md)
+- [`params_thecostraca_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_thecostraca_mito.md)
   : Default curation and validation parameters for Thecostraca
   mitochondria
-- [`params_turtle_mito()`](https://smithsonian.github.io/MitoPilot/reference/params_turtle_mito.md)
+- [`params_turtle_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/params_turtle_mito.md)
   : Default curation and validation parameters for turtle Mitochondria
 
 ## Pipeline internals
 
 Called by the Nextflow workflows. Not intended for direct use.
 
-- [`annotate()`](https://smithsonian.github.io/MitoPilot/reference/annotate.md)
+- [`annotate()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate.md)
   : Mitogenome Annotation Wrapper
-- [`annotate_mitos2()`](https://smithsonian.github.io/MitoPilot/reference/annotate_mitos2.md)
+- [`annotate_mitos2()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate_mitos2.md)
   : Annotate mitochondrial genomes using MITOS2
-- [`annotate_trnaScan()`](https://smithsonian.github.io/MitoPilot/reference/annotate_trnaScan.md)
+- [`annotate_trnaScan()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate_trnaScan.md)
   : Use tRNAscan-SE to annotate tRNAs in a mitochondrial genome assembly
-- [`annotate_arwen()`](https://smithsonian.github.io/MitoPilot/reference/annotate_arwen.md)
+- [`annotate_arwen()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate_arwen.md)
   : Use ARWEN to annotate tRNAs in a mitochondrial genome assembly
-- [`annotate_aragorn()`](https://smithsonian.github.io/MitoPilot/reference/annotate_aragorn.md)
+- [`annotate_aragorn()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate_aragorn.md)
   : Use ARAGORN to annotate tRNAs in a mitochondrial genome assembly
-- [`annotate_mitofinder()`](https://smithsonian.github.io/MitoPilot/reference/annotate_mitofinder.md)
+- [`annotate_mitofinder()`](https://nmnh-oceandna.github.io/MitoPilot/reference/annotate_mitofinder.md)
   : Annotate a mitogenome assembly with MitoFinder (WF2, optional)
-- [`coverage()`](https://smithsonian.github.io/MitoPilot/reference/coverage.md)
+- [`coverage()`](https://nmnh-oceandna.github.io/MitoPilot/reference/coverage.md)
   : Map reads to assembly
-- [`coverage_trim()`](https://smithsonian.github.io/MitoPilot/reference/coverage_trim.md)
+- [`coverage_trim()`](https://nmnh-oceandna.github.io/MitoPilot/reference/coverage_trim.md)
   : Use coverage info to trim linear assemblies
-- [`orf_finder()`](https://smithsonian.github.io/MitoPilot/reference/orf_finder.md)
+- [`orf_finder()`](https://nmnh-oceandna.github.io/MitoPilot/reference/orf_finder.md)
   : Find open reading frames in unannotated regions
-- [`rotate_asmb()`](https://smithsonian.github.io/MitoPilot/reference/rotate_asmb.md)
+- [`rotate_asmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/rotate_asmb.md)
   : Rotate circular mitogenome to start at given gene
-- [`run_scaffold_join()`](https://smithsonian.github.io/MitoPilot/reference/run_scaffold_join.md)
+- [`run_scaffold_join()`](https://nmnh-oceandna.github.io/MitoPilot/reference/run_scaffold_join.md)
   : Nextflow entry point: build + persist a joined assembly (file
   outputs only)
-- [`find_mito()`](https://smithsonian.github.io/MitoPilot/reference/find_mito.md)
+- [`find_mito()`](https://nmnh-oceandna.github.io/MitoPilot/reference/find_mito.md)
   : Find the mitochondrial contigs in a user-supplied assembly
-- [`select_mito_contigs()`](https://smithsonian.github.io/MitoPilot/reference/select_mito_contigs.md)
+- [`select_mito_contigs()`](https://nmnh-oceandna.github.io/MitoPilot/reference/select_mito_contigs.md)
   : Select mitochondrial contigs from a BLAST screen
-- [`circularize_asmb()`](https://smithsonian.github.io/MitoPilot/reference/circularize_asmb.md)
+- [`circularize_asmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/circularize_asmb.md)
   : Attempt to circularize a linear mitogenome assembly
-- [`get_assembly()`](https://smithsonian.github.io/MitoPilot/reference/get_assembly.md)
+- [`get_assembly()`](https://nmnh-oceandna.github.io/MitoPilot/reference/get_assembly.md)
   : Get assembly from database
-- [`get_assembly_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/get_assembly_userAsmb.md)
+- [`get_assembly_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/get_assembly_userAsmb.md)
   : Get assembly from database (user-supplied assemblies)
-- [`map_to_ref()`](https://smithsonian.github.io/MitoPilot/reference/map_to_ref.md)
+- [`map_to_ref()`](https://nmnh-oceandna.github.io/MitoPilot/reference/map_to_ref.md)
   : Map-to-reference mitogenome assembly
-- [`maptoref_prepare_ref()`](https://smithsonian.github.io/MitoPilot/reference/maptoref_prepare_ref.md)
+- [`maptoref_prepare_ref()`](https://nmnh-oceandna.github.io/MitoPilot/reference/maptoref_prepare_ref.md)
   : Read and validate a MapToRef reference mitogenome
-- [`maptoref_fetch_accession()`](https://smithsonian.github.io/MitoPilot/reference/maptoref_fetch_accession.md)
+- [`maptoref_fetch_accession()`](https://nmnh-oceandna.github.io/MitoPilot/reference/maptoref_fetch_accession.md)
   : Resolve an NCBI accession to a MapToRef reference file
 
 # Articles
@@ -590,58 +590,58 @@ Called by the Nextflow workflows. Not intended for direct use.
 ### Setup
 
 - [Installation and
-  Requirements](https://smithsonian.github.io/MitoPilot/articles/Installation.md):
+  Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.md):
 
 ### Test project walkthrough
 
 - [Test Project:
-  Assemble](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Assemble.md):
+  Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md):
 - [Test Project:
-  Annotate](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Annotate.md):
+  Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md):
 - [Test Project:
-  Export](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.md):
+  Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md):
 
 ### Usage
 
 - [Starting Your Own
-  Project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.md):
+  Project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md):
 - [Using Your Own
-  Assemblies](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Assemblies.md):
+  Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.md):
 - [Choosing an Assembly
-  Method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.md):
+  Method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md):
 - [Difficult
-  Assemblies](https://smithsonian.github.io/MitoPilot/articles/Difficult-Assemblies.md):
+  Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.md):
 - [Curation Ruleset
-  Browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.md):
+  Browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md):
 - [Curation and
-  Validation](https://smithsonian.github.io/MitoPilot/articles/Curation-and-Validation.md):
+  Validation](https://nmnh-oceandna.github.io/MitoPilot/articles/Curation-and-Validation.md):
 - [Building Custom
-  Databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md):
+  Databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md):
 
 ### Metadata
 
 - [Sample metadata: GEOME, GBIF, and
-  NCBI](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.md):
+  NCBI](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.md):
 - [Linking records across
-  databases](https://smithsonian.github.io/MitoPilot/articles/Metadata-Linking.md):
+  databases](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Linking.md):
 - [NMNH voucher
-  submissions](https://smithsonian.github.io/MitoPilot/articles/NMNH-Vouchers.md):
+  submissions](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Vouchers.md):
 - [Metadata field
-  reference](https://smithsonian.github.io/MitoPilot/articles/Metadata-Reference.md):
+  reference](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Reference.md):
 
 ### Computing Environments
 
 - [HPC Cluster
-  Support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md):
+  Support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md):
 - [Installing Without
-  Containers](https://smithsonian.github.io/MitoPilot/articles/Native-Install.md):
+  Containers](https://nmnh-oceandna.github.io/MitoPilot/articles/Native-Install.md):
 - [Smithsonian Hydra
-  Setup](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.md):
+  Setup](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.md):
 - [NOAA SEDNA
-  Setup](https://smithsonian.github.io/MitoPilot/articles/NOAA-SEDNA.md):
+  Setup](https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.md):
 
 ### Help
 
 - [Frequently Asked
-  Questions](https://smithsonian.github.io/MitoPilot/articles/FAQ.md):
-- [Troubleshooting](https://smithsonian.github.io/MitoPilot/articles/Troubleshooting.md):
+  Questions](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.md):
+- [Troubleshooting](https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.md):

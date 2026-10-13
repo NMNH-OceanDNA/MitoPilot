@@ -1,9 +1,9 @@
 # Test Project: Export
 
 Test project: [1.
-Assemble](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Assemble.md)
+Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md)
 [2.
-Annotate](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Annotate.md)
+Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)
 3. Export
 
 The Export module turns finished annotations into the files GenBank
@@ -88,7 +88,7 @@ into the header box you last clicked. Save a template by name with
 `{geome_...}`, `{gbif_...}`, and `{ncbi_...}` columns in the header,
 such as `{geome_lat_lon}`, `{gbif_collection_date}`, and
 `{ncbi_geo_loc_name}`. See [Using metadata fields at
-export](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.html#using-metadata-fields-at-export).
+export](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.html#using-metadata-fields-at-export).
 
 Other options in the Export Data window:
 
@@ -102,7 +102,7 @@ Other options in the Export Data window:
   check described below.
 - **NMNH user** adds the specimen voucher and EZID modifiers that
   Smithsonian NMNH records need, and checks them. See [NMNH voucher
-  submissions](https://smithsonian.github.io/MitoPilot/articles/NMNH-Vouchers.md).
+  submissions](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Vouchers.md).
 
 Then click **Export**.
 
@@ -215,7 +215,7 @@ to submit to GenBank.
 
 Congratulations, you’ve completed the test project walkthrough! When you
 are ready to try MitoPilot with your own data, see [starting your own
-project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.md).
+project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md).
 
 [Next: Start your own project
-→](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.md)
+→](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md)

@@ -11,7 +11,7 @@ with [GetOrganelle](https://github.com/Kinggerm/GetOrganelle) (the
 default), [MitoFinder](https://github.com/RemiAllio/MitoFinder), or
 MapToRef, set by the `assembler` option at project setup (see [choosing
 an assembly
-method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.md)).
+method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md)).
 GetOrganelle explores an assembly graph and can return several
 alternative **paths** through it, each possibly split into scaffolds.
 MitoFinder returns a **single path**, but can still report several

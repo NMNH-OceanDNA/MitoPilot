@@ -1,9 +1,9 @@
 # Test Project: Annotate
 
 Test project: [1.
-Assemble](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Assemble.md)
+Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md)
 2. Annotate [3.
-Export](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.md)
+Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md)
 
 This module finds the genes, curates the gene models against reference
 sequences from GenBank, and validates the result against rules for your
@@ -43,7 +43,7 @@ naming conventions, and the genetic code. It defaults to Actinopterygii,
 which is correct for the test fishes.
 
 For your own data, pick the closest clade from the [ruleset
-browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.md).
+browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md).
 Expand **Curation rules for this ruleset** to see the validation
 parameters, which are the ruleset itself, laid out so you can see
 exactly which rules an assembly is being judged against.
@@ -221,4 +221,4 @@ When you are satisfied, select the assemblies and click **Lock** to
 release them to the Export module.
 
 [Next: Export
-→](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.md)
+→](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md)

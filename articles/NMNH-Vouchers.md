@@ -47,7 +47,7 @@ For each sample, MitoPilot takes the first valid value from, in order:
 A voucher with no EZID is looked up in GBIF to find the EZID, and an
 EZID with no voucher is looked up to find the voucher. Linking the
 samples first (see [Linking records across
-databases](https://smithsonian.github.io/MitoPilot/articles/Metadata-Linking.md))
+databases](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Linking.md))
 fills in more values.
 
 ## What is checked and fixed

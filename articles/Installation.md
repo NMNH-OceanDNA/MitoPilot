@@ -2,7 +2,7 @@
 
 Everything on this page happens once per machine. When it is done, go to
 [Get
-Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.md)
+Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 and run the test project.
 
 ## What you need
@@ -24,7 +24,7 @@ Nextflow pulls for you on the first run.
 **No containers allowed?** There is a second route that needs none of
 the requirements above except disk space and internet access: the
 [native
-install](https://smithsonian.github.io/MitoPilot/articles/Native-Install.md)
+install](https://nmnh-oceandna.github.io/MitoPilot/articles/Native-Install.md)
 puts R, Java, Nextflow, every pipeline tool, and the reference database
 into one folder you own, with a conda-style package manager and no root
 access. Use it on clusters that forbid Docker, Singularity, and
@@ -33,12 +33,12 @@ Apptainer.
 We provide cluster-specific instructions for two sites:
 
 - [Smithsonian
-  Hydra](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.md)
+  Hydra](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.md)
 - [NOAA
-  SEDNA](https://smithsonian.github.io/MitoPilot/articles/NOAA-SEDNA.md)
+  SEDNA](https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.md)
 
 For any other cluster, see [HPC cluster
-support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md).
+support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md).
 
 ## Install the R package
 
@@ -92,16 +92,16 @@ BiocManager::install("Smithsonian/MitoPilot@1.5.2")
 ```
 
 Each MitoPilot version pairs with a matching container image, and
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 writes that image tag into the project’s `.config` when the project is
 created. An existing project therefore keeps running the pipeline code
 baked into its original image until you update it. The
-[changelog](https://smithsonian.github.io/MitoPilot/news/index.md) lists
-the container tag for every release.
+[changelog](https://nmnh-oceandna.github.io/MitoPilot/news/index.md)
+lists the container tag for every release.
 
 **Warning.** Some releases change the project database schema. After
 updating, existing projects may need
-[`backwards_compatibility()`](https://smithsonian.github.io/MitoPilot/reference/backwards_compatibility.md)
+[`backwards_compatibility()`](https://nmnh-oceandna.github.io/MitoPilot/reference/backwards_compatibility.md)
 before they will open. That migration is irreversible and a migrated
 project cannot be reopened by an older MitoPilot, so back up your
 projects before updating. The changelog says which releases are
@@ -171,12 +171,13 @@ pipelines.
 ## Next steps
 
 - [Get
-  Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.md)
+  Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
   walks the whole pipeline using the built-in test project.
 - [HPC cluster
-  support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md)
+  support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md)
   covers executors, cluster profiles, and running the app over an SSH
   tunnel.
-- [Troubleshooting](https://smithsonian.github.io/MitoPilot/articles/Troubleshooting.md)
-  and the [FAQ](https://smithsonian.github.io/MitoPilot/articles/FAQ.md)
-  cover what to do when a run fails.
+- [Troubleshooting](https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.md)
+  and the
+  [FAQ](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.md) cover
+  what to do when a run fails.

@@ -3,58 +3,58 @@
 ### Setup
 
 - [Installation and
-  Requirements](https://smithsonian.github.io/MitoPilot/articles/Installation.md):
+  Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.md):
 
 ### Test project walkthrough
 
 - [Test Project:
-  Assemble](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Assemble.md):
+  Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md):
 - [Test Project:
-  Annotate](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Annotate.md):
+  Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md):
 - [Test Project:
-  Export](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.md):
+  Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md):
 
 ### Usage
 
 - [Starting Your Own
-  Project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.md):
+  Project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md):
 - [Using Your Own
-  Assemblies](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Assemblies.md):
+  Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.md):
 - [Choosing an Assembly
-  Method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.md):
+  Method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md):
 - [Difficult
-  Assemblies](https://smithsonian.github.io/MitoPilot/articles/Difficult-Assemblies.md):
+  Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.md):
 - [Curation Ruleset
-  Browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.md):
+  Browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md):
 - [Curation and
-  Validation](https://smithsonian.github.io/MitoPilot/articles/Curation-and-Validation.md):
+  Validation](https://nmnh-oceandna.github.io/MitoPilot/articles/Curation-and-Validation.md):
 - [Building Custom
-  Databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md):
+  Databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md):
 
 ### Metadata
 
 - [Sample metadata: GEOME, GBIF, and
-  NCBI](https://smithsonian.github.io/MitoPilot/articles/Specimen-Metadata.md):
+  NCBI](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.md):
 - [Linking records across
-  databases](https://smithsonian.github.io/MitoPilot/articles/Metadata-Linking.md):
+  databases](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Linking.md):
 - [NMNH voucher
-  submissions](https://smithsonian.github.io/MitoPilot/articles/NMNH-Vouchers.md):
+  submissions](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Vouchers.md):
 - [Metadata field
-  reference](https://smithsonian.github.io/MitoPilot/articles/Metadata-Reference.md):
+  reference](https://nmnh-oceandna.github.io/MitoPilot/articles/Metadata-Reference.md):
 
 ### Computing Environments
 
 - [HPC Cluster
-  Support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md):
+  Support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md):
 - [Installing Without
-  Containers](https://smithsonian.github.io/MitoPilot/articles/Native-Install.md):
+  Containers](https://nmnh-oceandna.github.io/MitoPilot/articles/Native-Install.md):
 - [Smithsonian Hydra
-  Setup](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.md):
+  Setup](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.md):
 - [NOAA SEDNA
-  Setup](https://smithsonian.github.io/MitoPilot/articles/NOAA-SEDNA.md):
+  Setup](https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.md):
 
 ### Help
 
 - [Frequently Asked
-  Questions](https://smithsonian.github.io/MitoPilot/articles/FAQ.md):
-- [Troubleshooting](https://smithsonian.github.io/MitoPilot/articles/Troubleshooting.md):
+  Questions](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.md):
+- [Troubleshooting](https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.md):

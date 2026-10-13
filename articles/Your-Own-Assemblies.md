@@ -3,18 +3,18 @@
 This page is for projects built from assemblies you already have,
 whether those are finished mitogenomes or whole draft genomes. Create
 them with
-[`new_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_project_userAsmb.md).
+[`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md).
 MitoPilot will not assemble anything, but you still work through all
 three modules: the Assemble module prepares and checks your sequences,
 then you annotate, curate, and export.
 
 Read [Starting Your Own
-Project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.md)
+Project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md)
 first. It covers what you need, how the mapping file is laid out, and
 how a project is set up. This page covers only what differs.
 
 **Tip.**
-[`new_test_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
+[`new_test_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
 builds a ready-to-run project from nine example assemblies, covering
 linear, circular, and multi-contig cases, with the reference database
 the mitogenome search needs. Try it before running your own data.
@@ -86,7 +86,7 @@ released to Annotate once you lock them here.
 A run looks the same as any other MitoPilot project:
 
 1.  Open the app for the project,
-    [`MitoPilot()`](https://smithsonian.github.io/MitoPilot/reference/MitoPilot.md)
+    [`MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
     from the project directory. It opens on the Assemble module.
 2.  If needed, change any run options.
 3.  Click **Update**, then **Run from App** or **Submit as Job**.
@@ -97,9 +97,9 @@ A run looks the same as any other MitoPilot project:
     buttons at the top left.
 
 Then continue with
-[Annotate](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Annotate.md)
+[Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)
 and
-[Export](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.md)
+[Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md)
 as usual.
 
 ## Finding the mitogenome in a whole assembly
@@ -138,7 +138,7 @@ It writes a dated, clade-named folder; pass the `.gb` file inside it as
 `mitofinder_db`, using the full path the builder prints when it
 finishes. Project creation refuses the search without it. See [building
 custom
-databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md).
+databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md).
 
 The **Mito Search** column of the Assemble table summarizes each sample.
 Click the summary to open the full evidence: every contig the search
@@ -249,7 +249,7 @@ NCBI expects the number of `N`s to be the estimated gap length, so
 MitoPilot will not invent a spacer. Those contigs can still be submitted
 as several sequences under one BioSample. See [Sequences containing
 unknown
-bases](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.html#sequences-containing-unknown-bases).
+bases](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.html#sequences-containing-unknown-bases).
 
 The outcome for every sample appears in the **Scaffold Join Notes**
 column of the Assemble table, including how many junctions could not be

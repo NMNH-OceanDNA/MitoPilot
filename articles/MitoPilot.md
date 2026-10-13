@@ -17,9 +17,9 @@ HYDRA **Are you a Smithsonian user?** Boxes like this one flag the
 places where usage on the Smithsonian Hydra computing cluster differs
 from a generic setup. Before starting this tutorial, work through the
 Hydra [Get an R
-session](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.html#get-an-r-session-on-hydra)
+session](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.html#get-an-r-session-on-hydra)
 and [Install
-Nextflow](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.html#install-nextflow)
+Nextflow](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.html#install-nextflow)
 sections. Users can also check out the [2025 Smithsonian workshop
 webpage](https://smithsonianworkshops.github.io/MitoPilot_workshop_2025/),
 although it is slightly outdated.
@@ -31,7 +31,7 @@ although it is slightly outdated.
 MitoPilot needs R, Java, Nextflow, and a container runtime (Docker
 locally, or Singularity/Apptainer on a cluster), plus about 15 GB of
 disk for the container image. [Installation and
-Requirements](https://smithsonian.github.io/MitoPilot/articles/Installation.md)
+Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.md)
 has the full list and the install commands. Work through that page
 first, then come back here.
 
@@ -56,11 +56,11 @@ engine, Java, and your `~/bin`, so Nextflow cannot find `qsub` and job
 submission fails.
 [`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) and
 opening the app both detect Hydra and run
-[`hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+[`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
 for you: it puts the Hydra Java and job scheduler directories at the
 front of your `PATH` and pins a compatible Nextflow version for the
 session. If the setup message does not appear, call
-[`hydra_setup()`](https://smithsonian.github.io/MitoPilot/reference/hydra_setup.md)
+[`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
 yourself.
 
 ------------------------------------------------------------------------
@@ -90,7 +90,7 @@ new_test_project(
 
 `executor = "local"` runs everything on the machine you are sitting at
 and uses Docker. To run on a cluster instead, see [HPC cluster
-support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md)
+support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md)
 and pass the matching executor name. `full_size = FALSE` uses the small
 pre-filtered reads that ship with the package; `TRUE` downloads about 10
 GB of raw data, which takes much longer to process.
@@ -106,10 +106,10 @@ too small and projects cannot be run from `/store`.
 
 You can also bring your own assemblies to MitoPilot for annotation,
 curation, and export.
-[`new_test_project_userAsmb()`](https://smithsonian.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
+[`new_test_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
 sets up the equivalent test project, covering the common cases. See
 [Using Your Own
-Assemblies](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Assemblies.md).
+Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.md).
 
 ------------------------------------------------------------------------
 
@@ -174,35 +174,35 @@ Now you’re ready to start running the test project samples through each
 MitoPilot module. Follow the links below to begin.
 
 [1.
-Assemble](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Assemble.md)
+Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md)
 [2.
-Annotate](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Annotate.md)
+Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)
 [3.
-Export](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.md)
+Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md)
 
 ## Where to go next
 
 Once you’re comfortable with MitoPilot, try [starting a
-project](https://smithsonian.github.io/MitoPilot/articles/Your-Own-Project.md)
+project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md)
 with your own sequence data!
 
 Additional articles for you to explore:
 
 - [Building custom
-  databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md)
+  databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md)
 - [Choosing an assembly
-  method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.md)
+  method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md)
 - [Handling difficult
-  assemblies](https://smithsonian.github.io/MitoPilot/articles/Difficult-Assemblies.md)
+  assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.md)
 - [Curation ruleset
-  browser](https://smithsonian.github.io/MitoPilot/articles/Ruleset-Browser.md)
+  browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md)
   and [curation and validation
-  details](https://smithsonian.github.io/MitoPilot/articles/Curation-and-Validation.md)
+  details](https://nmnh-oceandna.github.io/MitoPilot/articles/Curation-and-Validation.md)
 - [HPC cluster
-  support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md),
+  support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md),
   [Smithsonian
-  Hydra](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.md),
+  Hydra](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.md),
   and [NOAA
-  SEDNA](https://smithsonian.github.io/MitoPilot/articles/NOAA-SEDNA.md)
-- [FAQ](https://smithsonian.github.io/MitoPilot/articles/FAQ.md) and
-  [troubleshooting](https://smithsonian.github.io/MitoPilot/articles/Troubleshooting.md)
+  SEDNA](https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.md)
+- [FAQ](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.md) and
+  [troubleshooting](https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.md)

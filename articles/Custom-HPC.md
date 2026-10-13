@@ -4,14 +4,14 @@
 
 The following steps will help you get started running MitoPilot on a HPC
 cluster. We have specific instructions for the [Smithsonian Hydra
-cluster](https://smithsonian.github.io/MitoPilot/articles/NMNH-Hydra.html)
+cluster](https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.html)
 and the [NOAA SEDNA
-cluster](https://smithsonian.github.io/MitoPilot/articles/NOAA-SEDNA.html).
+cluster](https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.html).
 
 This page covers the cluster-specific parts only: getting an R session,
 writing a config, and submitting work. Everything about using MitoPilot
 itself is the same as in the [Get
-Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.md)
+Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 walkthrough, so run through that first if you have not already.
 
 ### Launch an R session on the cluster
@@ -75,7 +75,7 @@ The rest of this guide works the same in either R session.
 
 If your cluster forbids Docker, Singularity, and Apptainer, install the
 tools natively with the install script in [Installing without
-containers](https://smithsonian.github.io/MitoPilot/articles/Native-Install.md),
+containers](https://nmnh-oceandna.github.io/MitoPilot/articles/Native-Install.md),
 then use
 `generate_config(..., container_engine = "none", native_prefix = ...)`
 below. Everything else on this page is the same.
@@ -99,11 +99,11 @@ Pass the value in the middle column to
 | PBS Pro, OpenPBS, Torque | `"pbs"`   | `pbspro` [^1]     |
 | IBM Spectrum LSF         | `"lsf"`   | `lsf`             |
 
-[`generate_config()`](https://smithsonian.github.io/MitoPilot/reference/generate_config.md)
+[`generate_config()`](https://nmnh-oceandna.github.io/MitoPilot/reference/generate_config.md)
 builds a Nextflow config from a generic template, fills in your
 cluster-specific settings, and saves it as a **named profile** in your
 persistent MitoPilot config directory (see
-[`mitopilot_config_dir()`](https://smithsonian.github.io/MitoPilot/reference/mitopilot_config_dir.md)).
+[`mitopilot_config_dir()`](https://nmnh-oceandna.github.io/MitoPilot/reference/mitopilot_config_dir.md)).
 
 ``` r
 
@@ -126,11 +126,11 @@ values unset.
 
 **Note:** Saved cluster configs need no extra binding if running R with
 Docker/Singularity. The
-[`generate_config()`](https://smithsonian.github.io/MitoPilot/reference/generate_config.md)
+[`generate_config()`](https://nmnh-oceandna.github.io/MitoPilot/reference/generate_config.md)
 writes its profiles to `~/.config/R/MitoPilot` inside your home
 directory, and Singularity mounts your home automatically. A profile you
 save once therefore persists and is found by
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 on every later run, with no `--bind` needed. (This only breaks if you
 deliberately launch with `--contain` or `--no-home`, which detach the
 home directory.)
@@ -147,7 +147,7 @@ new_project(
 )
 ```
 
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 resolves the saved profile and fills in the per-project values (raw data
 directory, container image, genetic code, etc.), leaving a ready-to-run
 `.config` in the project directory. When running from the container, use
@@ -163,7 +163,7 @@ list_configs()
 
 ### The project `.config` file
 
-[`new_project()`](https://smithsonian.github.io/MitoPilot/reference/new_project.md)
+[`new_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.md)
 writes a `.config` file into the project directory, built from your
 executor’s template. It may contain placeholders in the form
 `<<PARAMETER_NAME>>` that you need to fill in. Every generated config
@@ -217,7 +217,7 @@ cluster**, so you do not need RStudio Server just to use the app.
 Instead, run the server on a cluster node with a fixed host and port,
 then reach it from your local computer over an SSH tunnel. (If you are
 using RStudio Server instead, skip this section: just call
-[`MitoPilot()`](https://smithsonian.github.io/MitoPilot/reference/MitoPilot.md)
+[`MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
 and it opens in your browser.)
 
 **1. On the cluster**, launch MitoPilot from your project directory and

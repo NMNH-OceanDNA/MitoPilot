@@ -1,12 +1,12 @@
 # Test Project: Assemble
 
 Test project: 1. Assemble [2.
-Annotate](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Annotate.md)
+Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)
 [3.
-Export](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Export.md)
+Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md)
 
 This walkthrough picks up where [Get
-Started](https://smithsonian.github.io/MitoPilot/articles/MitoPilot.md)
+Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 leaves off, so start there if you have not yet set up the test project
 and opened the app.
 
@@ -51,27 +51,27 @@ Nothing is editable until you tick **Edit**. The important controls:
   better for groups with few reference mitogenomes. MapToRef maps your
   reads to a reference mitogenome you supply and calls the consensus
   from the reads. See [choosing an assembly
-  method](https://smithsonian.github.io/MitoPilot/articles/Assembly-Methods.md)
+  method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md)
   for a comparison.
 - **GetOrganelle seed and label databases.** The reference sequences
   GetOrganelle uses to recruit and extend mitochondrial reads. The
   defaults are fish; for other groups, build your own with
-  [`custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+  [`custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
   (see [custom
-  databases](https://smithsonian.github.io/MitoPilot/articles/custom_dbs.md)).
+  databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md)).
 - **MitoFinder database.** Only used when the assembler is MitoFinder. A
   GenBank-format (`.gb`) file of one or more reference mitogenomes that
   MitoFinder uses to identify mitochondrial contigs. The default is the
   zebrafish mitogenome (NC_002333.2), so for anything other than a fish,
   supply a reference from your own group.
-  [`custom_assembly_db()`](https://smithsonian.github.io/MitoPilot/reference/custom_assembly_db.md)
+  [`custom_assembly_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_assembly_db.md)
   can build this file too.
 - **Max assembly paths / Max scaffolds.** Samples are marked failed
   instead of continuing in the pipeline if they exceed these thresholds.
 - **Automatically join multi-scaffold assemblies (Path 0).** Off by
   default, and worth leaving off until you understand your data. See
   [handling difficult
-  assemblies](https://smithsonian.github.io/MitoPilot/articles/Difficult-Assemblies.md).
+  assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.md).
 
 Options are saved as named, reusable sets. To make one, tick **Edit**,
 change what you want, type a new name in the **Parameter set name** box,
@@ -140,7 +140,7 @@ is what you paste into a job submission script on a cluster.
 Closing the MitoPilot app will kill the pipeline. For large projects, or
 anything on a cluster, save or submit a job script instead so the run
 survives a dropped connection. See [HPC cluster
-support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md).
+support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md).
 
 HYDRA **Submit as Job.** MitoPilot detects Hydra and adds a **Submit as
 Job** button next to **Run from App**. It submits the workflow to the
@@ -161,7 +161,7 @@ runs all samples in parallel through these steps.
 
 Failures are normal and often mean a sample ran out of memory. Common
 error messages are covered in the
-[troubleshooting](https://smithsonian.github.io/MitoPilot/articles/Troubleshooting.md)
+[troubleshooting](https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.md)
 articles.
 
 ### Finding the reference: local vs remote BLAST
@@ -382,4 +382,4 @@ Annotate module. Switch modules with the numbered buttons at the top
 left.
 
 [Next: Annotate
-→](https://smithsonian.github.io/MitoPilot/articles/Test-Project-Annotate.md)
+→](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)

@@ -149,7 +149,7 @@ generate_config(
 
 Then create projects with `new_project(..., executor = "local_native")`
 or `executor = "my_cluster"`, exactly as in [HPC cluster
-support](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.md).
+support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md).
 The profile makes every pipeline task source `<install_dir>/activate.sh`
 before it runs, so no module loads or conda activation are needed on
 compute nodes.
@@ -162,7 +162,7 @@ use the bundled R.
 
 **From a terminal (SSH tunnel).** Source the environment, start R, and
 follow [Accessing the MitoPilot app over an SSH
-tunnel](https://smithsonian.github.io/MitoPilot/articles/Custom-HPC.html#accessing-the-mitopilot-app-over-an-ssh-tunnel):
+tunnel](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html#accessing-the-mitopilot-app-over-an-ssh-tunnel):
 
 ``` bash
 source <install_dir>/activate.sh
@@ -180,7 +180,7 @@ library(MitoPilot)
 native_setup("<install_dir>")
 ```
 
-[`native_setup()`](https://smithsonian.github.io/MitoPilot/reference/native_setup.md)
+[`native_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.md)
 puts the bundled Nextflow and Java on this session’s PATH, together with
 the job scheduler commands (`sbatch`, `qsub`, or `bsub`) and their
 environment variables as they were when the install script ran, since
@@ -188,11 +188,11 @@ RStudio Server sessions do not inherit a login shell’s PATH. If the
 scheduler lives somewhere else on your cluster, edit the “job scheduler”
 lines near the end of `activate.sh`. To make it automatic, add
 `MITOPILOT_NATIVE_PREFIX=<install_dir>` to `~/.Renviron` and call
-[`native_setup()`](https://smithsonian.github.io/MitoPilot/reference/native_setup.md)
+[`native_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.md)
 with no arguments, or add the call to `~/.Rprofile`. The **Start**
 button in the app reads the project config and finds the environment on
 its own, so it works even without
-[`native_setup()`](https://smithsonian.github.io/MitoPilot/reference/native_setup.md);
+[`native_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.md);
 the setup is what makes
 [`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) report
 the right Nextflow version and lets you run `nextflow` from the R
@@ -202,7 +202,7 @@ console.
 the line `source <install_dir>/activate.sh` is already filled in.
 
 **On a workstation.** With `activate.sh` sourced,
-[`MitoPilot()`](https://smithsonian.github.io/MitoPilot/reference/MitoPilot.md)
+[`MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
 from the bundled R opens your browser through `xdg-open`, which the
 bundled R uses because it ships with no browser setting of its own. On a
 headless machine there is nothing to open; pass `launch.browser = FALSE`
@@ -229,7 +229,7 @@ and in any other R you use for the app. When a release changes tool pins
 - **Solver errors during install**: run again with `--manager mamba` if
   you have one, or copy the failing `envs/*.yml` name into an issue.
 - **`Could not find nextflow` in RStudio Server**: call
-  [`native_setup()`](https://smithsonian.github.io/MitoPilot/reference/native_setup.md).
+  [`native_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.md).
 - **Jobs fail with `runmitos: command not found`**: the task did not
   source `activate.sh`; check the project `.config` has
   `process.beforeScript`.
@@ -240,7 +240,7 @@ and in any other R you use for the app. When a release changes tool pins
   `launch.browser = FALSE`.
 - **A different Java or Nextflow wins on PATH**: source `activate.sh`
   last, after any `module load`; it puts the bundled environment first.
-- **[`native_check()`](https://smithsonian.github.io/MitoPilot/reference/native_check.md)
+- **[`native_check()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_check.md)
   shows the wrong Nextflow version**: look for an `NXF_VER` in
   `~/.Renviron` or your shell profile.
 - **`sbatch: command not found` from the Start button in RStudio
@@ -279,7 +279,7 @@ execute { cmd = "source <install_dir>/activate.sh", modeA = { "load" } }
 ```
 
 Users then `module load mitopilot`, and
-[`native_setup()`](https://smithsonian.github.io/MitoPilot/reference/native_setup.md)
+[`native_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.md)
 needs no argument.
 `generate_config(container_engine = "none", native_prefix = "<install_dir>")`
 is unchanged for everyone.
