@@ -335,7 +335,7 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           tagAppendChild(opts_help(
             "Path to the MitoFinder reference database (GenBank .gb format) ",
             "used to seed the assembly.",
-            href = "https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html",
+            href = "https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html",
             id = ns("help_mf_db"), nested = TRUE)),
         textInput(
           ns("getOrganelle"),
@@ -356,7 +356,7 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           tagAppendChild(opts_help(
             "Seed database: reference sequences GetOrganelle uses to start ",
             "recruiting mitochondrial reads.",
-            href = "https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html",
+            href = "https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html",
             id = ns("help_seeds_db"), nested = TRUE)),
         textInput(
           ns("labels_db"),
@@ -367,7 +367,7 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           tagAppendChild(opts_help(
             "Label database: reference genes GetOrganelle uses to identify ",
             "and extend mitochondrial contigs.",
-            href = "https://smithsonian.github.io/MitoPilot/articles/custom_dbs.html",
+            href = "https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html",
             id = ns("help_labels_db"), nested = TRUE)),
         selectInput(
           ns("maptoref_mapper"),
