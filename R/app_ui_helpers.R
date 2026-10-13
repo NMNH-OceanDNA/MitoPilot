@@ -141,7 +141,7 @@ mp_app_header <- function(dir, badge = NULL, gaps = NULL) {
       )
     },
     tags$a(
-      class = "mp-help", href = "https://smithsonian.github.io/MitoPilot/",
+      class = "mp-help", href = "https://nmnh-oceandna.github.io/MitoPilot/",
       target = "_blank", rel = "noopener", "Help"
     )
   )
