@@ -223,13 +223,15 @@ hydra_setup <- function() {
   invisible(TRUE)
 }
 
+detect_qsub <- function() nzchar(Sys.which("qsub"))
+
 #' Apply the Hydra environment when the session has not been set up
 #'
 #' Runs when MitoPilot is attached and when the app starts. Does nothing off
-#' Hydra, or once `qsub` is already on `PATH`.
+#' Hydra, or once both `qsub` and `nextflow` are already on `PATH`.
 #' @noRd
 ensure_hydra_setup <- function() {
-  if (!is_hydra_cluster() || nzchar(Sys.which("qsub"))) return(invisible(FALSE))
+  if (!is_hydra_cluster() || (detect_qsub() && nf_on_path())) return(invisible(FALSE))
   message("NMNH Hydra detected: running hydra_setup() for this session.")
   hydra_setup()
 }

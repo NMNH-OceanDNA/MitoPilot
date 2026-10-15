@@ -1,3 +1,7 @@
+# MitoPilot (development version)
+
+- **Hydra.** Loading the package now puts `~/bin` and Java on PATH even when `qsub` is already visible, so Nextflow is found in sessions that start with the scheduler but not the user's bin directory.
+
 # MitoPilot 1.5.9
 
 Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
