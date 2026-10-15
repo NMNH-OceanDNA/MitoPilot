@@ -264,3 +264,47 @@ test_that("sync skips the live run, rewrites a broken report, and waits for a jo
   expect_equal(r$result, "failed")
   expect_equal(r$launch, "job")
 })
+
+test_that("a job's id is read from the jobID line of its scheduler log", {
+  d <- withr::local_tempdir()
+  dir.create(run_dir(d, "logs"), recursive = TRUE)
+  expect_true(is.na(run_job_id(d, "assemble_2026")))
+  writeLines("+ Mon job assemble_2026 started in sThC.q with jobID=4242 on compute-1",
+    file.path(run_dir(d, "logs"), "assemble_2026.log"))
+  expect_equal(run_job_id(d, "assemble_2026"), "4242")
+})
+
+test_that("scheduler replies classify a job as alive, gone, or unknown", {
+  expect_true(job_alive_from("squeue", "123 main  job  R", 0L))
+  expect_false(job_alive_from("squeue", character(0), 0L))
+  expect_false(job_alive_from("squeue", "slurm_load_jobs error: Invalid job id specified", 1L))
+  expect_true(job_alive_from("qstat", c("job_number: 123", "sge_o_home: /home/x"), 0L))
+  expect_false(job_alive_from("qstat", "Following jobs do not exist:", 1L))
+  expect_true(is.na(job_alive_from("qstat", "error: commlib error", 1L)))
+  expect_true(job_alive_from("bjobs", "123 me RUN normal", 0L))
+  expect_false(job_alive_from("bjobs", "Job <123> is not found", 255L))
+  expect_true(is.na(job_alive(NA_character_)))
+})
+
+test_that("a job the scheduler no longer has gets a killed report", {
+  b <- "assemble_2026-09-04_10-00-00"
+  d <- local_runs_project(stats::setNames("unfinished", b))
+  dir.create(run_dir(d, "jobs")); dir.create(run_dir(d, "logs"))
+  writeLines(c("nextflow run x", nf_exit_trailer()), file.path(run_dir(d, "jobs"), paste0(b, ".sh")))
+  writeLines("+ Mon job started in sThC.q with jobID=77 on compute-1",
+    file.path(run_dir(d, "logs"), paste0(b, ".log")))
+
+  local_mocked_bindings(job_alive = function(id) TRUE)
+  expect_equal(sync_run_reports(d), character(0))
+  local_mocked_bindings(job_alive = function(id) NA)
+  expect_equal(sync_run_reports(d), character(0))
+  local_mocked_bindings(job_alive = function(id) { expect_equal(id, "77"); FALSE })
+  expect_equal(sync_run_reports(d), b)
+  r <- list_run_reports(d, "assemble")
+  expect_equal(r$result, "killed")
+  expect_true(is.na(r$exit_status))
+  expect_equal(r$launch, "job")
+  txt <- readLines(run_report_paths(d, b)[["txt"]])
+  expect_true(any(grepl("Result:    Killed", txt, fixed = TRUE)))
+  expect_match(run_result_html("killed"), "mp-pill-danger")
+})
