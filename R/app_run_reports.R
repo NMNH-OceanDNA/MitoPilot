@@ -18,9 +18,9 @@ run_reports_notice_workflow <- function(mode, bases) {
 #' @noRd
 run_result_html <- function(result) {
   tone <- c(finished = "success", failures = "warning", failed = "danger",
-            stopped = "neutral", unfinished = "info")
+            stopped = "neutral", killed = "danger", unfinished = "info")
   ic <- c(finished = "circle-check", failures = "triangle-exclamation",
-          failed = "circle-xmark", stopped = "circle-stop", unfinished = "hourglass-half")
+          failed = "circle-xmark", stopped = "circle-stop", killed = "ban", unfinished = "hourglass-half")
   vapply(result, function(r) {
     if (is.na(r) || !r %in% names(tone)) return("")
     sprintf("<span class='mp-pill mp-pill-%s'>%s %s</span>",

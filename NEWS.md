@@ -1,3 +1,7 @@
+# MitoPilot (development version)
+
+- **Run reports.** A submitted job that the scheduler killed (out of time or memory, or cancelled) is now reported as "Killed / ended without finishing" once the scheduler no longer lists it, instead of staying at "Running / no finish recorded".
+
 # MitoPilot 1.5.9
 
 Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
