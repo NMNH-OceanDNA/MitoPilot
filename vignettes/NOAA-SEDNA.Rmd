@@ -50,7 +50,7 @@ In the new R session, run the following to install MitoPilot. It will take a whi
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
   install.packages("BiocManager")
 }
-BiocManager::install("Smithsonian/MitoPilot")
+BiocManager::install("NMNH-OceanDNA/MitoPilot")
 ```
 
 If install was successful, you can exit the R session using `quit()`.

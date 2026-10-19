@@ -84,7 +84,7 @@ release you want (the script and the R package must be the same version):
 
 ```{bash eval=FALSE}
 ver=1.5.9
-curl -L https://github.com/Smithsonian/MitoPilot/archive/refs/tags/${ver}.tar.gz | tar -xz
+curl -L https://github.com/NMNH-OceanDNA/MitoPilot/archive/refs/tags/${ver}.tar.gz | tar -xz
 cd MitoPilot-${ver}/inst/native
 ```
 
@@ -215,7 +215,7 @@ R -e "MitoPilot::MitoPilot(host='0.0.0.0', port=7591, launch.browser=FALSE)"
 ```
 
 **From RStudio Server or Open OnDemand.** Install MitoPilot in that R once
-(`BiocManager::install("Smithsonian/MitoPilot")`), then in each session:
+(`BiocManager::install("NMNH-OceanDNA/MitoPilot")`), then in each session:
 
 ```{r eval=FALSE}
 library(MitoPilot)
@@ -255,7 +255,7 @@ download it. Remove the setting on a cluster that uses the native install.
 ## Updating
 
 Update the R package inside the bundled R with
-`<install_dir>/envs/mitopilot/bin/Rscript -e 'BiocManager::install("Smithsonian/MitoPilot@<version>")'`,
+`<install_dir>/envs/mitopilot/bin/Rscript -e 'BiocManager::install("NMNH-OceanDNA/MitoPilot@<version>")'`,
 and in any other R you use for the app. When a release changes tool pins (see
 `inst/native/VERSIONS.md` in the release), delete `<install_dir>/envs` and re-run the
 install script.
