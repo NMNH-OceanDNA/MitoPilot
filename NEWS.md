@@ -2,6 +2,7 @@
 
 - **Run reports.** A submitted job that the scheduler killed (out of time or memory, or cancelled) is now reported as "Killed / ended without finishing" once the scheduler no longer lists it, instead of staying at "Running / no finish recorded".
 - **Hydra.** Loading the package now puts `~/bin` and Java on PATH even when `qsub` is already visible, so Nextflow is found in sessions that start with the scheduler but not the user's bin directory.
+- **GitHub org.** The repository now lives at https://github.com/NMNH-OceanDNA/MitoPilot. Install with `BiocManager::install("NMNH-OceanDNA/MitoPilot")`; the old `Smithsonian/MitoPilot` address still redirects.
 
 # MitoPilot 1.5.9
 

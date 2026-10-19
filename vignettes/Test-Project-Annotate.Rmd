@@ -164,7 +164,7 @@ which rules an assembly is being judged against.
 <div class="alert alert-note">
 <strong>No ruleset for your samples?</strong> If you do not see an appropriate clade for your samples,
 please post an
-[issue](https://github.com/Smithsonian/MitoPilot/issues) or reach out to
+[issue](https://github.com/NMNH-OceanDNA/MitoPilot/issues) or reach out to
 Dan MacGuigan directly at <macguigand@si.edu>. We are always looking to expand the taxonomic scope
 of MitoPilot.
 </div>

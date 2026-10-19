@@ -8,7 +8,7 @@ authors:
   - family-names: MacGuigan
     given-names: Dan
     email: macguigand@si.edu
-repository-code: "https://github.com/Smithsonian/MitoPilot"
+repository-code: "https://github.com/NMNH-OceanDNA/MitoPilot"
 url: "https://nmnh-oceandna.github.io/MitoPilot/"
 license: GPL-3.0-or-later
 version: 1.5.3

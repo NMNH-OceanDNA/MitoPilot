@@ -99,7 +99,7 @@ Open R and run:
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
   install.packages("BiocManager")
 }
-BiocManager::install("Smithsonian/MitoPilot", ask = FALSE)
+BiocManager::install("NMNH-OceanDNA/MitoPilot", ask = FALSE)
 ```
 
 The first install pulls a long list of dependencies and takes a while. Warnings
@@ -125,7 +125,7 @@ If Nextflow cannot be found, make sure it is on your `PATH` in the same R sessio
 
 ```r
 remove.packages("MitoPilot")
-BiocManager::install("Smithsonian/MitoPilot")
+BiocManager::install("NMNH-OceanDNA/MitoPilot")
 .rs.restartR()   # or restart R yourself
 ```
 
@@ -133,7 +133,7 @@ Installing without a version tag tracks the latest development state. To pin a
 specific release, or to roll back, name the tag:
 
 ```r
-BiocManager::install("Smithsonian/MitoPilot@1.5.2")
+BiocManager::install("NMNH-OceanDNA/MitoPilot@1.5.2")
 ```
 
 Each MitoPilot version pairs with a matching container image, and `new_project()`

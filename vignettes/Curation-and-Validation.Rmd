@@ -98,7 +98,7 @@ limits, and genetic code right for a new clade takes real curation experience,
 and a ruleset that is subtly wrong will silently edit your gene models.
 
 If MitoPilot does not cover your group, please open an
-[issue](https://github.com/Smithsonian/MitoPilot/issues) or contact Dan MacGuigan
+[issue](https://github.com/NMNH-OceanDNA/MitoPilot/issues) or contact Dan MacGuigan
 at <macguigand@si.edu>. We are actively adding rulesets and are glad to work with
 you on one for your taxa.
 
