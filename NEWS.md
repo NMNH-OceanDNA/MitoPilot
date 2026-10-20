@@ -1,4 +1,6 @@
-# MitoPilot (development version)
+# MitoPilot 1.5.10
+
+Released 2026-10-20. Container: `macguigand/mitopilot:1.5.10`
 
 - **Large projects load faster.** Opening the app, the Metadata picker, and saving it no longer stall on projects with hundreds of samples that carry GEOME, GBIF, or NCBI metadata. Field summaries, metadata columns, and specimen status were recomputed per sample with repeated table scans; they now use one pass each (app start on 550 samples with GBIF records: ~21s to ~5s).
 - **Run reports.** A submitted job that the scheduler killed (out of time or memory, or cancelled) is now reported as "Killed / ended without finishing" once the scheduler no longer lists it, instead of staying at "Running / no finish recorded".
