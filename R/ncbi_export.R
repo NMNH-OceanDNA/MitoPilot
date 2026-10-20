@@ -7,7 +7,7 @@
 }
 
 .ncbi_val <- function(recs, field, level = "BioSample") {
-  .ncbi_blank(.geome_pick(recs[recs$level == level, , drop = FALSE], field))
+  .ncbi_blank(.geome_pick(recs, field, level))
 }
 
 .ncbi_passthrough <- function(field, lower = FALSE) {

@@ -18,9 +18,9 @@ run_reports_notice_workflow <- function(mode, bases) {
 #' @noRd
 run_result_html <- function(result) {
   tone <- c(finished = "success", failures = "warning", failed = "danger",
-            stopped = "neutral", unfinished = "info")
+            stopped = "neutral", killed = "danger", unfinished = "info")
   ic <- c(finished = "circle-check", failures = "triangle-exclamation",
-          failed = "circle-xmark", stopped = "circle-stop", unfinished = "hourglass-half")
+          failed = "circle-xmark", stopped = "circle-stop", killed = "ban", unfinished = "hourglass-half")
   vapply(result, function(r) {
     if (is.na(r) || !r %in% names(tone)) return("")
     sprintf("<span class='mp-pill mp-pill-%s'>%s %s</span>",
@@ -52,6 +52,9 @@ run_reports_server <- function(id) {
     runs <- reactiveVal(NULL)
     opened <- reactiveVal(0)
     notice_wf <- NULL
+    cur_wf <- NULL
+    keep_sel <- NULL
+    polled <- FALSE
     pending <- character(0)
     session$userData$run_reports_new <- character(0)
 
@@ -70,6 +73,9 @@ run_reports_server <- function(id) {
         c(assemble = "Assemble", annotate = "Annotate")[[workflow]]
       df <- if (is.null(workflow)) NULL else tryCatch(
         list_run_reports(session$userData$dir, workflow), error = function(e) NULL)
+      cur_wf <<- workflow
+      keep_sel <<- NULL
+      polled <<- FALSE
       runs(df)
       opened(opened() + 1)
       body <- if (is.null(workflow)) {
@@ -82,6 +88,7 @@ run_reports_server <- function(id) {
           uiOutput(ns("detail"))
         )
       }
+      body <- tagList(body, uiOutput(ns("poll")))
       showModal(modalDialog(
         title = mp_modal_title(paste("Run reports:", panel)),
         size = "l",
@@ -93,6 +100,29 @@ run_reports_server <- function(id) {
 
     observeEvent(input$open, {
       show_reports(run_reports_workflow(session$userData$mode))
+    })
+
+    # every 15 seconds while the window is open: new runs and finished runs
+    poll <- function() {
+      if (is.null(cur_wf)) return(invisible())
+      sync()
+      fresh <- tryCatch(list_run_reports(session$userData$dir, cur_wf), error = function(e) NULL)
+      old <- runs()
+      if (is.null(fresh) || !nrow(fresh) ||
+          identical(fresh[c("base", "result")], old[c("base", "result")])) {
+        return(invisible())
+      }
+      if (is.null(old) || !nrow(old)) return(show_reports(cur_wf))
+      i <- reactable::getReactableState("tbl", "selected")
+      keep_sel <<- if (length(i) == 1 && i <= nrow(old)) old$base[i]
+      runs(fresh)
+    }
+    output$poll <- renderUI({
+      opened()
+      invalidateLater(15000)
+      if (polled) isolate(poll())
+      polled <<- TRUE
+      NULL
     })
 
     output$tbl <- reactable::renderReactable({
@@ -111,11 +141,13 @@ run_reports_server <- function(id) {
         check.names = FALSE,
         stringsAsFactors = FALSE
       )
+      sel <- match(keep_sel, df$base)
       reactable::reactable(
         disp,
         selection = "single",
         onClick = "select",
-        height = 300,
+        defaultSelected = if (length(sel) == 1 && !is.na(sel)) sel,
+        height = if (nrow(disp) > 10) 380 else "auto",
         pagination = FALSE,
         compact = TRUE,
         highlight = TRUE,

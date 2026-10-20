@@ -1,3 +1,12 @@
+# MitoPilot 1.5.10
+
+Released 2026-10-20. Container: `macguigand/mitopilot:1.5.10`
+
+- **Large projects load faster.** Opening the app, the Metadata picker, and saving it no longer stall on projects with hundreds of samples that carry GEOME, GBIF, or NCBI metadata. Field summaries, metadata columns, and specimen status were recomputed per sample with repeated table scans; they now use one pass each (app start on 550 samples with GBIF records: ~21s to ~5s).
+- **Run reports.** A submitted job that the scheduler killed (out of time or memory, or cancelled) is now reported as "Killed / ended without finishing" once the scheduler no longer lists it, instead of staying at "Running / no finish recorded".
+- **Hydra.** Loading the package now puts `~/bin` and Java on PATH even when `qsub` is already visible, so Nextflow is found in sessions that start with the scheduler but not the user's bin directory.
+- **GitHub org.** The repository now lives at https://github.com/NMNH-OceanDNA/MitoPilot. Install with `BiocManager::install("NMNH-OceanDNA/MitoPilot")`; the old `Smithsonian/MitoPilot` address still redirects.
+
 # MitoPilot 1.5.9
 
 Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
@@ -8,7 +17,7 @@ Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
 
 ## New Features
 
-- **Run reports.** After every Assemble or Annotate run, MitoPilot writes a plain-language report: the result, task counts, failed tasks with a likely cause (for example, out of memory), and samples that failed with their notes. This works for runs started in the app and for runs submitted to a cluster or run in the background from a saved script. A "New run reports available" message appears when new reports are ready, and the **Run Reports** button (next to **Work Dirs**) lists every run for the active panel. Click a run to read its report, copy it, or open its folder. Runs still in progress show live task progress read from the Nextflow log.
+- **Run reports.** After every Assemble or Annotate run, MitoPilot writes a plain-language report: the result, task counts, failed tasks with a likely cause (for example, out of memory), and samples that failed with their notes. This works for runs started in the app and for runs submitted to a cluster or run in the background from a saved script. A "New run reports available" message appears when new reports are ready, and the **Run Reports** button (next to **Work Dirs**) lists every run for the active panel. Click a run to read its report, copy it, or open its folder. Runs still in progress show live task progress read from the Nextflow log. While open, the window checks every 15 seconds for new runs and for runs that have finished; the run list fits its runs and scrolls past 10.
 - **Tidier run files.** Each run's submission script, scheduler log, Nextflow log, and report now share one name and live under a hidden `.runs/` folder in the project, instead of loose files in the project folder. Older projects keep working; their existing logs stay where they are.
 - **Test projects come with sample metadata.** `new_test_project()` and `new_test_project_userAsmb()` now fetch each sample's NCBI metadata from its SRA run and follow links to GBIF and GEOME.
 - **One window for metadata fields.** The **Metadata** button now picks both which metadata fields show as table columns (**Show**) and which can be used at export (**Export**), replacing the separate **Set Export Metadata** button. **Tick both together** sets both with one click, header boxes tick every row in view, **GenBank-ready** and **Ticked only** narrow the list, sample counts show gaps, and a click copies a field's template text. **Choose fields** in Export Data opens the same window filtered to that source.
