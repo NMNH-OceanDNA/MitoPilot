@@ -26,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">MitoPilot</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.9</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -79,7 +79,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/Smithsonian/MitoPilot/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/NMNH-OceanDNA/MitoPilot/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -95,7 +95,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Installing Without Containers</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/Smithsonian/MitoPilot/blob/main/vignettes/Native-Install.Rmd" class="external-link"><code>vignettes/Native-Install.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NMNH-OceanDNA/MitoPilot/blob/main/vignettes/Native-Install.Rmd" class="external-link"><code>vignettes/Native-Install.Rmd</code></a></small>
       <div class="d-none name"><code>Native-Install.Rmd</code></div>
     </div>
 
@@ -207,8 +207,8 @@ single binary) for you</td>
 <p>Download the install script and the environment definitions from the
 MitoPilot release you want (the script and the R package must be the
 same version):</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="va">ver</span><span class="op">=</span>1.5.9</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-L</span> https://github.com/Smithsonian/MitoPilot/archive/refs/tags/<span class="va">${ver}</span>.tar.gz <span class="kw">|</span> <span class="fu">tar</span> <span class="at">-xz</span></span>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="va">ver</span><span class="op">=</span>1.5.10</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-L</span> https://github.com/NMNH-OceanDNA/MitoPilot/archive/refs/tags/<span class="va">${ver}</span>.tar.gz <span class="kw">|</span> <span class="fu">tar</span> <span class="at">-xz</span></span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="bu">cd</span> MitoPilot-<span class="va">${ver}</span>/inst/native</span></code></pre></div>
 <div class="alert alert-tip">
 <p><strong>Pick your install directory first.</strong> Everything on
@@ -253,7 +253,7 @@ the network</td>
 inside your cluster)</td>
 </tr>
 <tr class="odd">
-<td><code>--mitopilot-ref 1.5.9</code></td>
+<td><code>--mitopilot-ref 1.5.10</code></td>
 <td>Install a MitoPilot tag from GitHub instead of the source tree the
 script came from</td>
 </tr>
@@ -301,7 +301,7 @@ re-run (see Updating).</p>
 <p>From any R that has MitoPilot installed (the bundled one is at
 <code>&lt;install_dir&gt;/envs/mitopilot/bin/R</code>):</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/Smithsonian/MitoPilot" class="external-link">MitoPilot</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/NMNH-OceanDNA/MitoPilot" class="external-link">MitoPilot</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/native_check.html">native_check</a></span><span class="op">(</span><span class="st">"&lt;install_dir&gt;"</span><span class="op">)</span></span></code></pre></div>
 <p>Every core tool should show <code>found TRUE</code>. Optional tools
 are missing only if you installed with <code>--no-optional</code>.</p>
@@ -316,7 +316,7 @@ MitoPilot to use the install directory instead, and it is saved so every
 later project can reuse it by name.</p>
 <p><strong>Workstation or a single node, no scheduler:</strong></p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/Smithsonian/MitoPilot" class="external-link">MitoPilot</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/NMNH-OceanDNA/MitoPilot" class="external-link">MitoPilot</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/generate_config.html">generate_config</a></span><span class="op">(</span></span>
 <span>  name             <span class="op">=</span> <span class="st">"local_native"</span>,</span>
 <span>  scheduler        <span class="op">=</span> <span class="st">"local"</span>,</span>
@@ -366,10 +366,10 @@ the MitoPilot app over an SSH tunnel</a>:</p>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">"MitoPilot::MitoPilot(host='0.0.0.0', port=7591, launch.browser=FALSE)"</span></span></code></pre></div>
 <p><strong>From RStudio Server or Open OnDemand.</strong> Install
 MitoPilot in that R once
-(<code>BiocManager::install("Smithsonian/MitoPilot")</code>), then in
+(<code>BiocManager::install("NMNH-OceanDNA/MitoPilot")</code>), then in
 each session:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/Smithsonian/MitoPilot" class="external-link">MitoPilot</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/NMNH-OceanDNA/MitoPilot" class="external-link">MitoPilot</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/native_setup.html">native_setup</a></span><span class="op">(</span><span class="st">"&lt;install_dir&gt;"</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/native_setup.html">native_setup()</a></code> puts the bundled Nextflow and Java on
 this session’s PATH, together with the job scheduler commands
@@ -384,7 +384,7 @@ arguments, or add the call to <code>~/.Rprofile</code>. The
 <strong>Start</strong> button in the app reads the project config and
 finds the environment on its own, so it works even without
 <code><a href="../reference/native_setup.html">native_setup()</a></code>; the setup is what makes
-<code><a href="https://github.com/Smithsonian/MitoPilot" class="external-link">library(MitoPilot)</a></code> report the right Nextflow version and
+<code><a href="https://github.com/NMNH-OceanDNA/MitoPilot" class="external-link">library(MitoPilot)</a></code> report the right Nextflow version and
 lets you run <code>nextflow</code> from the R console.</p>
 <p><strong>Batch submission.</strong> When the app offers a cluster
 submission script, the line
@@ -401,7 +401,7 @@ tunnel above.</p>
 example in <code>~/.Renviron</code> or <code>~/.bashrc</code>) overrides
 the bundled Nextflow in every R session. The <strong>Start</strong>
 button and the submit script pin the bundled version themselves, but
-<code><a href="https://github.com/Smithsonian/MitoPilot" class="external-link">library(MitoPilot)</a></code> will report the other version and
+<code><a href="https://github.com/NMNH-OceanDNA/MitoPilot" class="external-link">library(MitoPilot)</a></code> will report the other version and
 console calls to <code>nextflow</code> will download it. Remove the
 setting on a cluster that uses the native install.</p>
 </div>
@@ -410,7 +410,7 @@ setting on a cluster that uses the native install.</p>
 <h3 id="updating">Updating<a class="anchor" aria-label="anchor" href="#updating"></a>
 </h3>
 <p>Update the R package inside the bundled R with
-<code>&lt;install_dir&gt;/envs/mitopilot/bin/Rscript -e 'BiocManager::install("Smithsonian/MitoPilot@&lt;version&gt;")'</code>,
+<code>&lt;install_dir&gt;/envs/mitopilot/bin/Rscript -e 'BiocManager::install("NMNH-OceanDNA/MitoPilot@&lt;version&gt;")'</code>,
 and in any other R you use for the app. When a release changes tool pins
 (see <code>inst/native/VERSIONS.md</code> in the release), delete
 <code>&lt;install_dir&gt;/envs</code> and re-run the install script.</p>
@@ -483,7 +483,7 @@ inside the bundled R; users may also install it in their own R for the
 app.</li>
 </ol>
 <p>A module file is the natural wrapper. With Lmod:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="ex">--</span> /apps/modulefiles/mitopilot/1.5.9.lua</span>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="ex">--</span> /apps/modulefiles/mitopilot/1.5.10.lua</span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="ex">setenv</span><span class="er">(</span><span class="st">"MITOPILOT_NATIVE_PREFIX"</span><span class="ex">,</span> <span class="st">"&lt;install_dir&gt;"</span><span class="kw">)</span></span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="ex">setenv</span><span class="er">(</span><span class="st">"NXF_HOME"</span><span class="ex">,</span> pathJoin<span class="er">(</span><span class="ex">os.getenv</span><span class="er">(</span><span class="st">"HOME"</span><span class="kw">)</span><span class="ex">,</span> <span class="st">".nextflow"</span><span class="kw">))</span></span>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="ex">execute</span> { cmd = <span class="st">"source &lt;install_dir&gt;/activate.sh"</span>, modeA = { <span class="st">"load"</span> } }</span></code></pre></div>

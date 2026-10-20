@@ -30,8 +30,8 @@ MitoPilot release you want (the script and the R package must be the
 same version):
 
 ``` bash
-ver=1.5.9
-curl -L https://github.com/Smithsonian/MitoPilot/archive/refs/tags/${ver}.tar.gz | tar -xz
+ver=1.5.10
+curl -L https://github.com/NMNH-OceanDNA/MitoPilot/archive/refs/tags/${ver}.tar.gz | tar -xz
 cd MitoPilot-${ver}/inst/native
 ```
 
@@ -55,7 +55,7 @@ the bundled R. Options:
 | `--no-optional` | Skip MitoFinder, ARWEN, and NCBI ORFfinder (saves about 2 GB; these are off by default in projects anyway) |
 | `--skip-blast-db` | Skip the 289 MB database; reference search falls back to NCBI over the network |
 | `--blast-db-url URL` | Download the database from another location (for example a mirror inside your cluster) |
-| `--mitopilot-ref 1.5.9` | Install a MitoPilot tag from GitHub instead of the source tree the script came from |
+| `--mitopilot-ref 1.5.10` | Install a MitoPilot tag from GitHub instead of the source tree the script came from |
 | `--mitopilot-source PATH` | Install the R package from a local directory or tarball instead |
 | `--skip-mitopilot` | Do not install the MitoPilot R package (you install it yourself, see step 4) |
 | `--dry-run` | Show what would happen |
@@ -171,7 +171,7 @@ R -e "MitoPilot::MitoPilot(host='0.0.0.0', port=7591, launch.browser=FALSE)"
 ```
 
 **From RStudio Server or Open OnDemand.** Install MitoPilot in that R
-once (`BiocManager::install("Smithsonian/MitoPilot")`), then in each
+once (`BiocManager::install("NMNH-OceanDNA/MitoPilot")`), then in each
 session:
 
 ``` r
@@ -194,8 +194,8 @@ button in the app reads the project config and finds the environment on
 its own, so it works even without
 [`native_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.md);
 the setup is what makes
-[`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) report
-the right Nextflow version and lets you run `nextflow` from the R
+[`library(MitoPilot)`](https://github.com/NMNH-OceanDNA/MitoPilot)
+report the right Nextflow version and lets you run `nextflow` from the R
 console.
 
 **Batch submission.** When the app offers a cluster submission script,
@@ -212,14 +212,14 @@ and use the tunnel above.
 `~/.bashrc`) overrides the bundled Nextflow in every R session. The
 **Start** button and the submit script pin the bundled version
 themselves, but
-[`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) will
+[`library(MitoPilot)`](https://github.com/NMNH-OceanDNA/MitoPilot) will
 report the other version and console calls to `nextflow` will download
 it. Remove the setting on a cluster that uses the native install.
 
 ### Updating
 
 Update the R package inside the bundled R with
-`<install_dir>/envs/mitopilot/bin/Rscript -e 'BiocManager::install("Smithsonian/MitoPilot@<version>")'`,
+`<install_dir>/envs/mitopilot/bin/Rscript -e 'BiocManager::install("NMNH-OceanDNA/MitoPilot@<version>")'`,
 and in any other R you use for the app. When a release changes tool pins
 (see `inst/native/VERSIONS.md` in the release), delete
 `<install_dir>/envs` and re-run the install script.
@@ -272,7 +272,7 @@ directory:
 A module file is the natural wrapper. With Lmod:
 
 ``` bash
--- /apps/modulefiles/mitopilot/1.5.9.lua
+-- /apps/modulefiles/mitopilot/1.5.10.lua
 setenv("MITOPILOT_NATIVE_PREFIX", "<install_dir>")
 setenv("NXF_HOME", pathJoin(os.getenv("HOME"), ".nextflow"))
 execute { cmd = "source <install_dir>/activate.sh", modeA = { "load" } }

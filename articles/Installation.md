@@ -49,7 +49,7 @@ Open R and run:
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
   install.packages("BiocManager")
 }
-BiocManager::install("Smithsonian/MitoPilot", ask = FALSE)
+BiocManager::install("NMNH-OceanDNA/MitoPilot", ask = FALSE)
 ```
 
 The first install pulls a long list of dependencies and takes a while.
@@ -79,7 +79,7 @@ the same R session (check with `Sys.which("nextflow")`).
 ``` r
 
 remove.packages("MitoPilot")
-BiocManager::install("Smithsonian/MitoPilot")
+BiocManager::install("NMNH-OceanDNA/MitoPilot")
 .rs.restartR()   # or restart R yourself
 ```
 
@@ -88,7 +88,7 @@ pin a specific release, or to roll back, name the tag:
 
 ``` r
 
-BiocManager::install("Smithsonian/MitoPilot@1.5.2")
+BiocManager::install("NMNH-OceanDNA/MitoPilot@1.5.2")
 ```
 
 Each MitoPilot version pairs with a matching container image, and

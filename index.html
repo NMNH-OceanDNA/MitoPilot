@@ -29,7 +29,7 @@
 
     <a class="navbar-brand me-2" href="index.html">MitoPilot</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.9</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -82,7 +82,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/Smithsonian/MitoPilot/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/NMNH-OceanDNA/MitoPilot/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -154,7 +154,7 @@
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"BiocManager"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"BiocManager"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu">install</span><span class="op">(</span><span class="st">"Smithsonian/MitoPilot"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu">install</span><span class="op">(</span><span class="st">"NMNH-OceanDNA/MitoPilot"</span><span class="op">)</span></span></code></pre></div>
 <p>See <a href="https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html">Installation and Requirements</a> for the full requirements, disk space, updating and version pinning, and container cache setup. Cluster-specific instructions are available for <a href="https://nmnh-oceandna.github.io/MitoPilot/articles/NMNH-Hydra.html">Smithsonian Hydra</a> and <a href="https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.html">NOAA SEDNA</a>; for any other cluster see <a href="https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html">HPC cluster support</a>.</p>
 </div>
 <div class="section level1">
@@ -636,7 +636,7 @@ Untested
 </tbody>
 </table>
 <p>See the <a href="https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.html">curation ruleset browser</a> for details about each curation ruleset. The curation ruleset can be set individually for each sample in the <code>Curate Opts.</code> window in the MitoPilot app.</p>
-<p>All curation rulesets ship inside the Docker image (<a href="https://hub.docker.com/repository/docker/macguigand/mitopilot" class="external-link">macguigand/MitoPilot</a>). If MitoPilot doesn’t have a curation ruleset for your taxonomic group, please open an <a href="https://github.com/Smithsonian/MitoPilot/issues" class="external-link">issue</a> or contact Dan MacGuigan at <a href="mailto:macguigand@si.edu" class="email">macguigand@si.edu</a>.</p>
+<p>All curation rulesets ship inside the Docker image (<a href="https://hub.docker.com/repository/docker/macguigand/mitopilot" class="external-link">macguigand/MitoPilot</a>). If MitoPilot doesn’t have a curation ruleset for your taxonomic group, please open an <a href="https://github.com/NMNH-OceanDNA/MitoPilot/issues" class="external-link">issue</a> or contact Dan MacGuigan at <a href="mailto:macguigand@si.edu" class="email">macguigand@si.edu</a>.</p>
 <p>For groups other than fishes, make sure you build or pick the appropriate reference databases. There are three independent kinds of databases:</p>
 <ul>
 <li>
@@ -714,7 +714,7 @@ Untested
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
-<li><a href="https://github.com/Smithsonian/MitoPilot/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/smithsonian/MitoPilot/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://github.com/NMNH-OceanDNA/MitoPilot/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/NMNH-OceanDNA/MitoPilot/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 </ul>
 </div>
 

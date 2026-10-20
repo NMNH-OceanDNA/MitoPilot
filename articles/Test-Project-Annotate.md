@@ -50,9 +50,9 @@ exactly which rules an assembly is being judged against.
 
 **No ruleset for your samples?** If you do not see an appropriate clade
 for your samples, please post an
-[issue](https://github.com/Smithsonian/MitoPilot/issues) or reach out to
-Dan MacGuigan directly at <macguigand@si.edu>. We are always looking to
-expand the taxonomic scope of MitoPilot.
+[issue](https://github.com/NMNH-OceanDNA/MitoPilot/issues) or reach out
+to Dan MacGuigan directly at <macguigand@si.edu>. We are always looking
+to expand the taxonomic scope of MitoPilot.
 
 When ready, click **Update** and run the workflow the same way you ran
 Assemble.

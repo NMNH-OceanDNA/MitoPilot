@@ -57,7 +57,7 @@ take a while to install all of the necessary dependencies.
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
   install.packages("BiocManager")
 }
-BiocManager::install("Smithsonian/MitoPilot")
+BiocManager::install("NMNH-OceanDNA/MitoPilot")
 ```
 
 If install was successful, you can exit the R session using
@@ -201,8 +201,8 @@ should look something like this.
 ### Launching MitoPilot
 
 Once you have opened the RStudio server session, run
-[`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) to load
-the package. You should see a message about Nextflow if successful.
+[`library(MitoPilot)`](https://github.com/NMNH-OceanDNA/MitoPilot) to
+load the package. You should see a message about Nextflow if successful.
 
 Want to learn how to use MitoPilot? Check out the [MitoPilot workshop
 website](https://smithsonianworkshops.github.io/MitoPilot_workshop_2025/qmd/example_project/01_init.html).

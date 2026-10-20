@@ -26,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">MitoPilot</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.9</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -79,7 +79,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/Smithsonian/MitoPilot/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/NMNH-OceanDNA/MitoPilot/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -95,7 +95,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Smithsonian Hydra Setup</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/Smithsonian/MitoPilot/blob/main/vignettes/NMNH-Hydra.Rmd" class="external-link"><code>vignettes/NMNH-Hydra.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NMNH-OceanDNA/MitoPilot/blob/main/vignettes/NMNH-Hydra.Rmd" class="external-link"><code>vignettes/NMNH-Hydra.Rmd</code></a></small>
       <div class="d-none name"><code>NMNH-Hydra.Rmd</code></div>
     </div>
 
@@ -176,11 +176,11 @@ your RStudio Server session.</p>
 submission fails. <code><a href="../reference/hydra_setup.html">hydra_setup()</a></code> fixes that, and MitoPilot
 runs it for you when you load the package and when you open the app:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/Smithsonian/MitoPilot" class="external-link">MitoPilot</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/NMNH-OceanDNA/MitoPilot" class="external-link">MitoPilot</a></span><span class="op">)</span></span></code></pre></div>
 <p>It puts the Hydra Java and job scheduler directories at the front of
 your <code>PATH</code>, checks your Nextflow version, and pins a
 compatible one for the session. If you use <code>MitoPilot::</code>
-functions without <code><a href="https://github.com/Smithsonian/MitoPilot" class="external-link">library(MitoPilot)</a></code>, or the setup message
+functions without <code><a href="https://github.com/NMNH-OceanDNA/MitoPilot" class="external-link">library(MitoPilot)</a></code>, or the setup message
 does not appear, call <code><a href="../reference/hydra_setup.html">hydra_setup()</a></code> yourself. It warns and
 changes nothing if you are not on Hydra, so it is safe to leave in a
 script you also run elsewhere.</p>

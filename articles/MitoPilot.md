@@ -54,7 +54,7 @@ HYDRA **Hydra setup runs automatically.** RStudio Server sessions on
 Hydra start with a stripped `PATH` that leaves out the job scheduler
 engine, Java, and your `~/bin`, so Nextflow cannot find `qsub` and job
 submission fails.
-[`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) and
+[`library(MitoPilot)`](https://github.com/NMNH-OceanDNA/MitoPilot) and
 opening the app both detect Hydra and run
 [`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
 for you: it puts the Hydra Java and job scheduler directories at the

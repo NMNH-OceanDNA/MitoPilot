@@ -73,7 +73,7 @@ instead.
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
   install.packages("BiocManager")
 }
-BiocManager::install("Smithsonian/MitoPilot")
+BiocManager::install("NMNH-OceanDNA/MitoPilot")
 ```
 
 See [Installation and
@@ -155,8 +155,9 @@ MitoPilot app.
 All curation rulesets ship inside the Docker image
 ([macguigand/MitoPilot](https://hub.docker.com/repository/docker/macguigand/mitopilot)).
 If MitoPilot doesn’t have a curation ruleset for your taxonomic group,
-please open an [issue](https://github.com/Smithsonian/MitoPilot/issues)
-or contact Dan MacGuigan at <macguigand@si.edu>.
+please open an
+[issue](https://github.com/NMNH-OceanDNA/MitoPilot/issues) or contact
+Dan MacGuigan at <macguigand@si.edu>.
 
 For groups other than fishes, make sure you build or pick the
 appropriate reference databases. There are three independent kinds of

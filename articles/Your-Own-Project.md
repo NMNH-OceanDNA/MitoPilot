@@ -225,8 +225,8 @@ much cheaper to discover on a small test run.
 
 HYDRA **A Hydra project in full.** Keep the data and the project on
 `/pool` or `/scratch` (not `/store`).
-[`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) sets up
-the Hydra environment for the session:
+[`library(MitoPilot)`](https://github.com/NMNH-OceanDNA/MitoPilot) sets
+up the Hydra environment for the session:
 
 ``` r
 library(MitoPilot)

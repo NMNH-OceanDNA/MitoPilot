@@ -1,5 +1,27 @@
 # Changelog
 
+## MitoPilot 1.5.10
+
+Released 2026-10-20. Container: `macguigand/mitopilot:1.5.10`
+
+- **Large projects load faster.** Opening the app, the Metadata picker,
+  and saving it no longer stall on projects with hundreds of samples
+  that carry GEOME, GBIF, or NCBI metadata. Field summaries, metadata
+  columns, and specimen status were recomputed per sample with repeated
+  table scans; they now use one pass each (app start on 550 samples with
+  GBIF records: ~21s to ~5s).
+- **Run reports.** A submitted job that the scheduler killed (out of
+  time or memory, or cancelled) is now reported as “Killed / ended
+  without finishing” once the scheduler no longer lists it, instead of
+  staying at “Running / no finish recorded”.
+- **Hydra.** Loading the package now puts `~/bin` and Java on PATH even
+  when `qsub` is already visible, so Nextflow is found in sessions that
+  start with the scheduler but not the user’s bin directory.
+- **GitHub org.** The repository now lives at
+  <https://github.com/NMNH-OceanDNA/MitoPilot>. Install with
+  `BiocManager::install("NMNH-OceanDNA/MitoPilot")`; the old
+  `Smithsonian/MitoPilot` address still redirects.
+
 ## MitoPilot 1.5.9
 
 Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
@@ -26,7 +48,9 @@ Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
   are ready, and the **Run Reports** button (next to **Work Dirs**)
   lists every run for the active panel. Click a run to read its report,
   copy it, or open its folder. Runs still in progress show live task
-  progress read from the Nextflow log.
+  progress read from the Nextflow log. While open, the window checks
+  every 15 seconds for new runs and for runs that have finished; the run
+  list fits its runs and scrolls past 10.
 - **Tidier run files.** Each run’s submission script, scheduler log,
   Nextflow log, and report now share one name and live under a hidden
   `.runs/` folder in the project, instead of loose files in the project
@@ -72,7 +96,7 @@ Released 2026-10-07. Container: `macguigand/mitopilot:1.5.9`
   switch as you last left it. The voucher report’s field lists are
   sorted and offer **None** to leave a modifier out.
 - **Hydra setup runs automatically.** On the NMNH Hydra cluster,
-  [`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot) and
+  [`library(MitoPilot)`](https://github.com/NMNH-OceanDNA/MitoPilot) and
   opening the app with
   [`MitoPilot::MitoPilot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.md)
   run

@@ -76,9 +76,9 @@ curation experience, and a ruleset that is subtly wrong will silently
 edit your gene models.
 
 If MitoPilot does not cover your group, please open an
-[issue](https://github.com/Smithsonian/MitoPilot/issues) or contact Dan
-MacGuigan at <macguigand@si.edu>. We are actively adding rulesets and
-are glad to work with you on one for your taxa.
+[issue](https://github.com/NMNH-OceanDNA/MitoPilot/issues) or contact
+Dan MacGuigan at <macguigand@si.edu>. We are actively adding rulesets
+and are glad to work with you on one for your taxa.
 
 In the meantime you can select the closest available clade to get
 annotations you can review by hand, but treat the automated curation and

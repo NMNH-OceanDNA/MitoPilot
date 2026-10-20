@@ -78,8 +78,8 @@ library(MitoPilot)
 It puts the Hydra Java and job scheduler directories at the front of
 your `PATH`, checks your Nextflow version, and pins a compatible one for
 the session. If you use `MitoPilot::` functions without
-[`library(MitoPilot)`](https://github.com/Smithsonian/MitoPilot), or the
-setup message does not appear, call
+[`library(MitoPilot)`](https://github.com/NMNH-OceanDNA/MitoPilot), or
+the setup message does not appear, call
 [`hydra_setup()`](https://nmnh-oceandna.github.io/MitoPilot/reference/hydra_setup.md)
 yourself. It warns and changes nothing if you are not on Hydra, so it is
 safe to leave in a script you also run elsewhere.
