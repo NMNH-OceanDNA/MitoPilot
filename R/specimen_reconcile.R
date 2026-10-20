@@ -212,6 +212,7 @@ specimen_conflicts <- function(con, ids = NULL) {
     row <- s[i, , drop = FALSE]
     r <- by_id[[s$ID[i]]] %||% empty
     no_meta <- !nrow(r)
+    r_src <- if (no_meta) list() else split(r, r$source)
     for (k in SPECIMEN_CONCEPTS) {
       j <- j + 1L
       cv <- .spec_csv_value(row, cols[[k]])
@@ -220,7 +221,7 @@ specimen_conflicts <- function(con, ids = NULL) {
         status[j] <- if (!is.na(cv) && nzchar(cv)) "single" else NA_character_
         next
       }
-      for (src in srcs) sv[j, src] <- .spec_source_value(k, src, r[r$source == src, , drop = FALSE])
+      for (src in srcs) sv[j, src] <- .spec_source_value(k, src, r_src[[src]] %||% empty)
       status[j] <- .spec_status(k, c(cv, sv[j, ]))
     }
   }
