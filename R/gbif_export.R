@@ -1,6 +1,4 @@
-.gbif_occ <- function(recs, field) {
-  .geome_pick(recs[recs$level == "Occurrence", , drop = FALSE], field)
-}
+.gbif_occ <- function(recs, field) .geome_pick(recs, field, "Occurrence")
 
 .gbif_bad_coord_issues <- c("ZERO_COORDINATE", "COORDINATE_INVALID", "COORDINATE_OUT_OF_RANGE")
 

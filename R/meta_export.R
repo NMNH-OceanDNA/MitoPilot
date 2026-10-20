@@ -35,10 +35,22 @@ meta_export_cols <- function(con, ids = NULL, keys = NULL) {
   recs <- DBI::dbGetQuery(con, "SELECT ID, source, level, depth, field, value FROM meta_records")
   if (is.null(ids)) ids <- unique(recs$ID)
   out <- data.frame(ID = ids)
+  by_src <- split(recs, recs$source)
+  by_src_id <- list()
   for (k in keys) {
-    r <- recs[recs$source == toupper(sub(":.*", "", k)), ]
-    out[[.meta_key_col(k)]] <- vapply(ids, function(i) .meta_key_value(r[r$ID == i, ], k),
-                                      character(1), USE.NAMES = FALSE)
+    p <- strsplit(k, ":", fixed = TRUE)[[1]]
+    src <- toupper(p[1])
+    r <- by_src[[src]] %||% recs[0, ]
+    out[[.meta_key_col(k)]] <- if (p[2] == "combo") {
+      if (is.null(by_src_id[[src]])) by_src_id[[src]] <- split(r, r$ID)
+      by_id <- by_src_id[[src]]
+      vapply(ids, function(i) .meta_key_value(by_id[[i]] %||% r[0, ], k), character(1),
+             USE.NAMES = FALSE)
+    } else {
+      field <- paste(p[-(1:3)], collapse = ":")
+      h <- r[r$level == p[3] & r$field == field, ]
+      h$value[match(ids, h$ID)]
+    }
   }
   out
 }
@@ -59,26 +71,24 @@ meta_field_summary <- function(con, source) {
                           params = list(source))
   sel <- DBI::dbGetQuery(con, "SELECT key FROM meta_export_fields")$key
   defs <- .meta_combos(prefix)
-  ids <- unique(recs$ID)
+  by_id <- split(recs, recs$ID)
   combos <- do.call(rbind, lapply(names(defs), function(nm) {
-    vals <- vapply(ids, function(i) defs[[nm]]$fn(recs[recs$ID == i, ]), character(1))
+    vals <- vapply(by_id, defs[[nm]]$fn, character(1), USE.NAMES = FALSE)
     data.frame(key = paste0(prefix, ":combo:", nm), kind = "combo", level = NA_character_,
                field = paste(defs[[nm]]$sources, collapse = " + "),
                n_samples = sum(!is.na(vals)),
                example = if (any(!is.na(vals))) vals[!is.na(vals)][1] else NA_character_)
   }))
   raw <- if (nrow(recs)) {
-    g <- unique(recs[, c("level", "depth", "field")])
+    key <- paste(recs$level, recs$depth, recs$field, sep = "\r")
+    first <- !duplicated(key)
+    g <- recs[first, c("level", "depth", "field", "value")]
+    n_ids <- vapply(split(recs$ID, key), function(x) length(unique(x)), integer(1))
+    g$n_samples <- unname(n_ids[key[first]])
     g <- g[order(-g$depth, g$level, g$field), ]
     data.frame(
       key = paste0(prefix, ":raw:", g$level, ":", g$field), kind = "raw", level = g$level,
-      field = g$field,
-      n_samples = vapply(seq_len(nrow(g)), function(j) {
-        length(unique(recs$ID[recs$level == g$level[j] & recs$field == g$field[j]]))
-      }, integer(1)),
-      example = vapply(seq_len(nrow(g)), function(j) {
-        recs$value[recs$level == g$level[j] & recs$field == g$field[j]][1]
-      }, character(1))
+      field = g$field, n_samples = g$n_samples, example = g$value
     )
   }
   out <- rbind(combos, raw)

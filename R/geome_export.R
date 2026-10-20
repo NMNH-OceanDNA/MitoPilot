@@ -1,6 +1,10 @@
-.geome_pick <- function(recs, field) {
-  hit <- recs[recs$field == field & !is.na(recs$value) & nzchar(recs$value), ]
-  if (!nrow(hit)) NA_character_ else hit$value[which.min(hit$depth)]
+# Vector indexing only: this runs once per sample per field and [.data.frame
+# dominated app load on large projects.
+.geome_pick <- function(recs, field, level = NULL) {
+  v <- recs$value
+  i <- which(recs$field == field & !is.na(v) & nzchar(v) &
+               (if (is.null(level)) TRUE else recs$level == level))
+  if (!length(i)) NA_character_ else v[i[which.min(recs$depth[i])]]
 }
 
 .geome_coord <- function(x, max) {
