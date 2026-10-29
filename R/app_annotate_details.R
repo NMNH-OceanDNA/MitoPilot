@@ -144,7 +144,14 @@ gene_label_overlay <- function(df, img_w, x_lo, x_hi, track_top, track_height,
 annotations_details_server <- function(id, rv, table_id = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    open_modal <- function() annotate_details_modal(rv, table_id = table_id) |> showModal()
+    open_modal <- function() {
+      annotate_details_modal(rv, table_id = table_id) |> showModal()
+      # The single-codon box is a raw checkbox that only reports on change; a
+      # rebuilt modal renders it unchecked, so reset the stale server value.
+      shinyjs::runjs(sprintf(
+        "Shiny.setInputValue('%s', false, {priority: 'event'})", ns("single_codon")
+      ))
+    }
 
     # A locked assembly is read-only in this window, the same rule the Annotate
     # toolbar enforces (theme T02).

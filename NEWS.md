@@ -1,5 +1,6 @@
 # MitoPilot (development version)
 
+- **Annotate details.** The "single codon" box in the alignment editor no longer stays silently in effect after the window is reopened or you move to another sample; it starts unticked and behaves that way.
 - **Annotate details.** The reference alignment no longer spills past the edge of the window after the browser window is resized; it redraws to fit.
 - **Sequence viewer.** Coverage and error-rate bars no longer show vertical stripes when the browser is zoomed. The Sequence panel no longer opens itself when a gene is selected.
 - **Annotate details.** The annotation table opens about twice as tall and can be dragged taller or shorter from its bottom edge.
