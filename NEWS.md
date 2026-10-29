@@ -1,3 +1,7 @@
+# MitoPilot (development version)
+
+- **Annotate details.** The annotation table opens about twice as tall and can be dragged taller or shorter from its bottom edge.
+
 # MitoPilot 1.5.10
 
 Released 2026-10-20. Container: `macguigand/mitopilot:1.5.10`
