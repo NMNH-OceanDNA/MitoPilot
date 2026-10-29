@@ -497,6 +497,12 @@ details summary:hover {
   background: var(--mp-surface);
 }
 
+/* The alignment can never push the dialog wider than the viewport. */
+.mp-msa-box {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 /* Footer sample navigation: prev, picker, next on one line, left of Close. */
 .mp-nav {
   float: left;

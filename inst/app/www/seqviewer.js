@@ -188,7 +188,6 @@
     var s = G.span(f, this.len), margin = Math.max(3, s * 0.05);
     this.ppb = Math.min(MAX_PPB, this.width() / (s + 2 * margin));
     this.viewStart = f.pos1 - margin; this.clamp();
-    if (this.section && !this.section.open) this.section.open = true;
     this.draw();
   };
 
@@ -427,6 +426,10 @@
   Viewer.prototype.drawTrack = function (c, W, y, h, vals, vmax, label, flag) {
     var base = flag ? '#a0a0a0' : cssVar('--mp-primary', '#337ab7'), red = '#e69f00', muted = cssVar('--mp-text-muted', '#6a6a6a');
     c.fillStyle = cssVar('--mp-surface-alt', '#f5f5f5'); c.fillRect(GUTTER, y, W - GUTTER, h);
+    // Columns are collected into one path per colour and filled once: at a
+    // fractional devicePixelRatio (browser zoom) separately filled 1px rects
+    // leave anti-aliased seams that show as vertical stripes.
+    var bars = new Path2D(), flagged = new Path2D(), gaps = new Path2D();
     for (var px = GUTTER; px < W; px++) {
       var a = Math.floor(this.viewStart + (px - GUTTER) / this.ppb), b = Math.floor(this.viewStart + (px + 1 - GUTTER) / this.ppb);
       var v = null, gap = false;
@@ -439,11 +442,13 @@
       if (v === null) continue;
       // a column holding any uncovered base gets a full-height red wash, so
       // gaps survive the per-column max at whole-genome zoom
-      if (!flag && gap) { c.fillStyle = 'rgba(217, 83, 79, 0.35)'; c.fillRect(px, y, 1, h); }
+      if (!flag && gap) gaps.rect(px, y, 1, h);
       var bh = Math.min(h, Math.round(v / vmax * h));
-      c.fillStyle = flag && v > ERR_FLAG ? red : base;
-      if (bh > 0) c.fillRect(px, y + h - bh, 1, bh);
+      if (bh > 0) (flag && v > ERR_FLAG ? flagged : bars).rect(px, y + h - bh, 1, bh);
     }
+    c.fillStyle = 'rgba(217, 83, 79, 0.35)'; c.fill(gaps);
+    c.fillStyle = base; c.fill(bars);
+    c.fillStyle = red; c.fill(flagged);
     c.strokeStyle = cssVar('--mp-border', '#ccc'); c.beginPath(); c.moveTo(GUTTER, y + h + 0.5); c.lineTo(W, y + h + 0.5); c.stroke();
     if (flag) { c.save(); c.strokeStyle = red; c.setLineDash([2, 3]); var fy = y + h - ERR_FLAG / vmax * h;
       c.beginPath(); c.moveTo(GUTTER, fy + 0.5); c.lineTo(W, fy + 0.5); c.stroke(); c.restore(); }
