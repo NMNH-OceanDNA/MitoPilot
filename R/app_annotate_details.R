@@ -2549,6 +2549,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     })
 
     output$msa <- msaR::renderMsaR({
+      input$msa_relayout  # redraw once the box is laid out (custom.js)
       msa <- msaR::msaR(
         req(rv$alignment$aln),
         overviewbox = FALSE,
@@ -5427,7 +5428,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
           uiOutput(ns("join_preview")),
           uiOutput(ns("junction_context")),
           uiOutput(ns("msa_header")),
-          msaR::msaROutput(ns("msa"))
+          div(class = "mp-msa-box", msaR::msaROutput(ns("msa")))
         )
       ) |> shinyjs::hidden()
     ),

@@ -81,6 +81,29 @@ $( document ).ready(function(){
   });
 });
 
+// msa.js measures its container once, when it renders. A modal still fading
+// in can measure as zero width, and a window that shrinks afterwards leaves
+// the alignment wider than the dialog. Ask the server to draw again any
+// alignment that overflows its box: on modal show, section open, and resize.
+$( document ).ready(function(){
+  function relayout(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('.msaR'), function(el) {
+      if (el.parentNode && el.scrollWidth > el.parentNode.clientWidth + 2) {
+        Shiny.setInputValue(el.id + '_relayout', Date.now(), {priority: 'event'});
+      }
+    });
+  }
+  $(document).on('shown.bs.modal', '#shiny-modal', function() { relayout(this); });
+  document.addEventListener('toggle', function(e) {
+    var d = e.target;
+    if (d.tagName === 'DETAILS' && d.open) setTimeout(function() { relayout(d); }, 0);
+  }, true);
+  var t;
+  window.addEventListener('resize', function() {
+    clearTimeout(t); t = setTimeout(function() { relayout(document); }, 200);
+  });
+});
+
 // Center the MSA viewer on a given alignment column (conflict-block navigation)
 // Scrolls the same horizontally-overflowing element the rightScroll handler
 // uses (.biojs_msa_rheader); the seqblock is a fixed-size canvas and does not
