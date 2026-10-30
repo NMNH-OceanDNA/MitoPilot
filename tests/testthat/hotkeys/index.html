@@ -13,6 +13,10 @@
   <input type="radio" name="mode" value="Annotate">
   <input type="radio" name="mode" value="Export">
 </div>
+<div id="asmb_ctrls" style="display:none">
+  <button id="state" onclick="__clicks.push('dup-state')"></button>
+  <button id="lock" onclick="__clicks.push('dup-lock')"></button>
+</div>
 <div id="toolbar">
   <button id="refresh" onclick="__clicks.push(this.id)"></button>
   <button id="state" onclick="__clicks.push(this.id)"></button>
@@ -48,11 +52,11 @@
   window.coverageModal = function () {
     var C = 'assemble-coverage_details-';
     var btn = function (id) { return '<button type="button" id="' + C + id + '" onclick="__clicks.push(this.id)"></button>'; };
-    document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div class="modal-body">' +
+    window.showModal(
       ['close_modal','lock','align','next_block','prev_block','build_resolved','trim_consensus'].map(btn).join('') +
       '<div id="' + C + 'res_mode" class="shiny-input-radiogroup">' +
-        '<input type="radio" value="path" onclick="__clicks.push(\'res1\')"><input type="radio" value="majority" onclick="__clicks.push(\'res2\')">' +
-        '<input type="radio" value="iupac" onclick="__clicks.push(\'res3\')"><input type="radio" value="nmask" onclick="__clicks.push(\'res4\')"></div>' +
+        '<input type="radio" value="nmask" onclick="__clicks.push(\'res:\'+this.value)"><input type="radio" value="path" onclick="__clicks.push(\'res:\'+this.value)">' +
+        '<input type="radio" value="iupac" onclick="__clicks.push(\'res:\'+this.value)"><input type="radio" value="majority" onclick="__clicks.push(\'res:\'+this.value)"></div>' +
       '<div id="' + C + 'table"><div class="rt-tbody">' +
         '<div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push(\'scaf1\')"><a onclick="__clicks.push(\'ignore1\'); Shiny.setInputValue(\'' + C + 'ignore\', 1)"></a></div>' +
         '<div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push(\'scaf2\')"><a onclick="__clicks.push(\'ignore2\'); Shiny.setInputValue(\'' + C + 'ignore\', 2)"></a></div>' +
@@ -64,13 +68,14 @@
       '<input type="checkbox" id="assemble-coverage_details-maptoref_viewer-show_reads" onclick="__clicks.push(\'reads\')">' +
       '<button type="button" data-mpseq="whole" onclick="__clicks.push(\'mtwhole\')"></button>' +
       '<canvas id="assemble-coverage_details-maptoref_viewer-canvas" class="mp-seqview-canvas"></canvas>' +
+      '<canvas id="assemble-coverage_details-maptoref_viewer-reads" class="mp-seqview-canvas"></canvas>' +
       '<textarea id="' + C + 'notes"></textarea>' +
-      '</div></div>';
+      '');
   };
   window.reviewModal = function () {
     var E = 'export-';
     var btn = function (id) { return '<button type="button" id="' + E + id + '" onclick="__clicks.push(this.id)"></button>'; };
-    document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div class="modal-body">' +
+    window.showModal(
       ['review_prev','review_next','skip_gene','review_done','cancel_review'].map(btn).join('') +
       '<div id="' + E + 'review_table"><div class="rt-tbody">' +
         '<div class="rt-tr"><a onclick="__clicks.push(\'pick1\'); Shiny.onInputChange(\'' + E + 'review_pick\', 1)"></a>' +
@@ -78,15 +83,25 @@
           '<button onclick="__clicks.push(\'goto1\'); Shiny.setInputValue(\'' + E + 'goto_annot\', 1)"></button></div>' +
         '<div class="rt-tr"><a onclick="__clicks.push(\'pick2\'); Shiny.onInputChange(\'' + E + 'review_pick\', 2)"></a></div>' +
         '<div class="rt-tr rt-tr-pad"></div>' +
-      '</div></div></div></div>';
+      '</div></div>');
   };
   window.stateModal = function () {
-    document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div id="assemble-new_state">' +
+    window.showModal('<div id="assemble-new_state">' +
       '<input type="radio" value="1" onclick="__clicks.push(\'st1\')"><input type="radio" value="2" onclick="__clicks.push(\'st2\')"></div>' +
-      '<button id="assemble-update_state" onclick="__clicks.push(this.id)"></button></div>';
+      '<button id="assemble-update_state" onclick="__clicks.push(this.id)"></button>');
   };
 </script>
-<div id="shiny-modal"></div>
+<div id="modal-host"></div>
+<script>
+  // Mirrors Shiny: #shiny-modal is the .modal element itself and is removed on close.
+  window.showModal = function (inner) {
+    window.closeModal();
+    var m = document.createElement('div'); m.id = 'shiny-modal'; m.className = 'modal in';
+    m.innerHTML = '<div class="modal-dialog"><div class="modal-body">' + inner + '</div></div>';
+    document.getElementById('modal-host').appendChild(m);
+  };
+  window.closeModal = function () { var m = document.getElementById('shiny-modal'); if (m) m.remove(); };
+</script>
 <script>
   // Annotate details modal markup (ids from R/app_annotate_details.R), buttons record clicks.
   window.detailsModal = function () {
@@ -95,7 +110,7 @@
     var ids = ['close','lock','lock_only','back_to_review','nav_next','nav_prev','ID_verified','reviewed','problematic',
       'partial','delete','restore','merge','unjoin','assign_gene','auto_assign_orfs','confirm_merge','cancel_merge',
       'edit_mode','save_edits','discard_edits','toggle_partial_start','toggle_partial_stop','polyA_stop'];
-    document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div class="modal-body">' +
+    window.showModal(
       ids.map(btn).join('') +
       '<details id="' + D + 'annotation_table_details" open><summary>Annotation Table</summary>' +
         '<div id="' + D + 'table"><div class="rt-tbody">' +
@@ -122,8 +137,8 @@
           '<button id="' + D + 'rrna-3-in"></button><button id="' + D + 'rrna-3-out"></button>' +
           '<label><input type="checkbox" onchange="Shiny.setInputValue(\'' + D + 'single_codon\', this.checked)"> single codon</label>' +
         '</div>' +
-        '<div id="' + D + 'reduce_align" class="pretty"><input type="checkbox" onchange="__clicks.push(\'reduce_align\')"></div>' +
-        '<div id="' + D + 'local_blast" class="pretty"><input type="checkbox" onchange="__clicks.push(\'local_blast\')"></div>' +
+        '<div class="pretty"><input type="checkbox" id="' + D + 'reduce_align" onchange="__clicks.push(\'reduce_align\')"><div class="state"></div></div>' +
+        '<div class="pretty"><input type="checkbox" id="' + D + 'local_blast" onchange="__clicks.push(\'local_blast\')"><div class="state"></div></div>' +
       '</details>' +
       '<div id="' + D + 'join_preview">' +
         '<span onclick="__clicks.push(\'seg1\'); Shiny.setInputValue(\'' + D + 'join_seg_click\', 4)"></span>' +
@@ -131,7 +146,7 @@
         '<span onclick="__clicks.push(\'seg3\'); Shiny.setInputValue(\'' + D + 'join_seg_click\', 6)"></span></div>' +
       '<details><summary>Notes</summary><textarea id="' + D + 'notes"></textarea></details>' +
       '<div id="' + D + 'merge_select_div" style="display:none"></div>' +
-      '</div></div>';
+      '');
   };
   window.mpseq = { zoom: function (id, f) { __clicks.push('zoom:' + id + ':' + f); }, pan: function (id, f) { __clicks.push('pan:' + id + ':' + f); } };
   window.mpsyn = { zoom: function (id, f) { __clicks.push('syn:' + id + ':' + f); }, pan: function (id, f) { __clicks.push('synpan:' + id + ':' + f); } };
