@@ -47,8 +47,8 @@ params.sqlWriteBlastLineage = 'UPDATE assemble SET blast_lineage = ? WHERE ID = 
 params.sqlWriteBlastLineageScaffold = 'UPDATE assemblies SET blast_lineage = ? WHERE ID = ? AND path = ? AND scaffold = ?'
 
 params.sqlWriteBlastRef = '''INSERT OR REPLACE INTO blast_ref_annotations
-    (accession, gene, type, pos1, pos2, direction, ref_length, time_stamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
+    (accession, gene, type, pos1, pos2, direction, ref_length, partial_start, partial_stop, time_stamp)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'''
 
 params.sqlWriteRefSeq = '''INSERT OR REPLACE INTO blast_ref_sequences
     (accession, sequence, ref_length, genetic_code, lineage, topology, time_stamp)
@@ -155,10 +155,11 @@ workflow BLAST_REF_FETCH {
                 def ts = java.time.Instant.now().getEpochSecond()
                 lines.drop(1).each { line ->
                     if (line.trim()) {
-                        // CSV columns: gene,type,pos1,pos2,direction,ref_length
+                        // CSV columns: gene,type,pos1,pos2,direction,ref_length,partial_start,partial_stop
                         // Strip surrounding quotes written by R's write.csv
                         def parts = line.split(',').collect { it.replaceAll('^"|"$', '') }
                         if (parts.size() >= 6 && parts[2].isLong() && parts[3].isLong() && parts[5].isLong()) {
+                            def flag = { i -> parts.size() > i && parts[i].isLong() ? parts[i].toLong() : 0L }
                             rows << tuple(
                                 accession,
                                 parts[0],              // gene
@@ -167,6 +168,8 @@ workflow BLAST_REF_FETCH {
                                 parts[3].toLong(),     // pos2
                                 parts[4],              // direction
                                 parts[5].toLong(),     // ref_length
+                                flag(6),               // partial_start
+                                flag(7),               // partial_stop
                                 ts                     // time_stamp
                             )
                         }

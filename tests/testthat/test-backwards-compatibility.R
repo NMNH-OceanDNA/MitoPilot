@@ -517,6 +517,7 @@ test_that("backwards_compatibility migrates a v1.0.0 database to current schema"
   tables <- DBI::dbListTables(con)
   expect_true("blast_opts"            %in% tables)
   expect_true("blast_ref_annotations" %in% tables)
+  expect_cols(con, "blast_ref_annotations", c("partial_start", "partial_stop"))
   expect_true("blast_ref_sequences"   %in% tables)
   expect_true("blast_ref_alignment"   %in% tables)
   expect_true("assemblies"            %in% tables)
@@ -573,6 +574,7 @@ test_that("backwards_compatibility migrates a v1.3.10 database to current schema
   tables <- DBI::dbListTables(con)
   expect_true("blast_opts"            %in% tables)
   expect_true("blast_ref_annotations" %in% tables)
+  expect_cols(con, "blast_ref_annotations", c("partial_start", "partial_stop"))
   expect_true("blast_ref_sequences"   %in% tables)
   expect_true("blast_ref_alignment"   %in% tables)
   expect_true("assemblies"            %in% tables)
@@ -1172,4 +1174,25 @@ test_that("a pre-context circularize_overlap table is brought up to date", {
     MitoPilot::backwards_compatibility(path = td, update_config = FALSE),
     "nothing to update"
   )
+})
+
+test_that("schema_gaps flags blast_ref_annotations without the partial columns", {
+  td <- tempfile()
+  dir.create(td)
+  on.exit(unlink(td, recursive = TRUE))
+
+  create_multi_scaffold_db(td)
+  make_config(td, version = "1.5.4")
+
+  con0 <- DBI::dbConnect(RSQLite::SQLite(), file.path(td, ".sqlite"))
+  expect_true("the blast_ref_annotations table lacks the partial-end columns" %in%
+                schema_gaps(con0))
+  DBI::dbDisconnect(con0)
+
+  MitoPilot::backwards_compatibility(path = td, update_config = FALSE)
+
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(td, ".sqlite"))
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+  expect_false("the blast_ref_annotations table lacks the partial-end columns" %in%
+                 schema_gaps(con))
 })

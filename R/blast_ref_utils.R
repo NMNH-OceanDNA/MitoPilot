@@ -351,10 +351,19 @@ fetch_blast_ref <- function(accession, output_file, sequence_file = NULL,
   df$raw <- dplyr::coalesce(df$gene_nm, df$product)
   df$gene <- mapply(normalize_mito_gene, df$raw, df$type, df$product, USE.NAMES = FALSE)
   df$direction <- dplyr::if_else(df$direction %in% c("+", "-"), df$direction, "+")
+  # NCBI marks an open low-coordinate end with start_range=.,N and an open
+  # high end with end_range=N,. ; which is 5' or 3' depends on strand.
+  lo_open <- !is.na(get_attr(df$attributes, "start_range"))
+  hi_open <- !is.na(get_attr(df$attributes, "end_range"))
+  minus <- df$direction == "-"
+  df$partial_start <- as.integer(ifelse(minus, hi_open, lo_open))
+  df$partial_stop  <- as.integer(ifelse(minus, lo_open, hi_open))
 
   result <- df[!is.na(df$gene) & !is.na(df$type),
                c("gene", "type", "pos1", "pos2", "direction")]
   result$ref_length <- ref_length
+  result$partial_start <- df$partial_start[!is.na(df$gene) & !is.na(df$type)]
+  result$partial_stop  <- df$partial_stop[!is.na(df$gene) & !is.na(df$type)]
 
   list(result = result, taxid = taxid, gff_organism = gff_organism,
        genetic_code_num = genetic_code_num, ref_length = ref_length,

@@ -80,14 +80,36 @@ test_that("identity window widens a narrow pixel bin to at least 10 columns, cla
   expect_equal(L(r), list(list(1, 10), list(46, 55), list(1, 20), list(95, 100)))
 })
 
+test_that("a wrapped feature owns its true edges only, and only when they are in view", {
+  b <- sy_page()
+  r <- js(b, "(function(){var g=window.mpsyn.geom; var f={c1:190,c2:30};
+    return JSON.stringify([g.owns([190,408],f,1,409), g.owns([1,30],f,1,409), g.owns([190,408],f,200,409),
+                           g.owns([1,30],f,1,20), g.owns([50,60],{c1:50,c2:60},1,409)]);})()")
+  expect_equal(L(r), list(list(start = TRUE, end = FALSE), list(start = FALSE, end = TRUE),
+                          list(start = FALSE, end = FALSE), list(start = FALSE, end = FALSE),
+                          list(start = TRUE, end = TRUE)))
+})
+
 # 408-column alignment: sample bases occupy columns 101-300, reference all 408.
 sy_payload <- function() paste0(
   "{id:'sy-canvas', input:'sy-pick', sampleLabel:'S1', refAcc:'NC_1', refLabel:'Fish', refRc:false,",
   " s:'-'.repeat(100) + 'ACGT'.repeat(50) + '-'.repeat(108), r:'ACGT'.repeat(102),",
   " refLength:408, rotation:0, version:1, selected:null,",
-  " sampleFeatures:[{row:1,gene:'nad1',type:'PCG',pos1:10,pos2:120,dir:'+'},",
+  " sampleFeatures:[{row:1,gene:'nad1',type:'PCG',pos1:10,pos2:120,dir:'+',partial5:true,partial3:false},",
   "                 {row:2,gene:'trnF',type:'tRNA',pos1:190,pos2:30,dir:'-'}],",
-  " refFeatures:[{gene:'nad1',type:'PCG',pos1:14,pos2:124,dir:'+'}]}")
+  " refFeatures:[{gene:'nad1',type:'PCG',pos1:14,pos2:124,dir:'+',partial5:false,partial3:true}]}")
+
+test_that("the gene tooltip names partial ends", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); window.mpsyn.whole('sy-canvas');
+    var v = window.mpsyn.state('sy-canvas');
+    var hs = window.mpsyn.hits('sy-canvas');
+    return JSON.stringify(hs.map(function(h){ return window.mpsyn.tip('sy-canvas', 0, h); }));})()", sy_payload()))
+  tips <- unlist(L(r))
+  expect_true(any(grepl("^Sample nad1 .*5' partial$", tips)))
+  expect_true(any(grepl("^Reference nad1 .*3' partial$", tips)))
+  expect_false(any(grepl("trnF.*partial", tips)))
+})
 
 test_that("the viewer opens on the sample span, fits, zooms and keeps its view on a same-version reload", {
   b <- sy_page()

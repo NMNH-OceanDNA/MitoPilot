@@ -892,6 +892,8 @@ new_db_userAsmb <- function(
       pos2 INTEGER,
       direction TEXT,
       ref_length INTEGER,
+      partial_start INTEGER,
+      partial_stop INTEGER,
       time_stamp INTEGER,
       PRIMARY KEY (accession, gene, pos1)
     );"
