@@ -4545,7 +4545,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
           )
         ),
         div(
-          style = "margin: 30px 5px 5px 5px;",
+          style = "margin: 10px 5px 5px 5px;",
           uiOutput(ns("join_preview")),
           uiOutput(ns("junction_context")),
           uiOutput(ns("msa_header")),
