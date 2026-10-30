@@ -26,9 +26,7 @@ Imports:
     DECIPHER,
     dplyr,
     gargoyle,
-    gggenes,
     ggplot2,
-    ggthemes,
     glue,
     golem,
     htmlwidgets,
@@ -41,7 +39,6 @@ Imports:
     patchwork,
     processx,
     purrr,
-    ragg,
     rclipboard,
     reactable,
     reactR,
@@ -75,4 +72,4 @@ VignetteBuilder:
 biocViews:
 Encoding: UTF-8
 LazyData: true
-Config/roxygen2/version: 8.1.0
+Config/roxygen2/version: 8.1.1

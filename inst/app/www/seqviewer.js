@@ -679,6 +679,7 @@
              readsPanelH: v.readsCanvas ? (v.readsWrap.hidden ? 0 : parseInt(v.readsCanvas.style.height, 10) || 0) : null,
              nLanes: v.nLanes, features: v.feats.map(function (f) { return { row: f.row, gene: f.gene, pos1: f.pos1, pos2: f.pos2, lane: f.lane }; }) };
   };
+  window.mpseq.ui = { cssVar: cssVar, typeColor: typeColor, niceStep: niceStep };
   window.mpseq.fasta = function (id) { var v = get(id); return v ? v.visibleFasta() : null; };
   window.mpseq.zoom = function (id, f) { var v = get(id); if (v) v.zoom(f); };
   window.mpseq.fit = function (id, row) { var v = get(id); if (v) v.fit(row); };

@@ -1,0 +1,23 @@
+<!-- tests/testthat/synteny/index.html -->
+<!doctype html><meta charset="utf-8"><title>synteny test</title>
+<script>
+  // Shiny shim: capture handlers and inputs so the viewer can be driven by hand.
+  window.__handlers = {}; window.__inputs = [];
+  window.Shiny = {
+    addCustomMessageHandler: function (name, fn) { window.__handlers[name] = fn; },
+    setInputValue: function (name, value) { window.__inputs.push({ name: name, value: value }); }
+  };
+</script>
+<div style="width:1000px">
+  <details id="sy-section" open><summary>BLAST Reference Synteny</summary>
+    <div class="mp-seqview-controls">
+      <button type="button" data-mpsyn="zoom_in">+</button>
+      <button type="button" data-mpsyn="zoom_out">-</button>
+      <button type="button" data-mpsyn="whole">Whole</button>
+      <button type="button" data-mpsyn="fit">Fit</button>
+    </div>
+    <div class="mp-seqview"><canvas id="sy-canvas"></canvas><div id="sy-tip" hidden></div></div>
+  </details>
+</div>
+<script src="../../../inst/app/www/seqviewer.js"></script>
+<script src="../../../inst/app/www/synteny.js"></script>

@@ -63,22 +63,3 @@ test_that("normalisation tolerates empty and malformed input", {
   expect_false(out$ref_rc)
   expect_equal(out$aligned_sample, "ACGT")
 })
-
-test_that("split_wrapped_genes labels both arcs of an origin-wrapping feature", {
-  df <- data.frame(
-    gene = "cox1", xmin = 90, xmax = 10, direction = "+",
-    stringsAsFactors = FALSE
-  )
-  out <- split_wrapped_genes(df, x_lo = 0, x_hi = 100)
-  expect_equal(nrow(out), 2L)
-  # Both pieces carry the name: on a linearised layout the two arcs sit at
-  # opposite edges, so labelling only the longer one orphans the other.
-  expect_true(all(nzchar(out$gene)))
-  expect_equal(sort(c(out$xmin, out$xmax)), c(0, 10, 90, 100))
-})
-
-test_that("split_wrapped_genes leaves non-wrapping features alone", {
-  df <- data.frame(gene = c("cox1", "nad2"), xmin = c(10, 40), xmax = c(30, 60),
-                   direction = c("+", "-"), stringsAsFactors = FALSE)
-  expect_identical(split_wrapped_genes(df, x_lo = 0, x_hi = 100), df)
-})

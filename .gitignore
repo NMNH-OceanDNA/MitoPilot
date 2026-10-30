@@ -32,3 +32,5 @@ dev
 tests/testthat/seqview/index.generated.html
 inst/native/pixi.lock
 inst/native/.pixi/
+tests/testthat/_problems/
+tests/testthat/testthat-problems.rds

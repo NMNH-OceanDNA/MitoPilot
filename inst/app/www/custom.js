@@ -45,15 +45,6 @@ $( document ).ready(function(){
   });
 });
 
-// Update horizontal scroll position
-$( document ).ready(function(){
-  Shiny.addCustomMessageHandler('hScroll', function(params) {
-    // console.log(params.id)
-    var elmnt = document.getElementById(params.id);
-    if (elmnt) elmnt.scrollLeft = params.px;
-  });
-});
-
 // Update open/close state of details elements
 $( document ).ready(function(){
   Shiny.addCustomMessageHandler('toggleDetails', function(params) {
@@ -150,11 +141,6 @@ $( document ).ready(function(){
     });
   });
 });
-
-// The annotate-details views (coverage map, synteny, synteny zoom, alignment)
-// use native scrolling only: a vertical wheel scrolls the page, and horizontal
-// input scrolls the view. Vertical wheel is deliberately NOT translated into
-// horizontal scroll here.
 
 // Add an "All" choice to the sample-table page-size dropdowns. reactable
 // (0.4.5) has no native "All", so append an option with a very large page size
