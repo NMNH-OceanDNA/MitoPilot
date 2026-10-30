@@ -1,0 +1,30 @@
+<!-- tests/testthat/hotkeys/index.html -->
+<!doctype html><meta charset="utf-8"><title>hotkeys test</title>
+<script>
+  // Shiny shim: record inputs; record clicks on fixture buttons.
+  window.__handlers = {}; window.__inputs = []; window.__clicks = [];
+  window.Shiny = {
+    addCustomMessageHandler: function (name, fn) { window.__handlers[name] = fn; },
+    setInputValue: function (name, value) { window.__inputs.push({ name: name, value: value }); }
+  };
+</script>
+<div id="mode">
+  <input type="radio" name="mode" value="Assemble" checked>
+  <input type="radio" name="mode" value="Annotate">
+  <input type="radio" name="mode" value="Export">
+</div>
+<div id="toolbar">
+  <button id="refresh" onclick="__clicks.push(this.id)"></button>
+  <button id="state" onclick="__clicks.push(this.id)"></button>
+  <button id="lock" onclick="__clicks.push(this.id)"></button>
+  <button id="run_modal" onclick="__clicks.push(this.id)"></button>
+  <button id="id_verified_top" onclick="__clicks.push(this.id)"></button>
+  <button id="problematic_top" onclick="__clicks.push(this.id)"></button>
+  <button id="partial_top" onclick="__clicks.push(this.id)"></button>
+  <button id="group" onclick="__clicks.push(this.id)"></button>
+  <button id="clear_group" onclick="__clicks.push(this.id)"></button>
+  <button id="export" onclick="__clicks.push(this.id)"></button>
+</div>
+<input id="free-text">
+<div id="shiny-modal"></div>
+<script src="../../../inst/app/www/hotkeys.js"></script>
