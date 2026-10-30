@@ -80,12 +80,14 @@ test_that("context follows the open modal, then the Step", {
   expect_equal(js(b, "window.mpHotkeys.context()"), "page:Assemble")
   js(b, "document.querySelector('#mode input[value=Export]').checked = true")
   expect_equal(js(b, "window.mpHotkeys.context()"), "page:Export")
-  js(b, "document.getElementById('shiny-modal').innerHTML = '<div class=\"modal in\"><button id=\"x-update_state\"></button></div>'")
+  js(b, "window.showModal('<button id=\"x-update_state\"></button>')")
   expect_equal(js(b, "window.mpHotkeys.context()"), "state")
-  js(b, "document.getElementById('shiny-modal').innerHTML = '<div class=\"modal in\"><button id=\"annotate-annotations-close\"></button></div>'")
+  js(b, "window.showModal('<button id=\"annotate-annotations-close\"></button>')")
   expect_equal(js(b, "window.mpHotkeys.context()"), "details")
-  js(b, "document.getElementById('shiny-modal').innerHTML = '<div class=\"modal in\"></div>'")
+  js(b, "window.showModal('<p>Work dirs</p>')")
   expect_equal(js(b, "window.mpHotkeys.context()"), "modal")
+  js(b, "window.closeModal()")
+  expect_equal(js(b, "window.mpHotkeys.context()"), "page:Export")
 })
 
 test_that("? opens a cheat sheet for the current context and Escape closes it", {
@@ -193,12 +195,12 @@ test_that("edit-mode letters click their controls", {
 test_that("table cursor skips hidden rows, Space selects, Enter opens details (Review Focus 4)", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
   press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, "ArrowDown")
-  expect_equal(js(b, "document.querySelectorAll('#assemble-table .mp-kb-cursor').length"), 1L)
-  expect_equal(js(b, "document.querySelector('#assemble-table .mp-kb-cursor input').getAttribute('onclick')"), "__clicks.push('sel4')")
+  expect_equal(js(b, "document.querySelectorAll('#assemble-table [data-mp-kb-cursor]').length"), 1L)
+  expect_equal(js(b, "document.querySelector('#assemble-table [data-mp-kb-cursor] input').getAttribute('onclick')"), "__clicks.push('sel4')")
   press(b, " "); press(b, "Enter"); press(b, "ArrowUp"); press(b, "x"); press(b, "O", TRUE); press(b, "ArrowUp"); press(b, "S", TRUE)
   expect_equal(clicks(b), c("sel4", "det4", "sel2", "out2", "spec1"))
   press(b, "Escape")
-  expect_equal(js(b, "document.querySelectorAll('.mp-kb-cursor').length"), 0L)
+  expect_equal(js(b, "document.querySelectorAll('[data-mp-kb-cursor]').length"), 0L)
 })
 
 test_that("Shift+X extends the checked range from the last toggled row to the cursor", {
@@ -248,12 +250,12 @@ test_that("details modal: Left/Right pan the hovered viewer, even with its secti
 # ---- Assemble details and outlier review ----
 test_that("assemble details: block nav, resolve mode, cursor and viewer keys", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.coverageModal()")
-  press(b, "]"); press(b, "p"); press(b, "3"); press(b, "a"); press(b, "L", TRUE); press(b, "B", TRUE); press(b, "T", TRUE)
+  press(b, "]"); press(b, "p"); press(b, "3"); press(b, "4"); press(b, "a"); press(b, "L", TRUE); press(b, "B", TRUE); press(b, "T", TRUE)
   press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, " "); press(b, "X", TRUE)
   press(b, "W", TRUE); press(b, "c"); press(b, "t"); press(b, "R", TRUE); press(b, "ArrowRight"); press(b, "G", TRUE)
   expect_equal(js(b, "document.activeElement.id"), "assemble-coverage_details-maptoref_viewer-goto")
   press(b, "q", target = "document.body")
-  expect_equal(clicks(b), c(paste0("assemble-coverage_details-", c("next_block", "prev_block")), "res3",
+  expect_equal(clicks(b), c(paste0("assemble-coverage_details-", c("next_block", "prev_block")), "res:iupac", "res:nmask",
     paste0("assemble-coverage_details-", c("align", "lock", "build_resolved", "trim_consensus")),
     "scaf2", "ignore2", "mtwhole", "cov", "nt", "reads",
     "pan:assemble-coverage_details-maptoref_viewer-canvas:0.25", "assemble-coverage_details-close_modal"))
@@ -271,4 +273,46 @@ test_that("outlier review: gene arrows, sample cursor, per-row actions, no key f
   press(b, "ArrowDown"); press(b, "h"); press(b, "x"); press(b, "Enter"); press(b, "S", TRUE); press(b, "Escape")
   expect_equal(clicks(b), c("export-review_next", "export-review_prev", "export-review_next", "export-review_prev",
                             "pick1", "resolved1", "goto1", "export-skip_gene"))
+})
+
+
+# ---- final review fixes ----
+test_that("an ordinary modal blocks page keys (review Critical 1)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.showModal('<p>Work dirs</p>')")
+  press(b, "r"); press(b, "L", TRUE); press(b, "ArrowDown"); press(b, " ")
+  expect_equal(clicks(b), character(0))
+  expect_equal(js(b, "document.querySelectorAll('[data-mp-kb-cursor]').length"), 0L)
+})
+
+test_that("duplicate toolbar ids: the visible copy is clicked (review Important 2)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
+  press(b, "s"); press(b, "L", TRUE)
+  expect_equal(clicks(b), c("state", "lock"))
+})
+
+test_that("the cursor marker survives a React className rewrite (review Important 4)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
+  press(b, "ArrowDown")
+  js(b, "document.querySelector('#assemble-table [data-mp-kb-cursor]').className = 'rt-tr rt-tr-selected'")
+  press(b, " ")
+  expect_equal(clicks(b), "sel1")
+})
+
+test_that("focus on a checkbox or the pill does not swallow keys; Escape leaves a text field (review Important 5)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
+  press(b, "r", target = "document.getElementById('mp-hotkeys-on')")
+  expect_equal(clicks(b), "refresh")
+  press(b, "ArrowDown")
+  press(b, " ", target = "document.querySelector('#assemble-table input.rt-select-input')")
+  expect_equal(clicks(b), "refresh")
+  js(b, "document.getElementById('free-text').focus()")
+  press(b, "Escape", target = "document.getElementById('free-text')")
+  expect_equal(js(b, "document.activeElement.tagName"), "BODY")
+})
+
+test_that("hovering the reads track still drives the main viewer (review Important 7)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.coverageModal()")
+  js(b, "document.getElementById('assemble-coverage_details-maptoref_viewer-reads').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))")
+  press(b, "+", TRUE)
+  expect_equal(clicks(b), "zoom:assemble-coverage_details-maptoref_viewer-canvas:2")
 })

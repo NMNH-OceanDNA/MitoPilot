@@ -1213,4 +1213,4 @@ details.mp-nmnh-cols label { font-size: var(--mp-fs-meta); }
 .mp-hotkeys-help-box td { padding: 2px 10px 2px 0; vertical-align: top; }
 .mp-hotkeys-help-box kbd { font-family: monospace; background: var(--mp-primary-soft); border: 1px solid var(--mp-border);
   border-radius: 3px; padding: 0 5px; white-space: nowrap; }
-.mp-kb-cursor { outline: 2px solid var(--mp-primary); outline-offset: -2px; }
+[data-mp-kb-cursor] { outline: 2px solid var(--mp-primary); outline-offset: -2px; }

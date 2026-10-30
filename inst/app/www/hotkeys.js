@@ -5,7 +5,9 @@
 // bottom right is switched on; remembered in localStorage.
 (function () {
   var STORE = 'mp_hotkeys';
-  var IGNORE = 'input, textarea, select, [contenteditable], .selectize-input, .bootstrap-select';
+  var IGNORE = 'input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]), ' +
+    'textarea, select, [contenteditable], .selectize-input, .bootstrap-select';
+  var TEXTY = 'input, textarea';
   var MOUSE_ONLY = [
     'Continue export / Stop without exporting', 'Run pipeline start / stop',
     'Build joined assembly', 'Linearize, trim ends, restore assembly',
@@ -32,7 +34,7 @@
     if (has(m, '#assemble-coverage_details-close_modal')) return 'coverage';
     if (has(m, '#export-review_next')) return 'review';
     if (has(m, '[id$="-update_state"]')) return 'state';
-    if (has(m, '.modal')) return 'modal';
+    if (m) return 'modal';
     var r = document.querySelector('#mode input[type=radio]:checked');
     return 'page:' + (r ? r.value : 'Assemble');
   }
@@ -40,10 +42,13 @@
     (bindings[ctx] || (bindings[ctx] = {}))[key] = { label: label, run: run };
   }
   function usable(el) { return !!el && el.offsetParent !== null && !el.disabled; }
+  // Toolbar ids repeat across the Step panels; click the copy that is shown.
   function click(id) {
-    var el = document.getElementById(id);
-    if (!usable(el)) return false;
-    el.click(); return true;
+    var els = document.querySelectorAll('[id="' + id + '"]');
+    for (var i = 0; i < els.length; i++) {
+      if (usable(els[i])) { els[i].click(); return true; }
+    }
+    return false;
   }
   function clickIn(root, sel) {
     var el = root ? root.querySelector(sel) : null;
@@ -80,7 +85,12 @@
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.target && e.target.closest && e.target.closest(IGNORE)) return;
+    var t = e.target && e.target.closest ? e.target : null;
+    if (t && t.closest(IGNORE)) {
+      if (k === 'Escape' && t.matches(TEXTY)) { t.blur(); e.preventDefault(); }
+      return;
+    }
+    if (t && k === 'Space' && t.matches('input[type=checkbox], input[type=radio]')) return;
     if (document.querySelector('.swal2-container')) return;
     if (k === '?') { help(true); e.preventDefault(); return; }
     var b = bindings[context()], hit = b && b[k];
@@ -156,7 +166,7 @@
   var lastCanvas = null;
   document.addEventListener('mouseover', function (e) {
     var t = e.target;
-    if (t && t.classList && t.classList.contains('mp-seqview-canvas')) lastCanvas = t.id;
+    if (t && t.classList && t.classList.contains('mp-seqview-canvas')) lastCanvas = t.id.replace(/-reads$/, '-canvas');
   });
   var DET = 'annotate-annotations-';
   function viewer() {
@@ -279,8 +289,8 @@
     c('5', "Toggle partial 5'", 'toggle_partial_start');
     c('3', "Toggle partial 3'", 'toggle_partial_stop');
     c('P', 'poly-A stop', 'polyA_stop');
-    b('f', 'Toggle Align fewer refs', function () { return clickIn(document.getElementById(D + 'reduce_align'), 'input'); });
-    b('X', 'Toggle Local BLAST', function () { return clickIn(document.getElementById(D + 'local_blast'), 'input'); });
+    c('f', 'Toggle Align fewer refs', 'reduce_align');
+    c('X', 'Toggle Local BLAST', 'local_blast');
 
     b('G', 'Go to position', function () {
       openPanel(document.getElementById(D + 'seqview-section'));
@@ -298,9 +308,9 @@
   }
   function setCursor(sel, row) {
     var cur = cursorRow(sel);
-    if (cur) cur.classList.remove('mp-kb-cursor');
+    if (cur) cur.removeAttribute('data-mp-kb-cursor');
     if (!row) { delete cursors[sel]; return false; }
-    row.classList.add('mp-kb-cursor');
+    row.setAttribute('data-mp-kb-cursor', '');
     row.scrollIntoView({ block: 'nearest' });
     cursors[sel] = row; return true;
   }
@@ -409,13 +419,14 @@
     c('n', 'Next conflict block', 'next_block');
     c('[', 'Previous conflict block', 'prev_block');
     c('p', 'Previous conflict block', 'prev_block');
-    for (var n = 1; n <= 4; n++) (function (n) {
-      b(String(n), 'Resolve mode ' + n + ' (path / majority / IUPAC / N-mask)', function () {
-        var rs = document.querySelectorAll('#' + C + 'res_mode input[type=radio]');
-        if (!rs[n - 1]) return false;
-        rs[n - 1].click(); return true;
+    [['path', "Use one path's bases"], ['majority', 'Coverage-majority base'],
+     ['iupac', 'IUPAC ambiguity'], ['nmask', 'Mask with N']].forEach(function (mode, i) {
+      b(String(i + 1), 'Resolve mode: ' + mode[1], function () {
+        var r = document.querySelector('#' + C + 'res_mode input[type=radio][value="' + mode[0] + '"]');
+        if (!r) return false;
+        r.click(); return true;
       });
-    })(n);
+    });
     c('B', 'Build resolved assembly', 'build_resolved');
     c('T', 'Trim to consensus', 'trim_consensus');
     b('i', 'Focus notes', function () { return focusId(C + 'notes'); });
