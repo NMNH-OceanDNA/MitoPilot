@@ -25,7 +25,32 @@
   <button id="clear_group" onclick="__clicks.push(this.id)"></button>
   <button id="export" onclick="__clicks.push(this.id)"></button>
 </div>
+<button id="assemble-meta_view_open" onclick="__clicks.push(this.id)"></button>
+<button id="annotate-meta_view_open" onclick="__clicks.push(this.id)"></button>
+<button id="export-meta_view_open" onclick="__clicks.push(this.id)"></button>
+<button id="workdir_browser-open_browser" onclick="__clicks.push(this.id)"></button>
+<button id="run_reports-open" onclick="__clicks.push(this.id)"></button>
 <input id="free-text">
+<div id="assemble-table" class="mp-sample-table"><input class="rt-search"><div class="rt-tbody">
+  <div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push('sel1')"><button class="icon-bttn-text" onclick="__clicks.push('det1'); Shiny.setInputValue('assemble-details', 1)"></button><a onclick="__clicks.push('out1'); Shiny.setInputValue('assemble-output', 1)"></a><a onclick="__clicks.push('spec1'); Shiny.setInputValue('assemble-specimen_open', 1)"></a></div>
+  <div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push('sel2')"><button class="icon-bttn-text" onclick="__clicks.push('det2'); Shiny.setInputValue('assemble-details', 2)"></button><a onclick="__clicks.push('out2'); Shiny.setInputValue('assemble-output', 2)"></a></div>
+  <div class="rt-tr" style="display:none"><input class="rt-select-input" type="checkbox" onclick="__clicks.push('sel3')"><button class="icon-bttn-text" onclick="__clicks.push('det3'); Shiny.setInputValue('assemble-details', 3)"></button></div>
+  <div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push('sel4')"><button class="icon-bttn-text" onclick="__clicks.push('det4'); Shiny.setInputValue('assemble-details', 4)"></button></div>
+</div></div>
+<div id="annotate-table" class="mp-sample-table"></div>
+<div id="export-table" class="mp-sample-table"></div>
+<script>
+  window.Reactable = {
+    toggleAllRowsSelected: function (id) { __clicks.push('all:' + id); },
+    gotoPage: function (id, p) { __clicks.push('page:' + p); },
+    getState: function () { return { page: 2 }; }
+  };
+  window.stateModal = function () {
+    document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div id="assemble-new_state">' +
+      '<input type="radio" value="1" onclick="__clicks.push(\'st1\')"><input type="radio" value="2" onclick="__clicks.push(\'st2\')"></div>' +
+      '<button id="assemble-update_state" onclick="__clicks.push(this.id)"></button></div>';
+  };
+</script>
 <div id="shiny-modal"></div>
 <script>
   // Annotate details modal markup (ids from R/app_annotate_details.R), buttons record clicks.

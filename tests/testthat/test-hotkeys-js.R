@@ -188,3 +188,46 @@ test_that("edit-mode letters click their controls", {
     "toggle_partial_stop", "polyA_stop")), "reduce_align", "local_blast"))
   expect_equal(jsonlite::fromJSON(js(b, "JSON.stringify(window.__inputs.slice(-1)[0])"))$name, paste0(D, "single_codon"))
 })
+
+# ---- sample tables and toolbar ----
+test_that("table cursor skips hidden rows, Space selects, Enter opens details (Review Focus 4)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
+  press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, "ArrowDown")
+  expect_equal(js(b, "document.querySelectorAll('#assemble-table .mp-kb-cursor').length"), 1L)
+  expect_equal(js(b, "document.querySelector('#assemble-table .mp-kb-cursor input').getAttribute('onclick')"), "__clicks.push('sel4')")
+  press(b, " "); press(b, "Enter"); press(b, "ArrowUp"); press(b, "x"); press(b, "O", TRUE); press(b, "ArrowUp"); press(b, "S", TRUE)
+  expect_equal(clicks(b), c("sel4", "det4", "sel2", "out2", "spec1"))
+  press(b, "Escape")
+  expect_equal(js(b, "document.querySelectorAll('.mp-kb-cursor').length"), 0L)
+})
+
+test_that("Shift+X extends the checked range from the last toggled row to the cursor", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
+  press(b, "ArrowDown"); press(b, " ")
+  js(b, "document.querySelector('#assemble-table .rt-tr input').checked = true")
+  press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, "X", TRUE)
+  expect_equal(clicks(b), c("sel1", "sel2", "sel4"))
+})
+
+test_that("toolbar letters click the global buttons for the current Step", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
+  press(b, "r"); press(b, "s"); press(b, "L", TRUE); press(b, "u"); press(b, "v"); press(b, "m"); press(b, "w"); press(b, "R", TRUE)
+  press(b, "2"); press(b, "v"); press(b, "l"); press(b, "m")
+  press(b, "3"); press(b, "e"); press(b, "g"); press(b, "G", TRUE); press(b, "a"); press(b, "]"); press(b, "[")
+  expect_equal(clicks(b), c("refresh", "state", "lock", "run_modal", "assemble-meta_view_open", "workdir_browser-open_browser",
+    "run_reports-open", "id_verified_top", "partial_top", "annotate-meta_view_open", "export", "group", "clear_group",
+    "all:export-table", "page:3", "page:1"))
+  expect_equal(js(b, "window.mpHotkeys.context()"), "page:Export")
+})
+
+test_that("/ focuses the active table's search box", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
+  press(b, "/")
+  expect_equal(js(b, "document.activeElement.className"), "rt-search")
+})
+
+test_that("state modal: digits pick a radio and Enter applies", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.stateModal()")
+  press(b, "2"); press(b, "Enter")
+  expect_equal(clicks(b), c("st2", "assemble-update_state"))
+})
