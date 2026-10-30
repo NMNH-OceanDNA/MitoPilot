@@ -73,6 +73,13 @@ test_that("identity is the match fraction over columns with both bases", {
   expect_equal(L(r), list(0.8, 1, NULL))
 })
 
+test_that("identity window widens a narrow pixel bin to at least 10 columns, clamped", {
+  b <- sy_page()
+  r <- js(b, "(function(){var g=window.mpsyn.geom;
+    return JSON.stringify([g.window(5,5,100), g.window(50,51,100), g.window(1,20,100), g.window(99,100,100)]);})()")
+  expect_equal(L(r), list(list(1, 10), list(46, 55), list(1, 20), list(95, 100)))
+})
+
 # 408-column alignment: sample bases occupy columns 101-300, reference all 408.
 sy_payload <- function() paste0(
   "{id:'sy-canvas', input:'sy-pick', sampleLabel:'S1', refAcc:'NC_1', refLabel:'Fish', refRc:false,",

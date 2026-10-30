@@ -61,11 +61,20 @@
     var both = bothCounts[c1] - bothCounts[c0 - 1];
     return both > 0 ? (matchCounts[c1] - matchCounts[c0 - 1]) / both : null;
   }
+  // Rolling window: a pixel bin narrower than WIN columns is widened about
+  // its centre so the zoomed-out band is not a 0/0.5/1 skyline.
+  var WIN = 10;
+  function window_(c0, c1, L) {
+    var half = Math.ceil((WIN - (c1 - c0 + 1)) / 2);
+    if (half <= 0) return [c0, c1];
+    return [Math.max(1, c0 - half), Math.min(L, c1 + half)];
+  }
 
   window.mpsyn = window.mpsyn || {};
   window.mpsyn.geom = { nongap: nongap, counts: counts, classify: classify, sampleCol: sampleCol,
                         refCol: refCol, pieces: pieces, refFeature: refFeature, sampleAt: sampleAt,
-                        refAt: refAt, prefix: prefix, prefixNot: prefixNot, identity: identity };
+                        refAt: refAt, prefix: prefix, prefixNot: prefixNot, identity: identity,
+                        window: window_ };
 })();
 
 (function () {
@@ -292,7 +301,8 @@
       var c0 = Math.max(1, Math.floor(this.colF(px))), c1 = Math.min(this.L, Math.ceil(this.colF(px + 1)) - 1);
       if (c0 > this.L) break;
       if (c1 < c0) c1 = c0;
-      var id = G.identity(c0, c1, this.matchCounts, this.bothCounts);
+      var w2 = G.window(c0, c1, this.L);
+      var id = G.identity(w2[0], w2[1], this.matchCounts, this.bothCounts);
       if (id === null) continue;
       c.rect(px, y + IDENT_H * (1 - id), 1, IDENT_H * id);
     }
