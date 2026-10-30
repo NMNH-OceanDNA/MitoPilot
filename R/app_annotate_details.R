@@ -4353,10 +4353,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     tags$details(
       id = ns("blast_synteny_details"),
       tags$summary("BLAST Reference Synteny"),
-      div(
-        style = "padding: 2px 5mm;",
-        uiOutput(ns("synteny_ui"))
-      )
+      uiOutput(ns("synteny_ui"))
     ),
     tags$details(
       id = ns("alignment_div"),
