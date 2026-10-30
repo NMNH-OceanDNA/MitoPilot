@@ -1006,52 +1006,64 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
           ifelse(is.na(cand$qcovs), "?", format(cand$qcovs, trim = TRUE))
         )
       )
-      picker <- if (length(ref_choices) > 0) {
-        div(
-          id = ns("synteny_ref_picker"),
-          style = "margin-bottom: 6px; max-width: 820px;",
-          # Compact + single-line: shrink the selectize font and keep the selected
-          # item / dropdown options on one line (long "species (acc) | pid.. cov.."
-          # labels otherwise wrap in the box). Let the dropdown grow to fit.
-          tags$style(HTML(sprintf(
-            paste0(
-              "#%1$s .selectize-input, #%1$s .selectize-dropdown { font-size: 11px; }",
-              "#%1$s .selectize-input > .item, #%1$s .selectize-dropdown .option { white-space: nowrap; }",
-              "#%1$s .selectize-dropdown { width: auto !important; min-width: 100%%; }"
-            ),
-            ns("synteny_ref_picker")
-          ))),
+      toggle <- local({
+        tg <- shinyWidgets::prettyToggle(
+          ns("poor_blast_ref_toggle"),
+          label_on  = "Best reference flagged as poor",
+          label_off = "Flag best reference as poor",
+          icon_on   = shiny::icon("flag"),
+          icon_off  = shiny::icon("flag"),
+          status_on  = "warning",
+          status_off = "default",
+          value = is_poor,
+          inline = TRUE
+        )
+        if (locked()) shinyjs::disabled(tg) else tg
+      })
+      # Explicit commit: the picker is view-only; this makes the viewed candidate
+      # the sample's reference (tables + .tbl note + synteny default).
+      cur_ref <- (ctx$blast_accession %||% NA) %|NA|% ""
+      set_ref <- if (length(ref_choices) > 0 && nzchar(active_acc) && !identical(active_acc, cur_ref)) {
+        (\(b) if (locked()) shinyjs::disabled(b) else b)(actionButton(
+          ns("synteny_set_ref"),
+          label = paste0("Set ", active_acc, " as best reference"),
+          icon = shiny::icon("check"),
+          class = "btn-sm btn-default",
+          title = paste0("Overwrites the sample's best reference, shown in the ",
+                         "Annotate/Export tables and used in the .tbl reference-comparison note.")
+        ))
+      } else if (length(ref_choices) > 0) {
+        div(style = "font-size: 11px; color: #888; padding-bottom: 8px;", "Current best reference.")
+      }
+      picker <- div(
+        id = ns("synteny_ref_picker"),
+        style = "display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 6px;",
+        # Compact + single-line: shrink the selectize font and keep the selected
+        # item / dropdown options on one line (long "species (acc) | pid.. cov.."
+        # labels otherwise wrap in the box). Let the dropdown grow to fit.
+        tags$style(HTML(sprintf(
+          paste0(
+            "#%1$s .form-group { margin-bottom: 0; }",
+            "#%1$s .pretty { margin: 0 0 8px; }",
+            "#%1$s .selectize-input, #%1$s .selectize-dropdown { font-size: 11px; }",
+            "#%1$s .selectize-input > .item, #%1$s .selectize-dropdown .option { white-space: nowrap; }",
+            "#%1$s .selectize-dropdown { width: auto !important; min-width: 100%%; }"
+          ),
+          ns("synteny_ref_picker")
+        ))),
+        if (length(ref_choices) > 0) div(
+          style = "flex: 1 1 360px; max-width: 820px;",
           shiny::selectInput(
             ns("synteny_ref_select"),
             label = "Reference genome",
             choices = ref_choices,
             selected = active_acc,
             width = "100%"
-          ),
-          # Explicit commit: the picker above is view-only; this makes the viewed
-          # candidate the sample's reference (tables + .tbl note + synteny default).
-          local({
-            cur_ref <- (ctx$blast_accession %||% NA) %|NA|% ""
-            if (nzchar(active_acc) && !identical(active_acc, cur_ref)) {
-              div(
-                style = "margin-top: 2px;",
-                (\(b) if (locked()) shinyjs::disabled(b) else b)(actionButton(
-                  ns("synteny_set_ref"),
-                  label = paste0("Set ", active_acc, " as best reference"),
-                  icon = shiny::icon("check"),
-                  class = "btn-sm btn-default"
-                )),
-                div(style = "font-size: 11px; color: #888; margin-top: 3px;",
-                    "Overwrites the sample's best reference, shown in the Annotate/Export ",
-                    "tables and used in the .tbl reference-comparison note.")
-              )
-            } else {
-              div(style = "font-size: 11px; color: #888; margin-top: 2px;",
-                  "Current best reference.")
-            }
-          })
-        )
-      }
+          )
+        ),
+        set_ref,
+        toggle
+      )
       no_ref_msg <- if (!has_ref) {
         div(
           class = "alert alert-info",
@@ -1060,23 +1072,6 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         )
       }
       tagList(
-        div(
-          style = "display: flex; justify-content: start; margin-bottom: 6px;",
-          local({
-            tg <- shinyWidgets::prettyToggle(
-              ns("poor_blast_ref_toggle"),
-              label_on  = "Best reference flagged as poor",
-              label_off = "Flag best reference as poor",
-              icon_on   = shiny::icon("flag"),
-              icon_off  = shiny::icon("flag"),
-              status_on  = "warning",
-              status_off = "default",
-              value = is_poor,
-              inline = TRUE
-            )
-            if (locked()) shinyjs::disabled(tg) else tg
-          })
-        ),
         picker,
         no_ref_msg,
         if (has_ref && isTRUE(ctx$topology == "linear")) {
@@ -1607,12 +1602,6 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         flank5 <- flank_span(p1 - flank, p1 - 1, FALSE)
         in5 <- gseq(p1, wrapc(p1 + min(inN, this_len) - 1L))
       }
-      line5 <- tags$div(
-        style = "font-family: 'Courier New', Courier, monospace; white-space: nowrap;",
-        tags$span(style = "color:#666; margin-right:6px;", "5'"),
-        if (more5) ell(),
-        flank5, cut, inside(codon_group(in5, cum_before %% 3))
-      )
       # 3' end of the segment: inside-codons | flank
       phase3 <- (cum_before + max(0L, this_len - inN)) %% 3
       if (dir == "-") {
@@ -1620,17 +1609,23 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       } else {
         in3 <- gseq(wrapc(p2 - min(inN, this_len) + 1L), p2); flank3 <- flank_span(p2 + 1, p2 + flank, FALSE)
       }
-      line3 <- tags$div(
+      # Bases of the segment interior hidden between the two shown windows; a
+      # segment short enough to show whole is shown once.
+      mid_bp <- this_len - nchar(in5) - nchar(in3)
+      middle <- if (mid_bp > 0) tagList(
+        inside(codon_group(in5, cum_before %% 3)),
+        tags$span(style = "color:#888; margin: 0 6px;", paste0(": ", mid_bp, " bp :")),
+        inside(codon_group(in3, phase3))
+      ) else {
+        inside(codon_group(if (dir == "-") rc(gseq(p1, p2)) else gseq(p1, p2), cum_before %% 3))
+      }
+      line <- tags$div(
         style = "font-family: 'Courier New', Courier, monospace; white-space: nowrap;",
-        inside(codon_group(in3, phase3)), cut, flank3,
+        tags$span(style = "color:#666; margin-right:6px;", "5'"),
+        if (more5) ell(),
+        flank5, cut, middle, cut, flank3,
         if (more3) ell(),
         tags$span(style = "color:#666; margin-left:6px;", "3'")
-      )
-      # Bases of the segment interior hidden between the two shown windows.
-      mid_bp <- this_len - nchar(in5) - nchar(in3)
-      gap_line <- if (mid_bp > 0) tags$div(
-        style = "font-family: 'Courier New', Courier, monospace; color:#888; font-size:0.8em; margin: 1px 0;",
-        paste0("\u22ee ", mid_bp, " bp \u22ee")
       )
       div(
         class = "mp-edit-group",
@@ -1642,7 +1637,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
           class = "mp-edit-group-label",
           if (is_join) "Active segment junctions (nt)" else "Nucleotide boundaries (nt)"
         ),
-        tags$div(style = "overflow-x: auto;", line5, gap_line, line3),
+        tags$div(style = "overflow-x: auto;", line),
         tags$div(
           style = "color:#888; font-size:0.75em; margin-top:2px;",
           tags$span(style = "color:#c00; font-weight:bold;", "|"), " = boundary; ",
