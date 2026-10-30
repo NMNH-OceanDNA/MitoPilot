@@ -164,6 +164,6 @@ seqview_server <- function(id, rv, tick, selected) {
       session$sendCustomMessage("mpseq_select", list(id = ns("canvas"), row = cur_sel()))
     })
 
-    list(pick = reactive(input$pick))
+    list(pick = reactive(input$pick), sel = cur_sel)
   })
 }
