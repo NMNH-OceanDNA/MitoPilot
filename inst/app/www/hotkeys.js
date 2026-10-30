@@ -281,10 +281,114 @@
     });
   })();
 
+
+  // ---- keyboard cursor on reactable tables (keyed by table selector) ----
+  var cursors = {}, lastToggled = {};
+  function cursorRow(sel) {
+    var r = cursors[sel];
+    if (r && document.body.contains(r)) return r;
+    delete cursors[sel]; return null;
+  }
+  function setCursor(sel, row) {
+    var cur = cursorRow(sel);
+    if (cur) cur.classList.remove('mp-kb-cursor');
+    if (!row) { delete cursors[sel]; return false; }
+    row.classList.add('mp-kb-cursor');
+    row.scrollIntoView({ block: 'nearest' });
+    cursors[sel] = row; return true;
+  }
+  function moveCursor(sel, by) { return setCursor(sel, stepRow(sel, by, cursorRow(sel))); }
+  function toggleCursor(sel) {
+    var r = cursorRow(sel); if (!r) return false;
+    lastToggled[sel] = r;
+    return clickIn(r, 'input.rt-select-input');
+  }
+  // Check every row between the last Space-toggled row and the cursor.
+  function extendCursor(sel) {
+    var r = cursorRow(sel), rs = rows(sel), a = rs.indexOf(lastToggled[sel]), z = rs.indexOf(r);
+    if (a < 0 || z < 0) return false;
+    for (var i = Math.min(a, z); i <= Math.max(a, z); i++) {
+      var box = rs[i].querySelector('input.rt-select-input');
+      if (box && !box.checked) box.click();
+    }
+    return true;
+  }
+  function tableId(sel) { return sel.replace(/^#/, ''); }
+  function reactable(fn) { if (!window.Reactable) return false; fn(window.Reactable); return true; }
+
+  // ---- top-level pages: Assemble / Annotate / Export ----
+  ['Assemble', 'Annotate', 'Export'].forEach(function (step) {
+    var ctx = 'page:' + step, ns = step.toLowerCase(), T = '#' + ns + '-table';
+    function b(key, label, run) { bind(ctx, key, label, run); }
+    function c(key, label, id) { b(key, label, function () { return click(id); }); }
+    ['Assemble', 'Annotate', 'Export'].forEach(function (st, i) {
+      b(String(i + 1), 'Go to Step ' + st, function () {
+        var r = document.querySelector('#mode input[value="' + st + '"]');
+        if (!r) return false;
+        (r.closest('.btn') || r).click(); return true;
+      });
+    });
+    c('r', 'Refresh table', 'refresh');
+    b('/', 'Search the table', function () { return focusIn(T + ' .rt-search'); });
+    b('ArrowDown', 'Move row cursor down', function () { return moveCursor(T, 1); });
+    b('ArrowUp', 'Move row cursor up', function () { return moveCursor(T, -1); });
+    b('Space', 'Check / uncheck cursor row', function () { return toggleCursor(T); });
+    b('x', 'Check / uncheck cursor row', function () { return toggleCursor(T); });
+    b('X', 'Check rows from last toggled to cursor', function () { return extendCursor(T); });
+    b('a', 'Check / uncheck all rows on the page', function () {
+      return reactable(function (R) { R.toggleAllRowsSelected(tableId(T)); });
+    });
+    b('Escape', 'Clear row cursor', function () { return setCursor(T, null) || true; });
+    b('Enter', 'Open details for cursor row', function () { return clickIn(cursorRow(T), 'button[onclick*="-details"]'); });
+    b('o', 'Open details for cursor row', function () { return clickIn(cursorRow(T), 'button[onclick*="-details"]'); });
+    b('[', 'Previous page', function () {
+      return reactable(function (R) { R.gotoPage(tableId(T), R.getState(tableId(T)).page - 1); });
+    });
+    b(']', 'Next page', function () {
+      return reactable(function (R) { R.gotoPage(tableId(T), R.getState(tableId(T)).page + 1); });
+    });
+    c('s', 'Set State (checked rows)', 'state');
+    c('L', 'Lock / Unlock (checked rows)', 'lock');
+    c('u', 'Update (run pipeline)', 'run_modal');
+    c('m', 'Metadata fields', ns + '-meta_view_open');
+    c('w', 'Work dirs', 'workdir_browser-open_browser');
+    c('R', 'Run reports', 'run_reports-open');
+    b('O', 'Open output folder of cursor row', function () { return clickIn(cursorRow(T), '[onclick*="-output"]'); });
+    b('S', 'Specimen metadata of cursor row', function () { return clickIn(cursorRow(T), '[onclick*="specimen_open"]'); });
+    if (step === 'Annotate') {
+      c('v', 'Mark ID Verified (checked rows)', 'id_verified_top');
+      c('p', 'Mark Problematic (checked rows)', 'problematic_top');
+      c('l', 'Mark Partial (checked rows)', 'partial_top');
+    }
+    if (step === 'Export') {
+      c('g', 'Assign Group (checked rows)', 'group');
+      c('G', 'Clear Group (checked rows)', 'clear_group');
+      c('e', 'Export Data', 'export');
+    }
+  });
+  function focusIn(sel) { var el = document.querySelector(sel); if (!el) return false; el.focus(); return true; }
+
+  // ---- Set State modal ----
+  (function () {
+    for (var n = 1; n <= 9; n++) (function (n) {
+      bind('state', String(n), 'Pick state ' + n, function () {
+        var rs = document.querySelectorAll('[id$="-new_state"] input[type=radio]');
+        if (!rs[n - 1]) return false;
+        rs[n - 1].click(); return true;
+      });
+    })(n);
+    bind('state', 'Enter', 'Set state', function () {
+      var el = document.querySelector('[id$="-update_state"]');
+      if (!usable(el)) return false;
+      el.click(); return true;
+    });
+  })();
+
   window.mpHotkeys = {
     enabled: enabled, setEnabled: setEnabled, keyOf: keyOf, context: context,
     bindings: bindings, bind: bind, click: click, clickIn: clickIn, handle: handle, help: help,
     panel: panel, viewer: viewer, details: DET,
-    rows: rows, selectRow: selectRow, stepRow: stepRow
+    rows: rows, selectRow: selectRow, stepRow: stepRow,
+    moveCursor: moveCursor, cursorRow: cursorRow, setCursor: setCursor
   };
 })();
