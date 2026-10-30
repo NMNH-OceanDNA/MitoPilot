@@ -171,6 +171,7 @@
     return clickIn(sec || document.getElementById('shiny-modal'), '[' + v.attr + '="' + action + '"]');
   }
   function zoom(f) { var v = viewer(); if (v.api && v.api.zoom) { v.api.zoom(v.id, f); return true; } return false; }
+  function pan(f) { var v = viewer(); if (v.api && v.api.pan) { v.api.pan(v.id, f); return true; } return false; }
   function visible(id) { var el = document.getElementById(id); return !!el && el.offsetParent !== null; }
   function focusId(id) { var el = document.getElementById(id); if (!el) return false; el.focus(); return true; }
 
@@ -224,6 +225,8 @@
     b('+', 'Zoom in (hovered viewer)', function () { return zoom(2); });
     b('=', 'Zoom in (hovered viewer)', function () { return zoom(2); });
     b('-', 'Zoom out (hovered viewer)', function () { return zoom(0.5); });
+    b('ArrowLeft', 'Pan left (hovered viewer)', function () { return pan(-0.25); });
+    b('ArrowRight', 'Pan right (hovered viewer)', function () { return pan(0.25); });
     b('F', 'Fit selected gene', function () { return viewerButton('fit'); });
     b('W', 'Whole genome / alignment', function () { return viewerButton('whole'); });
     b('C', 'Copy visible sequence', function () { return viewerButton('copy'); });
