@@ -1033,36 +1033,40 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
                          "Annotate/Export tables and used in the .tbl reference-comparison note.")
         ))
       } else if (length(ref_choices) > 0) {
-        div(style = "font-size: 11px; color: #888; padding-bottom: 8px;", "Current best reference.")
+        div(style = "font-size: 11px; color: #888;", "Current best reference.")
       }
       picker <- div(
         id = ns("synteny_ref_picker"),
-        style = "display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 6px;",
+        style = "margin-bottom: 6px;",
         # Compact + single-line: shrink the selectize font and keep the selected
         # item / dropdown options on one line (long "species (acc) | pid.. cov.."
         # labels otherwise wrap in the box). Let the dropdown grow to fit.
         tags$style(HTML(sprintf(
           paste0(
             "#%1$s .form-group { margin-bottom: 0; }",
-            "#%1$s .pretty { margin: 0 0 8px; }",
+            "#%1$s .pretty { margin: 0; }",
             "#%1$s .selectize-input, #%1$s .selectize-dropdown { font-size: 11px; }",
             "#%1$s .selectize-input > .item, #%1$s .selectize-dropdown .option { white-space: nowrap; }",
             "#%1$s .selectize-dropdown { width: auto !important; min-width: 100%%; }"
           ),
           ns("synteny_ref_picker")
         ))),
-        if (length(ref_choices) > 0) div(
-          style = "flex: 1 1 360px; max-width: 820px;",
-          shiny::selectInput(
-            ns("synteny_ref_select"),
-            label = "Reference genome",
-            choices = ref_choices,
-            selected = active_acc,
-            width = "100%"
-          )
-        ),
-        set_ref,
-        toggle
+        if (length(ref_choices) > 0) tags$label(class = "control-label", "Reference genome"),
+        div(
+          style = "display: flex; gap: 10px; align-items: center; flex-wrap: wrap;",
+          if (length(ref_choices) > 0) div(
+            style = "flex: 1 1 360px; max-width: 820px;",
+            shiny::selectInput(
+              ns("synteny_ref_select"),
+              label = NULL,
+              choices = ref_choices,
+              selected = active_acc,
+              width = "100%"
+            )
+          ),
+          set_ref,
+          toggle
+        )
       )
       no_ref_msg <- if (!has_ref) {
         div(
