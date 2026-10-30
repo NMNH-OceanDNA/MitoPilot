@@ -65,6 +65,10 @@
         '<div id="' + D + 'reduce_align" class="pretty"><input type="checkbox" onchange="__clicks.push(\'reduce_align\')"></div>' +
         '<div id="' + D + 'local_blast" class="pretty"><input type="checkbox" onchange="__clicks.push(\'local_blast\')"></div>' +
       '</details>' +
+      '<div id="' + D + 'join_preview">' +
+        '<span onclick="__clicks.push(\'seg1\'); Shiny.setInputValue(\'' + D + 'join_seg_click\', 4)"></span>' +
+        '<span class="mp-seg-active" onclick="__clicks.push(\'seg2\'); Shiny.setInputValue(\'' + D + 'join_seg_click\', 5)"></span>' +
+        '<span onclick="__clicks.push(\'seg3\'); Shiny.setInputValue(\'' + D + 'join_seg_click\', 6)"></span></div>' +
       '<details><summary>Notes</summary><textarea id="' + D + 'notes"></textarea></details>' +
       '<div id="' + D + 'merge_select_div" style="display:none"></div>' +
       '</div></div>';

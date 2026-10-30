@@ -155,3 +155,36 @@ test_that("details modal: bindings survive a re-rendered modal (Review Focus 2)"
   press(b, "v"); js(b, "window.detailsModal(); window.__clicks = []"); press(b, "v")
   expect_equal(clicks(b), paste0(D, "ID_verified"))
 })
+
+test_that("details modal: arrows walk the annotation rows without wrapping", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, "ArrowDown"); press(b, "ArrowUp"); press(b, "Home"); press(b, "End")
+  expect_equal(clicks(b), c("row3", "row1", "row1", "row3"))
+})
+
+test_that("details modal: Shift+Up/Down cycle join segments around the active one", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, "ArrowDown", TRUE); press(b, "ArrowUp", TRUE)
+  expect_equal(clicks(b), c("seg3", "seg1"))
+})
+
+test_that("boundary keys route to codon or nucleotide buttons by wrapper visibility (Review Focus 3)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, ","); expect_equal(js(b, "window.__inputs.length"), 0L)
+  js(b, sprintf("document.getElementById('%sedit_mode_ctrls').style.display=''", D))
+  press(b, ","); press(b, "."); press(b, "<", TRUE); press(b, ">", TRUE)
+  js(b, sprintf("document.getElementById('%sstart_search_ctrl').style.display='none'", D))
+  press(b, ","); press(b, ">", TRUE)
+  r <- jsonlite::fromJSON(js(b, "JSON.stringify(window.__inputs.map(function(i){return i.name+'='+i.value;}))"))
+  expect_equal(r, paste0(D, c("start-add=one", "start-minus=one", "stop-minus=one", "stop-add=one", "rrna-5-out=one", "stop-add=one")))
+})
+
+test_that("edit-mode letters click their controls", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  js(b, sprintf("document.getElementById('%sedit_mode_ctrls').style.display=''", D))
+  press(b, "e"); press(b, "E", TRUE); press(b, "z"); press(b, "5"); press(b, "3"); press(b, "P", TRUE)
+  press(b, "f"); press(b, "X", TRUE); press(b, "c")
+  expect_equal(clicks(b), c(paste0(D, c("edit_mode", "save_edits", "discard_edits", "toggle_partial_start",
+    "toggle_partial_stop", "polyA_stop")), "reduce_align", "local_blast"))
+  expect_equal(jsonlite::fromJSON(js(b, "JSON.stringify(window.__inputs.slice(-1)[0])"))$name, paste0(D, "single_codon"))
+})
