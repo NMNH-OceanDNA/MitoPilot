@@ -227,9 +227,10 @@ orange above 5%, a sign of possible sequencing or assembly errors.
 ![Coverage map with gene models drawn over read depth](figures/get-started/annotate-coverage-map.png)
 
 **BLAST Reference Synteny** lines your annotation up against the closest GenBank
-mitogenome, with a percent-identity bar between them. Click anywhere in this plot to show a
-zoomed-in base-pair level alignment of your sample
-versus the reference.
+mitogenome, with a percent-identity bar between them. Drag or scroll sideways to pan and
+scroll or pinch to zoom; zoomed in far enough, the bases of your sample and the reference
+appear with mismatches and gaps coloured. Click a gene in the sample track to select it in
+the table.
 
 The reference mitogenome shown in this plot is recorded in the export's
 `sample_info.csv` in the `ref_accession` column, as its GenBank accession
