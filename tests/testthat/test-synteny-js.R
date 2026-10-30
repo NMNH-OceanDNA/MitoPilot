@@ -72,3 +72,70 @@ test_that("identity is the match fraction over columns with both bases", {
     return JSON.stringify([g.identity(1,6,m,both), g.identity(1,2,m,both), g.identity(6,6,m,both)]);})()")
   expect_equal(L(r), list(0.8, 1, NULL))
 })
+
+# 408-column alignment: sample bases occupy columns 101-300, reference all 408.
+sy_payload <- function() paste0(
+  "{id:'sy-canvas', input:'sy-pick', sampleLabel:'S1', refAcc:'NC_1', refLabel:'Fish', refRc:false,",
+  " s:'-'.repeat(100) + 'ACGT'.repeat(50) + '-'.repeat(108), r:'ACGT'.repeat(102),",
+  " refLength:408, rotation:0, version:1, selected:null,",
+  " sampleFeatures:[{row:1,gene:'nad1',type:'PCG',pos1:10,pos2:120,dir:'+'},",
+  "                 {row:2,gene:'trnF',type:'tRNA',pos1:190,pos2:30,dir:'-'}],",
+  " refFeatures:[{gene:'nad1',type:'PCG',pos1:14,pos2:124,dir:'+'}]}")
+
+test_that("the viewer opens on the sample span, fits, zooms and keeps its view on a same-version reload", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); var s0 = window.mpsyn.state('sy-canvas');
+    window.__handlers.mpsyn_select({id:'sy-canvas', row:1}); var s1 = window.mpsyn.state('sy-canvas');
+    window.mpsyn.whole('sy-canvas'); var s2 = window.mpsyn.state('sy-canvas');
+    window.mpsyn.zoom('sy-canvas', 2); var s3 = window.mpsyn.state('sy-canvas');
+    window.mpsyn.zoom('sy-canvas', 100); var s4 = window.mpsyn.state('sy-canvas');
+    var h = window.mpsyn.hitTest('sy-canvas', 100, 30);
+    window.__handlers.mpsyn(%s); var s5 = window.mpsyn.state('sy-canvas');
+    return JSON.stringify({s0:s0, s1:s1, s2:s2, s3:s3, s4:s4, s5:s5, h:h ? h.f.gene : null});})()",
+    sy_payload(), sy_payload()))
+  x <- L(r)
+  expect_equal(x$s0$L, 408); expect_equal(x$s0$sampleLanes, 2); expect_equal(x$s0$refLanes, 1)
+  expect_true(x$s0$viewStart <= 101 && x$s0$viewStart > 50); expect_gt(x$s0$ppc, x$s2$ppc)
+  expect_equal(x$s1$selected, 1)
+  expect_true(x$s1$viewStart <= 110 && x$s1$viewStart + 940 / x$s1$ppc >= 221)
+  expect_equal(x$s2$viewStart, 1); expect_equal(x$s3$ppc, x$s2$ppc * 2); expect_equal(x$s4$ppc, 14)
+  expect_equal(x$h, "nad1")
+  expect_equal(x$s5$ppc, 14); expect_equal(x$s5$viewStart, x$s4$viewStart)
+})
+
+test_that("clicking a sample arrow selects its row; a reference arrow only fits", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); window.mpsyn.whole('sy-canvas');
+    var v = window.mpsyn.state('sy-canvas');
+    var xs = 60 + (150 - v.viewStart) * v.ppc, xr = 60 + (60 - v.viewStart) * v.ppc;
+    window.mpsyn.click('sy-canvas', xs, 22 + 4 + 8); var a = window.mpsyn.state('sy-canvas').selected;
+    var n0 = window.__inputs.length;
+    window.mpsyn.click('sy-canvas', xr, v.height - 22 - 4 - 8); var s = window.mpsyn.state('sy-canvas');
+    return JSON.stringify({a:a, n0:n0, n1:window.__inputs.length, name:window.__inputs[0].name,
+      row:window.__inputs[0].value.row, ppcWhole:v.ppc, ppcAfter:s.ppc, selAfter:s.selected});})()", sy_payload()))
+  x <- L(r)
+  expect_equal(x$a, 1); expect_equal(x$n0, 1); expect_equal(x$n1, 1)
+  expect_equal(x$name, "sy-pick"); expect_equal(x$row, 1)
+  expect_gt(x$ppcAfter, x$ppcWhole); expect_equal(x$selAfter, 1)
+})
+
+test_that("the tooltip names gaps and never prints NaN", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ window.__handlers.mpsyn(%s);
+    return JSON.stringify([window.mpsyn.tip('sy-canvas', 1), window.mpsyn.tip('sy-canvas', 101),
+                           window.mpsyn.tip('sy-canvas', 102)]);})()", sy_payload()))
+  x <- jsonlite::fromJSON(r)
+  expect_match(x[1], "sample gap"); expect_match(x[1], "ref 1 A")
+  expect_match(x[2], "sample 1 A"); expect_match(x[2], "ref 101 A"); expect_match(x[2], "match$")
+  expect_match(x[3], "sample 2 C"); expect_match(x[3], "ref 102 C")
+  expect_false(any(grepl("NaN", x)))
+})
+
+test_that("a replaced canvas gets a fresh viewer", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); var old = document.getElementById('sy-canvas');
+    var nw = document.createElement('canvas'); nw.id = 'sy-canvas'; old.parentNode.replaceChild(nw, old);
+    window.__handlers.mpsyn(%s); return JSON.stringify(window.mpsyn.state('sy-canvas').L);})()",
+    sy_payload(), sy_payload()))
+  expect_equal(jsonlite::fromJSON(r), 408)
+})
