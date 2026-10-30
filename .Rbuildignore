@@ -25,3 +25,5 @@ $run_dev.*
 ^CITATION\.cff$
 ^inst/native/pixi\.lock$
 ^inst/native/\.pixi$
+^tests/testthat/_problems$
+^tests/testthat/testthat-problems\.rds$

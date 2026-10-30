@@ -384,14 +384,31 @@
     if ((tries || 0) >= 40) return;
     setTimeout(function () { withViewer(id, fn, (tries || 0) + 1); }, 250);
   }
+  // The section's uiOutput re-renders (picker, flags, lock, reopen) after the
+  // payload has already gone to the previous canvas, so keep the last payload
+  // per id and reload it into whatever canvas now carries that id.
+  var cache = {}, revivePending = null;
+  function revive() {
+    Object.keys(cache).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && (!viewers[id] || viewers[id].canvas !== el)) get(id).load(cache[id]);
+    });
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(function () {
+      if (revivePending) return;
+      revivePending = setTimeout(function () { revivePending = null; revive(); }, 50);
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
   if (window.Shiny) {
-    window.Shiny.addCustomMessageHandler('mpsyn', function (p) { withViewer(p.id, function (v) { v.load(p); }); });
+    window.Shiny.addCustomMessageHandler('mpsyn', function (p) { cache[p.id] = p; withViewer(p.id, function (v) { v.load(p); }); });
     window.Shiny.addCustomMessageHandler('mpsyn_select', function (p) { withViewer(p.id, function (v) { v.fit(p.row); }); });
   }
   window.mpsyn.state = function (id) {
     var v = viewers[id]; if (!v) return null;
     return { L: v.L, version: v.version, viewStart: v.viewStart, ppc: v.ppc, selected: v.selected,
-             height: v.height(), sampleLanes: v.sLanes, refLanes: v.rLanes };
+             height: v.height(), sampleLanes: v.sLanes, refLanes: v.rLanes,
+             live: v.canvas === document.getElementById(id) };
   };
   window.mpsyn.zoom = function (id, f) { var v = get(id); if (v) v.zoom(f); };
   window.mpsyn.whole = function (id) { var v = get(id); if (v) v.whole(); };

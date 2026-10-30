@@ -139,3 +139,14 @@ test_that("a replaced canvas gets a fresh viewer", {
     sy_payload(), sy_payload()))
   expect_equal(jsonlite::fromJSON(r), 408)
 })
+
+test_that("a canvas replaced after the payload arrived is redrawn from the cached payload", {
+  b <- sy_page()
+  js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); var old = document.getElementById('sy-canvas');
+    var nw = document.createElement('canvas'); nw.id = 'sy-canvas'; old.parentNode.replaceChild(nw, old); })()", sy_payload()))
+  Sys.sleep(0.5)
+  r <- js(b, "JSON.stringify(window.mpsyn.state('sy-canvas'))")
+  x <- L(r)
+  expect_true(x$live); expect_equal(x$L, 408); expect_gt(x$height, 0)
+  expect_equal(js(b, "parseInt(document.getElementById('sy-canvas').style.height, 10) > 0"), TRUE)
+})
