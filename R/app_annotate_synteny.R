@@ -12,11 +12,13 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
   r <- toupper(as.character(aln$aligned_ref[1]))
   if (is.na(s) || is.na(r) || !nzchar(s) || !nzchar(r)) return(NULL)
 
+  yes <- function(x) isTRUE(as.integer(x) == 1L)
   feat <- function(df, i, row = NULL) {
     f <- list(
       gene = as.character(df$gene[i]), type = as.character(df$type[i]),
       pos1 = as.integer(df$pos1[i]), pos2 = as.integer(df$pos2[i]),
-      dir = as.character(df$direction[i])
+      dir = as.character(df$direction[i]),
+      partial5 = yes(df$partial_start[i]), partial3 = yes(df$partial_stop[i])
     )
     if (!is.null(row)) f <- c(list(row = row), f)
     f

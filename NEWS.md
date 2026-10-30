@@ -1,5 +1,6 @@
 # MitoPilot (development version)
 
+- **Annotate details.** Partial gene ends are dashed in the synteny viewer as in the Sequence viewer, for sample and reference genes alike; reference partial flags come from the GenBank record (new `partial_start`/`partial_stop` columns, filled for references fetched from now on) and show in the gene tooltip.
 - **Annotate details.** The reference picker, "Set ... as best reference" button, and poor-reference flag sit on one line; the synteny section lines up with the Sequence panel; the nucleotide boundaries readout in the alignment editor is a single line.
 - **Annotate details.** The BLAST Reference Synteny plot is now an interactive viewer: drag or scroll to pan, scroll or pinch to zoom from the whole alignment down to individual bases, with mismatches and gaps coloured. The separate click-to-zoom panel and window-size box are gone, and the viewer takes less space.
 - **Annotate details.** The "single codon" box in the alignment editor no longer stays silently in effect after the window is reopened or you move to another sample; it starts unticked and behaves that way.

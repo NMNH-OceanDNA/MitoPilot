@@ -61,6 +61,11 @@
     var both = bothCounts[c1] - bothCounts[c0 - 1];
     return both > 0 ? (matchCounts[c1] - matchCounts[c0 - 1]) / both : null;
   }
+  // Whether a drawn piece [a, b] of feature f (columns c1..c2, wrapped when
+  // c1 > c2) shows f's true start / end edge inside the visible range [vs, ve).
+  function owns(pc, f, vs, ve) {
+    return { start: pc[0] === f.c1 && pc[0] >= vs, end: pc[1] === f.c2 && pc[1] + 1 <= ve };
+  }
   // Rolling window: a pixel bin narrower than WIN columns is widened about
   // its centre so the zoomed-out band is not a 0/0.5/1 skyline.
   var WIN = 10;
@@ -74,7 +79,7 @@
   window.mpsyn.geom = { nongap: nongap, counts: counts, classify: classify, sampleCol: sampleCol,
                         refCol: refCol, pieces: pieces, refFeature: refFeature, sampleAt: sampleAt,
                         refAt: refAt, prefix: prefix, prefixNot: prefixNot, identity: identity,
-                        window: window_ };
+                        window: window_, owns: owns };
 })();
 
 (function () {
@@ -124,12 +129,14 @@
     var self = this;
     this.sFeats = (p.sampleFeatures || []).map(function (f) {
       return { row: f.row, gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: f.dir, track: 'sample',
+               partial5: !!f.partial5, partial3: !!f.partial3,
                c1: G.sampleCol(f.pos1, self.sNongap), c2: G.sampleCol(f.pos2, self.sNongap) };
     });
     var ctx = { rNongap: this.rNongap, refLength: this.refLength, rotation: this.rotation, rc: this.rc };
     this.rFeats = (p.refFeatures || []).map(function (f) {
       var m = G.refFeature(f, ctx);
-      return { gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: m.dir, track: 'ref', c1: m.c1, c2: m.c2 };
+      return { gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: m.dir, track: 'ref',
+               partial5: !!f.partial5, partial3: !!f.partial3, c1: m.c1, c2: m.c2 };
     });
     this.sLanes = packLanes(this.sFeats, this.L); this.rLanes = packLanes(this.rFeats, this.L);
     this.selected = (p.selected === undefined || p.selected === null) ? null : p.selected;
@@ -250,6 +257,7 @@
     c.textAlign = 'center'; c.textBaseline = 'middle';
     feats.forEach(function (f) {
       var col = ui().typeColor(f.type), y = y0 + f.lane * LANE_H, h = LANE_H - 6;
+      var edge = window.mpseq.geom.partialEdge(f);
       G.pieces(f.c1, f.c2, self.L).forEach(function (pc) {
         if (pc[1] + 1 < vs || pc[0] > ve) return;
         var x0 = Math.max(GUTTER, self.x(pc[0])), x1 = Math.min(W, self.x(pc[1] + 1));
@@ -262,7 +270,20 @@
         c.closePath();
         c.fillStyle = col + '55'; c.fill();
         var sel = f.track === 'sample' && f.row === self.selected;
-        c.lineWidth = sel ? 2 : 1; c.strokeStyle = sel ? cssVar('--mp-primary', '#337ab7') : col; c.stroke();
+        c.lineWidth = sel ? 2 : 1; c.strokeStyle = sel ? cssVar('--mp-primary', '#337ab7') : col;
+        // flat closing edge (pts[4]-pts[0]) is the pos1 side when fwd, pos2
+        // side otherwise; a partial end is dashed
+        var own = edge ? G.owns(pc, f, vs, ve) : null;
+        var dashStart = !!edge && edge !== 'end' && own.start, dashEnd = !!edge && edge !== 'start' && own.end;
+        var dashFlat = fwd ? dashStart : dashEnd, dashTip = fwd ? dashEnd : dashStart;
+        c.setLineDash([]);
+        c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); c.lineTo(pts[1][0], pts[1][1]); c.stroke();
+        c.beginPath(); c.moveTo(pts[3][0], pts[3][1]); c.lineTo(pts[4][0], pts[4][1]); c.stroke();
+        c.setLineDash(dashTip ? [3, 2] : []);
+        c.beginPath(); c.moveTo(pts[1][0], pts[1][1]); c.lineTo(pts[2][0], pts[2][1]); c.lineTo(pts[3][0], pts[3][1]); c.stroke();
+        c.setLineDash(dashFlat ? [3, 2] : []);
+        c.beginPath(); c.moveTo(pts[4][0], pts[4][1]); c.lineTo(pts[0][0], pts[0][1]); c.stroke();
+        c.setLineDash([]);
         if (x1 - x0 > c.measureText(f.gene).width + 8) {
           c.fillStyle = cssVar('--mp-text', '#333'); c.fillText(f.gene, (x0 + x1) / 2, y + h / 2);
         }
@@ -321,7 +342,8 @@
     if (h) {
       var f = h.f;
       return (f.track === 'sample' ? 'Sample ' : 'Reference ') + f.gene + ' (' + f.type + ') ' + f.dir +
-        ' ' + f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString();
+        ' ' + f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString() +
+        (f.partial5 ? " | 5' partial" : '') + (f.partial3 ? " | 3' partial" : '');
     }
     if (col < 1 || col > this.L) return '';
     var sp = G.sampleAt(col, this.s, this.sCounts);
@@ -425,5 +447,6 @@
   window.mpsyn.fit = function (id, row) { var v = get(id); if (v) v.fit(row); };
   window.mpsyn.click = function (id, px, py) { var v = get(id); if (v) v.click(px, py); };
   window.mpsyn.hitTest = function (id, px, py) { var v = get(id); return v ? v.hitTest(px, py) : null; };
-  window.mpsyn.tip = function (id, col) { var v = get(id); return v ? v.tipText(col, null) : ''; };
+  window.mpsyn.tip = function (id, col, h) { var v = get(id); return v ? v.tipText(col, h || null) : ''; };
+  window.mpsyn.hits = function (id) { var v = get(id); return v ? v.hits : []; };
 })();

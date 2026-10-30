@@ -1575,6 +1575,8 @@ backwards_compatibility <- function(
         pos2 INTEGER,
         direction TEXT,
         ref_length INTEGER,
+        partial_start INTEGER,
+        partial_stop INTEGER,
         time_stamp INTEGER,
         PRIMARY KEY (accession, gene, pos1)
       );"
@@ -1592,6 +1594,8 @@ backwards_compatibility <- function(
         pos2 INTEGER,
         direction TEXT,
         ref_length INTEGER,
+        partial_start INTEGER,
+        partial_stop INTEGER,
         time_stamp INTEGER,
         PRIMARY KEY (accession, gene, pos1)
       );"
@@ -1606,6 +1610,15 @@ backwards_compatibility <- function(
     )
     DBI::dbExecute(con, "DROP TABLE blast_ref_annotations")
     DBI::dbExecute(con, "ALTER TABLE blast_ref_annotations_new RENAME TO blast_ref_annotations")
+  }
+  # Reference gene 5'/3' partial flags (from the GFF3 start_range/end_range
+  # markers). Cached references fetched before this stay NULL until refetched.
+  ref_ann_cols <- DBI::dbListFields(con, "blast_ref_annotations")
+  for (col in c("partial_start", "partial_stop")) {
+    if (!(col %in% ref_ann_cols)) {
+      message("added '", col, "' column to blast_ref_annotations table")
+      DBI::dbExecute(con, paste("ALTER TABLE blast_ref_annotations ADD COLUMN", col, "INTEGER"))
+    }
   }
 
   # max_target_seqs moved out of the nextflow .config into the blast_opts table
@@ -2340,6 +2353,9 @@ schema_gaps <- function(con) {
   }
   if (!has(all(c("maptoref_ref", "maptoref_topology") %in% DBI::dbListFields(con, "assemble")))) {
     gaps <- c(gaps, "the assemble table lacks the per-sample MapToRef reference columns")
+  }
+  if (!has(all(c("partial_start", "partial_stop") %in% DBI::dbListFields(con, "blast_ref_annotations")))) {
+    gaps <- c(gaps, "the blast_ref_annotations table lacks the partial-end columns")
   }
   if (is_user_asmb(con) &&
       (!has(all(c("circularize_overlap", "circularize_depth") %in%
