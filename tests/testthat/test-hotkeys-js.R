@@ -231,3 +231,16 @@ test_that("state modal: digits pick a radio and Enter applies", {
   press(b, "2"); press(b, "Enter")
   expect_equal(clicks(b), c("st2", "assemble-update_state"))
 })
+
+# ---- viewer panning ----
+test_that("details modal: Left/Right pan the hovered viewer, even with its section closed (Review Focus 5)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  expect_false(js(b, sprintf("document.getElementById('%sseqview-section').open", D)))
+  ok <- js(b, "(function(){ try { document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true})); return true; } catch (e) { return String(e); } })()")
+  expect_true(ok)
+  press(b, "ArrowLeft")
+  js(b, sprintf("document.getElementById('%ssynteny_canvas').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))", D))
+  press(b, "ArrowRight")
+  expect_equal(clicks(b), c(paste0("pan:", D, "seqview-canvas:0.25"), paste0("pan:", D, "seqview-canvas:-0.25"),
+                            paste0("synpan:", D, "synteny_canvas:0.25")))
+})

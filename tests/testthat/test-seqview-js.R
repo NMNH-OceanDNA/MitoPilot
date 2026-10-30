@@ -423,3 +423,19 @@ test_that("copy returns only the bases in view, wrapping on a circular unit", {
   expect_match(s$two, ">S1 Reference:.*>S1 Consensus:")
   expect_match(sub("^.*Consensus[^\n]*\n", "", s$two), "N")
 })
+
+test_that("pan moves the view by a fraction of its width, back again, and clamps at the start", {
+  b <- sv_page()
+  r <- js(b, "(function(){ var seq = Array(2000).join('ACGT').slice(0, 2000);
+    window.__handlers.mpseq({id:'sv-canvas', input:'sv-pick', unit:'S1', len:2000, topology:'linear', seq:seq, version:1, selected:null, features:[]});
+    window.mpseq.whole('sv-canvas'); window.mpseq.zoom('sv-canvas', 4); window.mpseq.goto('sv-canvas', 1000);
+    var a = window.mpseq.state('sv-canvas');
+    window.mpseq.pan('sv-canvas', 0.25); var b2 = window.mpseq.state('sv-canvas');
+    window.mpseq.pan('sv-canvas', -0.25); var c = window.mpseq.state('sv-canvas');
+    window.mpseq.pan('sv-canvas', -20); var d = window.mpseq.state('sv-canvas');
+    return JSON.stringify([a.viewStart, b2.viewStart, c.viewStart, d.viewStart]); })()")
+  v <- jsonlite::fromJSON(r)
+  expect_gt(v[2], v[1])
+  expect_equal(v[3], v[1], tolerance = 1e-6)
+  expect_equal(v[4], 1)
+})
