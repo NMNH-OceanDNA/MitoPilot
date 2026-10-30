@@ -35,3 +35,12 @@ test_that("selection outside the live rows is dropped and missing alignment give
   expect_null(synteny_payload(syn_ann(), syn_ref(), empty, "S1", "NC_1", "x"))
   expect_length(synteny_payload(syn_ann(), syn_ref()[0, ], syn_aln(), "S1", "NC_1", "x")$refFeatures, 0)
 })
+
+test_that("viewer UI carries the namespaced canvas, tip, and the four controls", {
+  html <- as.character(synteny_viewer_ui(shiny::NS("a")))
+  expect_match(html, 'id="a-synteny_canvas"', fixed = TRUE)
+  expect_match(html, 'id="a-synteny_tip"', fixed = TRUE)
+  for (a in c("fit", "whole", "zoom_in", "zoom_out")) {
+    expect_match(html, sprintf('data-mpsyn="%s"', a), fixed = TRUE)
+  }
+})

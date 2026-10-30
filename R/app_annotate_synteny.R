@@ -38,3 +38,31 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
     selected = sel, version = as.integer(version)
   )
 }
+
+#' Synteny viewer controls + canvas block (tools/synteny_viewer_spec.md, section 5)
+#' @noRd
+synteny_viewer_ui <- function(ns) {
+  btn <- function(action, label, icon = NULL, title = NULL) {
+    tags$button(
+      type = "button", class = "btn btn-default", `data-mpsyn` = action,
+      title = title, `aria-label` = title %||% label, icon, label
+    )
+  }
+  tagList(
+    div(
+      class = "mp-seqview-controls",
+      btn("fit", "Fit gene"),
+      btn("whole", "Whole alignment"),
+      btn("zoom_in", NULL, icon("magnifying-glass-plus"), "Zoom in"),
+      btn("zoom_out", NULL, icon("magnifying-glass-minus"), "Zoom out")
+    ),
+    div(class = "mp-coverage-caption",
+        paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a sample gene to select its row.",
+              "Bases appear when zoomed in.")),
+    div(
+      class = "mp-seqview",
+      tags$canvas(id = ns("synteny_canvas"), class = "mp-seqview-canvas"),
+      tags$div(id = ns("synteny_tip"), class = "mp-maptoref-tip", hidden = NA)
+    )
+  )
+}
