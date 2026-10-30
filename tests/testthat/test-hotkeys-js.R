@@ -244,3 +244,31 @@ test_that("details modal: Left/Right pan the hovered viewer, even with its secti
   expect_equal(clicks(b), c(paste0("pan:", D, "seqview-canvas:0.25"), paste0("pan:", D, "seqview-canvas:-0.25"),
                             paste0("synpan:", D, "synteny_canvas:0.25")))
 })
+
+# ---- Assemble details and outlier review ----
+test_that("assemble details: block nav, resolve mode, cursor and viewer keys", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.coverageModal()")
+  press(b, "]"); press(b, "p"); press(b, "3"); press(b, "a"); press(b, "L", TRUE); press(b, "B", TRUE); press(b, "T", TRUE)
+  press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, " "); press(b, "X", TRUE)
+  press(b, "W", TRUE); press(b, "c"); press(b, "t"); press(b, "R", TRUE); press(b, "ArrowRight"); press(b, "G", TRUE)
+  expect_equal(js(b, "document.activeElement.id"), "assemble-coverage_details-maptoref_viewer-goto")
+  press(b, "q", target = "document.body")
+  expect_equal(clicks(b), c(paste0("assemble-coverage_details-", c("next_block", "prev_block")), "res3",
+    paste0("assemble-coverage_details-", c("align", "lock", "build_resolved", "trim_consensus")),
+    "scaf2", "ignore2", "mtwhole", "cov", "nt", "reads",
+    "pan:assemble-coverage_details-maptoref_viewer-canvas:0.25", "assemble-coverage_details-close_modal"))
+})
+
+test_that("assemble details: I focuses the notes box", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.coverageModal()")
+  press(b, "I", TRUE)
+  expect_equal(js(b, "document.activeElement.id"), "assemble-coverage_details-notes")
+})
+
+test_that("outlier review: gene arrows, sample cursor, per-row actions, no key for Continue", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.reviewModal()")
+  press(b, "ArrowRight"); press(b, "ArrowLeft"); press(b, "]"); press(b, "[")
+  press(b, "ArrowDown"); press(b, "h"); press(b, "x"); press(b, "Enter"); press(b, "S", TRUE); press(b, "Escape")
+  expect_equal(clicks(b), c("export-review_next", "export-review_prev", "export-review_next", "export-review_prev",
+                            "pick1", "resolved1", "goto1", "export-skip_gene"))
+})
