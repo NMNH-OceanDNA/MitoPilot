@@ -27,4 +27,49 @@
 </div>
 <input id="free-text">
 <div id="shiny-modal"></div>
+<script>
+  // Annotate details modal markup (ids from R/app_annotate_details.R), buttons record clicks.
+  window.detailsModal = function () {
+    var D = 'annotate-annotations-';
+    var btn = function (id) { return '<button type="button" id="' + D + id + '" onclick="__clicks.push(this.id)"></button>'; };
+    var ids = ['close','lock','lock_only','back_to_review','nav_next','nav_prev','ID_verified','reviewed','problematic',
+      'partial','delete','restore','merge','unjoin','assign_gene','auto_assign_orfs','confirm_merge','cancel_merge',
+      'edit_mode','save_edits','discard_edits','toggle_partial_start','toggle_partial_stop','polyA_stop'];
+    document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div class="modal-body">' +
+      ids.map(btn).join('') +
+      '<details id="' + D + 'annotation_table_details" open><summary>Annotation Table</summary>' +
+        '<div id="' + D + 'table"><div class="rt-tbody">' +
+          '<div class="rt-tr"><input class="rt-select-input" type="radio" onclick="__clicks.push(\'row1\')">' +
+            '<button class="icon-bttn-text" onclick="__clicks.push(\'fas1\'); Shiny.setInputValue(\'' + D + 'copy_fas\', 1)"></button></div>' +
+          '<div class="rt-tr rt-tr-selected"><input class="rt-select-input" type="radio" onclick="__clicks.push(\'row2\')">' +
+            '<button class="icon-bttn-text" onclick="__clicks.push(\'fas2\'); Shiny.setInputValue(\'' + D + 'copy_fas\', 2)"></button>' +
+            '<button class="icon-bttn-text" onclick="__clicks.push(\'faa2\'); Shiny.setInputValue(\'' + D + 'copy_faa\', 2)"></button></div>' +
+          '<div class="rt-tr"><input class="rt-select-input" type="radio" onclick="__clicks.push(\'row3\')"></div>' +
+        '</div></div></details>' +
+      '<details id="' + D + 'seqview-section"><summary>Sequence</summary><div class="mp-seqview-controls">' +
+        '<input type="number" id="' + D + 'seqview-goto">' +
+        '<button type="button" data-mpseq="fit" onclick="__clicks.push(\'fit\')"></button>' +
+        '<button type="button" data-mpseq="whole" onclick="__clicks.push(\'whole\')"></button>' +
+        '<button type="button" data-mpseq="copy" onclick="__clicks.push(\'copy\')"></button></div>' +
+        '<canvas id="' + D + 'seqview-canvas" class="mp-seqview-canvas"></canvas></details>' +
+      '<details id="' + D + 'blast_synteny_details"><summary>BLAST Reference Synteny</summary>' +
+        '<button type="button" data-mpsyn="fit" onclick="__clicks.push(\'synfit\')"></button>' +
+        '<canvas id="' + D + 'synteny_canvas" class="mp-seqview-canvas"></canvas></details>' +
+      '<details id="' + D + 'alignment_div"><summary onclick="__clicks.push(\'align-summary\')">Alignment</summary>' +
+        '<div id="' + D + 'edit_mode_ctrls" style="display:none">' +
+          '<div id="' + D + 'start_search_ctrl">START</div><div id="' + D + 'stop_search_ctrl">STOP</div>' +
+          '<button id="' + D + 'rrna-5-out"></button><button id="' + D + 'rrna-5-in"></button>' +
+          '<button id="' + D + 'rrna-3-in"></button><button id="' + D + 'rrna-3-out"></button>' +
+          '<label><input type="checkbox" onchange="Shiny.setInputValue(\'' + D + 'single_codon\', this.checked)"> single codon</label>' +
+        '</div>' +
+        '<div id="' + D + 'reduce_align" class="pretty"><input type="checkbox" onchange="__clicks.push(\'reduce_align\')"></div>' +
+        '<div id="' + D + 'local_blast" class="pretty"><input type="checkbox" onchange="__clicks.push(\'local_blast\')"></div>' +
+      '</details>' +
+      '<details><summary>Notes</summary><textarea id="' + D + 'notes"></textarea></details>' +
+      '<div id="' + D + 'merge_select_div" style="display:none"></div>' +
+      '</div></div>';
+  };
+  window.mpseq = { zoom: function (id, f) { __clicks.push('zoom:' + id + ':' + f); }, pan: function (id, f) { __clicks.push('pan:' + id + ':' + f); } };
+  window.mpsyn = { zoom: function (id, f) { __clicks.push('syn:' + id + ':' + f); }, pan: function (id, f) { __clicks.push('synpan:' + id + ':' + f); } };
+</script>
 <script src="../../../inst/app/www/hotkeys.js"></script>

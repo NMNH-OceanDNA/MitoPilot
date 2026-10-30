@@ -98,3 +98,60 @@ test_that("? opens a cheat sheet for the current context and Escape closes it", 
   press(b, "Escape")
   expect_true(js(b, "document.getElementById('mp-hotkeys-help').hidden"))
 })
+
+# ---- Annotate details modal ----
+D <- "annotate-annotations-"
+
+test_that("details modal: lifecycle, flags and actions click their buttons", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  for (k in c("q", "v", "r", "p", "l", "d", "m", "u", "g", "o")) press(b, k)
+  press(b, "Q", TRUE); press(b, "L", TRUE); press(b, "D", TRUE)
+  press(b, "ArrowRight", TRUE); press(b, "ArrowLeft", TRUE); press(b, "Backspace")
+  expect_equal(clicks(b), paste0(D, c("close", "ID_verified", "reviewed", "problematic", "partial", "delete", "merge",
+    "unjoin", "assign_gene", "auto_assign_orfs", "lock", "lock_only", "restore", "nav_next", "nav_prev", "back_to_review")))
+})
+
+test_that("details modal: panel keys toggle, Shift opens and scrolls, alignment goes through its summary", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, "t"); expect_false(js(b, sprintf("document.getElementById('%sannotation_table_details').open", D)))
+  press(b, "s"); expect_true(js(b, sprintf("document.getElementById('%sseqview-section').open", D)))
+  press(b, "s"); expect_false(js(b, sprintf("document.getElementById('%sseqview-section').open", D)))
+  press(b, "S", TRUE); expect_true(js(b, sprintf("document.getElementById('%sseqview-section').open", D)))
+  press(b, "b"); expect_true(js(b, sprintf("document.getElementById('%sblast_synteny_details').open", D)))
+  press(b, "a"); expect_true(js(b, "window.__clicks.indexOf('align-summary') >= 0"))
+  expect_true(js(b, sprintf("document.getElementById('%salignment_div').open", D)))
+  press(b, "i"); expect_true(js(b, sprintf("document.getElementById('%snotes').closest('details').open", D)))
+  press(b, "I", TRUE)
+  expect_equal(js(b, "document.activeElement.id"), paste0(D, "notes"))
+})
+
+test_that("details modal: Escape cancels an open merge panel, Enter confirms it, otherwise Enter is inert", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, "Enter"); expect_equal(js(b, "window.__clicks.length"), 0L)
+  js(b, sprintf("document.getElementById('%smerge_select_div').style.display=''", D))
+  press(b, "Enter"); press(b, "Escape")
+  expect_equal(clicks(b), paste0(D, c("confirm_merge", "cancel_merge")))
+})
+
+test_that("details modal: copy keys hit the selected row's buttons", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, "y"); press(b, "Y", TRUE)
+  expect_equal(clicks(b), c("fas2", "faa2"))
+})
+
+test_that("details modal: zoom and viewer buttons target the hovered viewer, default sequence", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, "+", TRUE); press(b, "F", TRUE); press(b, "W", TRUE); press(b, "C", TRUE)
+  js(b, sprintf("document.getElementById('%ssynteny_canvas').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))", D))
+  press(b, "-"); press(b, "F", TRUE)
+  press(b, "G", TRUE)
+  expect_equal(clicks(b), c(paste0("zoom:", D, "seqview-canvas:2"), "fit", "whole", "copy",
+                            paste0("syn:", D, "synteny_canvas:0.5"), "synfit"))
+  expect_equal(js(b, "document.activeElement.id"), paste0(D, "seqview-goto"))
+})
+
+test_that("details modal: bindings survive a re-rendered modal (Review Focus 2)", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, "v"); js(b, "window.detailsModal(); window.__clicks = []"); press(b, "v")
+  expect_equal(clicks(b), paste0(D, "ID_verified"))
+})
