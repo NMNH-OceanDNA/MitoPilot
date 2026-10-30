@@ -45,6 +45,41 @@
     gotoPage: function (id, p) { __clicks.push('page:' + p); },
     getState: function () { return { page: 2 }; }
   };
+  window.coverageModal = function () {
+    var C = 'assemble-coverage_details-';
+    var btn = function (id) { return '<button type="button" id="' + C + id + '" onclick="__clicks.push(this.id)"></button>'; };
+    document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div class="modal-body">' +
+      ['close_modal','lock','align','next_block','prev_block','build_resolved','trim_consensus'].map(btn).join('') +
+      '<div id="' + C + 'res_mode" class="shiny-input-radiogroup">' +
+        '<input type="radio" value="path" onclick="__clicks.push(\'res1\')"><input type="radio" value="majority" onclick="__clicks.push(\'res2\')">' +
+        '<input type="radio" value="iupac" onclick="__clicks.push(\'res3\')"><input type="radio" value="nmask" onclick="__clicks.push(\'res4\')"></div>' +
+      '<div id="' + C + 'table"><div class="rt-tbody">' +
+        '<div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push(\'scaf1\')"><a onclick="__clicks.push(\'ignore1\'); Shiny.setInputValue(\'' + C + 'ignore\', 1)"></a></div>' +
+        '<div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push(\'scaf2\')"><a onclick="__clicks.push(\'ignore2\'); Shiny.setInputValue(\'' + C + 'ignore\', 2)"></a></div>' +
+        '<div class="rt-tr rt-tr-pad"></div>' +
+      '</div></div>' +
+      '<input type="number" id="assemble-coverage_details-maptoref_viewer-goto">' +
+      '<input type="checkbox" id="assemble-coverage_details-maptoref_viewer-show_cov" onclick="__clicks.push(\'cov\')">' +
+      '<input type="checkbox" id="assemble-coverage_details-maptoref_viewer-show_nt" onclick="__clicks.push(\'nt\')">' +
+      '<input type="checkbox" id="assemble-coverage_details-maptoref_viewer-show_reads" onclick="__clicks.push(\'reads\')">' +
+      '<button type="button" data-mpseq="whole" onclick="__clicks.push(\'mtwhole\')"></button>' +
+      '<canvas id="assemble-coverage_details-maptoref_viewer-canvas" class="mp-seqview-canvas"></canvas>' +
+      '<textarea id="' + C + 'notes"></textarea>' +
+      '</div></div>';
+  };
+  window.reviewModal = function () {
+    var E = 'export-';
+    var btn = function (id) { return '<button type="button" id="' + E + id + '" onclick="__clicks.push(this.id)"></button>'; };
+    document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div class="modal-body">' +
+      ['review_prev','review_next','skip_gene','review_done','cancel_review'].map(btn).join('') +
+      '<div id="' + E + 'review_table"><div class="rt-tbody">' +
+        '<div class="rt-tr"><a onclick="__clicks.push(\'pick1\'); Shiny.onInputChange(\'' + E + 'review_pick\', 1)"></a>' +
+          '<a onclick="__clicks.push(\'resolved1\'); Shiny.setInputValue(\'' + E + 'toggle_resolved\', 1)"></a>' +
+          '<button onclick="__clicks.push(\'goto1\'); Shiny.setInputValue(\'' + E + 'goto_annot\', 1)"></button></div>' +
+        '<div class="rt-tr"><a onclick="__clicks.push(\'pick2\'); Shiny.onInputChange(\'' + E + 'review_pick\', 2)"></a></div>' +
+        '<div class="rt-tr rt-tr-pad"></div>' +
+      '</div></div></div></div>';
+  };
   window.stateModal = function () {
     document.getElementById('shiny-modal').innerHTML = '<div class="modal in"><div id="assemble-new_state">' +
       '<input type="radio" value="1" onclick="__clicks.push(\'st1\')"><input type="radio" value="2" onclick="__clicks.push(\'st2\')"></div>' +

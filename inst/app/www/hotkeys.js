@@ -105,13 +105,13 @@
 
 
   // ---- reactable rows ----
-  // Rows of a reactable body that carry a selection input and are not hidden
-  // by CSS (the lock/state pickers hide rows with display:none, in the DOM).
+  // Rows of a reactable body, minus pagination padding and rows hidden by CSS
+  // (the lock/state pickers hide rows with display:none, still in the DOM).
   function rows(tableSel) {
     var t = document.querySelector(tableSel);
     if (!t) return [];
-    return Array.prototype.filter.call(t.querySelectorAll('.rt-tbody .rt-tr'), function (r) {
-      return r.querySelector('input.rt-select-input') && getComputedStyle(r).display !== 'none';
+    return Array.prototype.filter.call(t.querySelectorAll('.rt-tbody .rt-tr:not(.rt-tr-pad)'), function (r) {
+      return getComputedStyle(r).display !== 'none';
     });
   }
   function selectRow(row) {
@@ -160,8 +160,12 @@
   });
   var DET = 'annotate-annotations-';
   function viewer() {
-    var syn = lastCanvas && /synteny_canvas$/.test(lastCanvas) && document.getElementById(lastCanvas);
-    var id = syn ? lastCanvas : (document.getElementById(lastCanvas || '') ? lastCanvas : DET + 'seqview-canvas');
+    var id = lastCanvas && document.getElementById(lastCanvas) ? lastCanvas : null;
+    if (!id) {
+      var first = document.querySelector('#shiny-modal .mp-seqview-canvas');
+      id = first ? first.id : DET + 'seqview-canvas';
+    }
+    var syn = /synteny_canvas$/.test(id);
     return { api: syn ? window.mpsyn : window.mpseq, id: id, attr: syn ? 'data-mpsyn' : 'data-mpseq' };
   }
   function viewerButton(action) {
@@ -300,7 +304,10 @@
     row.scrollIntoView({ block: 'nearest' });
     cursors[sel] = row; return true;
   }
-  function moveCursor(sel, by) { return setCursor(sel, stepRow(sel, by, cursorRow(sel))); }
+  function moveCursor(sel, by) {
+    var next = stepRow(sel, by, cursorRow(sel));
+    return next ? setCursor(sel, next) : !!cursorRow(sel);
+  }
   function toggleCursor(sel) {
     var r = cursorRow(sel); if (!r) return false;
     lastToggled[sel] = r;
@@ -385,6 +392,70 @@
       if (!usable(el)) return false;
       el.click(); return true;
     });
+  })();
+
+
+  // ---- Assemble details modal ----
+  (function () {
+    var C = 'assemble-coverage_details-', ctx = 'coverage', T = '#' + C + 'table';
+    function b(key, label, run) { bind(ctx, key, label, run); }
+    function c(key, label, id) { b(key, label, function () { return click(C + id); }); }
+    function inModal(sel) { return clickIn(document.getElementById('shiny-modal'), sel); }
+    c('Escape', 'Close', 'close_modal');
+    c('q', 'Close', 'close_modal');
+    c('L', 'Lock', 'lock');
+    c('a', 'Align paths', 'align');
+    c(']', 'Next conflict block', 'next_block');
+    c('n', 'Next conflict block', 'next_block');
+    c('[', 'Previous conflict block', 'prev_block');
+    c('p', 'Previous conflict block', 'prev_block');
+    for (var n = 1; n <= 4; n++) (function (n) {
+      b(String(n), 'Resolve mode ' + n + ' (path / majority / IUPAC / N-mask)', function () {
+        var rs = document.querySelectorAll('#' + C + 'res_mode input[type=radio]');
+        if (!rs[n - 1]) return false;
+        rs[n - 1].click(); return true;
+      });
+    })(n);
+    c('B', 'Build resolved assembly', 'build_resolved');
+    c('T', 'Trim to consensus', 'trim_consensus');
+    b('i', 'Focus notes', function () { return focusId(C + 'notes'); });
+    b('I', 'Scroll to and focus notes', function () {
+      var el = document.getElementById(C + 'notes'); if (!el) return false;
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' }); el.focus(); return true;
+    });
+    b('ArrowDown', 'Move scaffold cursor down', function () { return moveCursor(T, 1); });
+    b('ArrowUp', 'Move scaffold cursor up', function () { return moveCursor(T, -1); });
+    b('Space', 'Check / uncheck cursor scaffold', function () { return toggleCursor(T); });
+    b('X', 'Include / ignore cursor scaffold', function () { return clickIn(cursorRow(T), '[onclick*="-ignore"]'); });
+    b('+', 'Zoom in (MapToRef viewer)', function () { return zoom(2); });
+    b('=', 'Zoom in (MapToRef viewer)', function () { return zoom(2); });
+    b('-', 'Zoom out (MapToRef viewer)', function () { return zoom(0.5); });
+    b('ArrowLeft', 'Pan left', function () { return pan(-0.25); });
+    b('ArrowRight', 'Pan right', function () { return pan(0.25); });
+    b('W', 'Whole genome', function () { return viewerButton('whole'); });
+    b('G', 'Go to position', function () { return focusIn('#shiny-modal [id$="-goto"]'); });
+    b('c', 'Toggle coverage layer', function () { return inModal('[id$="-show_cov"]'); });
+    b('t', 'Toggle nucleotide layer', function () { return inModal('[id$="-show_nt"]'); });
+    b('R', 'Toggle reads layer', function () { return inModal('[id$="-show_reads"]'); });
+  })();
+
+  // ---- Export outlier review modal ----
+  (function () {
+    var E = 'export-', ctx = 'review', T = '#' + E + 'review_table';
+    function b(key, label, run) { bind(ctx, key, label, run); }
+    function c(key, label, id) { b(key, label, function () { return click(E + id); }); }
+    c('ArrowLeft', 'Previous gene', 'review_prev');
+    c('[', 'Previous gene', 'review_prev');
+    c('ArrowRight', 'Next gene', 'review_next');
+    c(']', 'Next gene', 'review_next');
+    b('ArrowDown', 'Move sample cursor down', function () { return moveCursor(T, 1); });
+    b('ArrowUp', 'Move sample cursor up', function () { return moveCursor(T, -1); });
+    b('h', 'Highlight cursor sample in the alignment', function () { return clickIn(cursorRow(T), '[onclick*="review_pick"]'); });
+    b('x', 'Toggle resolved for cursor sample', function () { return clickIn(cursorRow(T), '[onclick*="toggle_resolved"]'); });
+    b('Space', 'Toggle resolved for cursor sample', function () { return clickIn(cursorRow(T), '[onclick*="toggle_resolved"]'); });
+    b('Enter', 'Edit cursor sample in Annotate', function () { return clickIn(cursorRow(T), '[onclick*="goto_annot"]'); });
+    b('e', 'Edit cursor sample in Annotate', function () { return clickIn(cursorRow(T), '[onclick*="goto_annot"]'); });
+    c('S', 'Mark whole gene resolved', 'skip_gene');
   })();
 
   window.mpHotkeys = {
