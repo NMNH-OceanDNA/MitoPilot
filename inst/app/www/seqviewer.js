@@ -177,6 +177,7 @@
     this.viewStart = centre - (centre - this.viewStart) * (this.ppb / newPpb);
     this.ppb = newPpb; this.clamp(); this.draw();
   };
+  Viewer.prototype.pan = function (frac) { this.viewStart += frac * this.viewLen(); this.clamp(); this.draw(); };
   Viewer.prototype.goto = function (pos) {
     if (this.ppb < NT_LETTER) this.ppb = 10;
     this.viewStart = pos - this.viewLen() / 2; this.clamp(); this.draw();
@@ -685,6 +686,7 @@
   window.mpseq.fit = function (id, row) { var v = get(id); if (v) v.fit(row); };
   window.mpseq.whole = function (id) { var v = get(id); if (v) v.whole(); };
   window.mpseq.goto = function (id, pos) { var v = get(id); if (v) v.goto(pos); };
+  window.mpseq.pan = function (id, frac) { var v = get(id); if (v) v.pan(frac); };
   window.mpseq.laneY = function (id, lane) { var v = get(id); return v ? v.laneY(lane) + 8 : 0; };
   window.mpseq.hitTest = function (id, px, py) { var v = get(id); return v ? v.hitTest(px, py) : null; };
   window.mpseq.click = function (id, px, py) { var v = get(id); if (v) v.click(px, py); };

@@ -179,3 +179,18 @@ test_that("a canvas replaced after the payload arrived is redrawn from the cache
   expect_true(x$live); expect_equal(x$L, 408); expect_gt(x$height, 0)
   expect_equal(js(b, "parseInt(document.getElementById('sy-canvas').style.height, 10) > 0"), TRUE)
 })
+
+test_that("pan moves the view by a fraction of its width, back again, and clamps at the start", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ window.__handlers.mpsyn(%s);
+    window.mpsyn.whole('sy-canvas'); window.mpsyn.zoom('sy-canvas', 4);
+    var a = window.mpsyn.state('sy-canvas');
+    window.mpsyn.pan('sy-canvas', 0.25); var b2 = window.mpsyn.state('sy-canvas');
+    window.mpsyn.pan('sy-canvas', -0.25); var c = window.mpsyn.state('sy-canvas');
+    window.mpsyn.pan('sy-canvas', -50); var d = window.mpsyn.state('sy-canvas');
+    return JSON.stringify([a.viewStart, b2.viewStart, c.viewStart, d.viewStart]); })()", sy_payload()))
+  v <- jsonlite::fromJSON(r)
+  expect_gt(v[2], v[1])
+  expect_equal(v[3], v[1], tolerance = 1e-6)
+  expect_equal(v[4], 1)
+})
