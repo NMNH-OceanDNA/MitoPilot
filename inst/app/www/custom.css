@@ -1200,8 +1200,6 @@ details.mp-nmnh-cols label { font-size: var(--mp-fs-meta); }
 #mp-hotkeys-pill { position: fixed; right: 12px; bottom: 12px; z-index: 1060; display: flex; align-items: center; gap: 6px;
   padding: 4px 8px; font-size: 12px; background: var(--mp-surface); border: 1px solid var(--mp-border); border-radius: 14px;
   box-shadow: 0 1px 4px rgba(0,0,0,.15); }
-.mp-header #mp-hotkeys-pill { position: static; margin-left: auto; padding: 0; border: none; box-shadow: none; background: none; }
-.mp-header #mp-hotkeys-pill ~ .mp-help { margin-left: 0; }
 #mp-hotkeys-pill label { margin: 0; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 #mp-hotkeys-pill input { margin: 0; }
 #mp-hotkeys-pill button { border: 1px solid var(--mp-border); background: var(--mp-primary-soft); border-radius: 50%;
