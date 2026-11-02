@@ -66,6 +66,8 @@
   }
 
   // ---- cheat sheet ----
+  // A bare capital letter is typed with Shift; show it that way.
+  function keyLabel(k) { return /^[A-Z]$/.test(k) ? 'Shift+' + k.toLowerCase() : k; }
   function help(show) {
     if (!helpEl) {
       helpEl = document.createElement('div');
@@ -77,7 +79,7 @@
     if (!show) { helpEl.hidden = true; return; }
     var ctx = context(), b = bindings[ctx] || {};
     var rows = Object.keys(b).map(function (k) {
-      return '<tr><td><kbd>' + k.replace('Shift+', 'Shift+') + '</kbd></td><td>' + b[k].label + '</td></tr>';
+      return '<tr><td><kbd>' + keyLabel(k) + '</kbd></td><td>' + b[k].label + '</td></tr>';
     }).join('');
     helpEl.innerHTML = '<div class="mp-hotkeys-help-box"><h4>Keyboard shortcuts: ' + ctx.replace('page:', '') +
       '</h4><table>' + rows + '</table><p class="text-muted">Mouse only: ' + MOUSE_ONLY.join('; ') +
