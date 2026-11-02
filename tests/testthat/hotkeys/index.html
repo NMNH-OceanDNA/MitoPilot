@@ -50,7 +50,7 @@
     getState: function () { return { page: 2 }; }
   };
   window.coverageModal = function () {
-    var C = 'assemble-coverage_details-';
+    var C = 'assemble-assemble-coverage_details-';
     var btn = function (id) { return '<button type="button" id="' + C + id + '" onclick="__clicks.push(this.id)"></button>'; };
     window.showModal(
       ['close_modal','lock','align','next_block','prev_block','build_resolved','trim_consensus'].map(btn).join('') +
@@ -62,13 +62,13 @@
         '<div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push(\'scaf2\')"><a onclick="__clicks.push(\'ignore2\'); Shiny.setInputValue(\'' + C + 'ignore\', 2)"></a></div>' +
         '<div class="rt-tr rt-tr-pad"></div>' +
       '</div></div>' +
-      '<input type="number" id="assemble-coverage_details-maptoref_viewer-goto">' +
-      '<input type="checkbox" id="assemble-coverage_details-maptoref_viewer-show_cov" onclick="__clicks.push(\'cov\')">' +
-      '<input type="checkbox" id="assemble-coverage_details-maptoref_viewer-show_nt" onclick="__clicks.push(\'nt\')">' +
-      '<input type="checkbox" id="assemble-coverage_details-maptoref_viewer-show_reads" onclick="__clicks.push(\'reads\')">' +
+      '<input type="number" id="assemble-assemble-coverage_details-maptoref_viewer-goto">' +
+      '<input type="checkbox" id="assemble-assemble-coverage_details-maptoref_viewer-show_cov" onclick="__clicks.push(\'cov\')">' +
+      '<input type="checkbox" id="assemble-assemble-coverage_details-maptoref_viewer-show_nt" onclick="__clicks.push(\'nt\')">' +
+      '<input type="checkbox" id="assemble-assemble-coverage_details-maptoref_viewer-show_reads" onclick="__clicks.push(\'reads\')">' +
       '<button type="button" data-mpseq="whole" onclick="__clicks.push(\'mtwhole\')"></button>' +
-      '<canvas id="assemble-coverage_details-maptoref_viewer-canvas" class="mp-seqview-canvas"></canvas>' +
-      '<canvas id="assemble-coverage_details-maptoref_viewer-reads" class="mp-seqview-canvas"></canvas>' +
+      '<canvas id="assemble-assemble-coverage_details-maptoref_viewer-canvas" class="mp-seqview-canvas"></canvas>' +
+      '<canvas id="assemble-assemble-coverage_details-maptoref_viewer-reads" class="mp-seqview-canvas"></canvas>' +
       '<textarea id="' + C + 'notes"></textarea>' +
       '');
   };
@@ -105,7 +105,7 @@
 <script>
   // Annotate details modal markup (ids from R/app_annotate_details.R), buttons record clicks.
   window.detailsModal = function () {
-    var D = 'annotate-annotations-';
+    var D = 'annotate-annotate-annotations-';
     var btn = function (id) { return '<button type="button" id="' + D + id + '" onclick="__clicks.push(this.id)"></button>'; };
     var ids = ['close','lock','lock_only','back_to_review','nav_next','nav_prev','ID_verified','reviewed','problematic',
       'partial','delete','restore','merge','unjoin','assign_gene','auto_assign_orfs','confirm_merge','cancel_merge',
@@ -114,12 +114,12 @@
       ids.map(btn).join('') +
       '<details id="' + D + 'annotation_table_details" open><summary>Annotation Table</summary>' +
         '<div id="' + D + 'table"><div class="rt-tbody">' +
-          '<div class="rt-tr"><input class="rt-select-input" type="radio" onclick="__clicks.push(\'row1\')">' +
+          '<div class="rt-tr"><div class="rt-td" onclick="__clicks.push(\'row1\')"></div>' +
             '<button class="icon-bttn-text" onclick="__clicks.push(\'fas1\'); Shiny.setInputValue(\'' + D + 'copy_fas\', 1)"></button></div>' +
-          '<div class="rt-tr rt-tr-selected"><input class="rt-select-input" type="radio" onclick="__clicks.push(\'row2\')">' +
+          '<div class="rt-tr rt-tr-selected"><div class="rt-td" onclick="__clicks.push(\'row2\')"></div>' +
             '<button class="icon-bttn-text" onclick="__clicks.push(\'fas2\'); Shiny.setInputValue(\'' + D + 'copy_fas\', 2)"></button>' +
             '<button class="icon-bttn-text" onclick="__clicks.push(\'faa2\'); Shiny.setInputValue(\'' + D + 'copy_faa\', 2)"></button></div>' +
-          '<div class="rt-tr"><input class="rt-select-input" type="radio" onclick="__clicks.push(\'row3\')"></div>' +
+          '<div class="rt-tr"><div class="rt-td" onclick="__clicks.push(\'row3\')"></div></div>' +
         '</div></div></details>' +
       '<details id="' + D + 'seqview-section"><summary>Sequence</summary><div class="mp-seqview-controls">' +
         '<input type="number" id="' + D + 'seqview-goto">' +
