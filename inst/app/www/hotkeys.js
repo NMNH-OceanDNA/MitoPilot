@@ -22,7 +22,13 @@
     var box = document.getElementById('mp-hotkeys-on');
     if (box) box.checked = !!on;
   }
+  // Alt combos name the physical key (Option+, types a symbol on macOS).
+  var ALT_CODES = { Comma: [',', '<'], Period: ['.', '>'] };
   function keyOf(e) {
+    if (e.altKey) {
+      var c = ALT_CODES[e.code];
+      return c ? 'Alt+' + c[e.shiftKey ? 1 : 0] : 'Alt+' + e.key;
+    }
     if (e.key === ' ') return 'Space';
     if (e.key.length === 1) return e.key;
     return (e.shiftKey ? 'Shift+' : '') + e.key;
@@ -95,7 +101,7 @@
       if (k === 'Escape' || k === '?') { help(false); e.preventDefault(); }
       return;
     }
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.ctrlKey || e.metaKey) return;
     var t = e.target && e.target.closest ? e.target : null;
     if (t && t.closest(IGNORE)) {
       if (k === 'Escape' && t.matches(TEXTY)) { t.blur(); e.preventDefault(); }
@@ -110,17 +116,30 @@
   document.addEventListener('keydown', handle, true);
 
   // ---- pill ----
+  var pillEl = null;
+  // Lives in the header just left of Help. The header is Shiny-rendered after
+  // load and can re-render, so (re)place the pill whenever the DOM changes;
+  // bottom-right corner while there is no header.
+  function placePill() {
+    var d = pillEl, helpLink = document.querySelector('.mp-header .mp-help');
+    if (helpLink) {
+      if (d.nextElementSibling !== helpLink) helpLink.parentElement.insertBefore(d, helpLink);
+    } else if (d.parentElement !== document.body) {
+      document.body.appendChild(d);
+    }
+  }
   function pill() {
-    if (document.getElementById('mp-hotkeys-pill')) return;
-    var d = document.createElement('div');
+    if (pillEl) return;
+    var d = pillEl = document.createElement('div');
     d.id = 'mp-hotkeys-pill';
     d.innerHTML = '<label><input type="checkbox" id="mp-hotkeys-on"> Hotkeys</label>' +
       '<button type="button" id="mp-hotkeys-help-btn" aria-label="Keyboard shortcuts">?</button>';
-    document.body.appendChild(d);
     var box = d.querySelector('#mp-hotkeys-on');
     box.checked = enabled();
     box.addEventListener('change', function () { setEnabled(box.checked); });
     d.querySelector('#mp-hotkeys-help-btn').addEventListener('click', function () { help(true); });
+    placePill();
+    if (window.MutationObserver) new MutationObserver(placePill).observe(document.body, { childList: true, subtree: true });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pill); else pill();
 
@@ -178,10 +197,21 @@
   var lastCanvas = null;
   document.addEventListener('mouseover', function (e) {
     var t = e.target;
-    if (t && t.classList && t.classList.contains('mp-seqview-canvas')) lastCanvas = t.id.replace(/-reads$/, '-canvas');
+    if (!t || !t.closest) return;
+    if (t.classList.contains('mp-seqview-canvas')) lastCanvas = t.id.replace(/-reads$/, '-canvas');
+    else if (t.closest('.msaR')) lastCanvas = 'msa';
   });
   function DET() { return nsFrom(DETAILS_MARK) || ''; }
+  var msaApi = {
+    pan: function (id, frac) {
+      var el = document.querySelector('#shiny-modal .biojs_msa_rheader');
+      if (!el) return;
+      el.scrollLeft += frac * el.clientWidth;
+      el.dispatchEvent(new Event('scroll'));
+    }
+  };
   function viewer() {
+    if (lastCanvas === 'msa' && document.querySelector('#shiny-modal .msaR')) return { api: msaApi, id: 'msa', attr: null };
     var id = lastCanvas && document.getElementById(lastCanvas) ? lastCanvas : null;
     if (!id) {
       var first = document.querySelector('#shiny-modal .mp-seqview-canvas');
@@ -192,6 +222,7 @@
   }
   function viewerButton(action) {
     var v = viewer(), cv = document.getElementById(v.id);
+    if (!v.attr) return false;
     var sec = cv && cv.closest('details');
     openPanel(sec);
     return clickIn(sec || document.getElementById('shiny-modal'), '[' + v.attr + '="' + action + '"]');
@@ -249,10 +280,9 @@
     b('Y', 'Copy amino-acid FASTA', function () { return clickIn(selectedRow(), 'button[onclick*="copy_faa"]'); });
 
     b('+', 'Zoom in (hovered viewer)', function () { return zoom(2); });
-    b('=', 'Zoom in (hovered viewer)', function () { return zoom(2); });
     b('-', 'Zoom out (hovered viewer)', function () { return zoom(0.5); });
-    b('ArrowLeft', 'Pan left (hovered viewer)', function () { return pan(-0.25); });
-    b('ArrowRight', 'Pan right (hovered viewer)', function () { return pan(0.25); });
+    b('ArrowLeft', 'Pan left (hovered viewer or alignment)', function () { return pan(-0.25); });
+    b('ArrowRight', 'Pan right (hovered viewer or alignment)', function () { return pan(0.25); });
     b('F', 'Fit selected gene', function () { return viewerButton('fit'); });
     b('W', 'Whole genome / alignment', function () { return viewerButton('whole'); });
     b('C', 'Copy visible sequence', function () { return viewerButton('copy'); });
@@ -279,14 +309,14 @@
     // value "one", which the R handlers read as step size 1. Codon buttons when
     // the segment owns that end (wrapper visible), else the nucleotide nudge.
     function editing() { return visible(D() + 'edit_mode_ctrls'); }
-    function boundary(end, dir) {
+    function boundary(end, dir, step) {
       if (!editing()) return false;
       var codon = visible(D() + (end === '5' ? 'start_search_ctrl' : 'stop_search_ctrl'));
       var id = codon
         ? (end === '5' ? (dir === 'out' ? 'start-add' : 'start-minus') : (dir === 'out' ? 'stop-add' : 'stop-minus'))
         : 'rrna-' + end + '-' + dir;
       if (!codon && !document.getElementById(D() + id)) return false;
-      return post(D() + id, 'one');
+      return post(D() + id, step || 'one');
     }
     c('e', 'Edit mode', 'edit_mode');
     c('E', 'Save edits', 'save_edits');
@@ -295,6 +325,10 @@
     b('.', "5' boundary in by one", function () { return boundary('5', 'in'); });
     b('<', "3' boundary in by one", function () { return boundary('3', 'in'); });
     b('>', "3' boundary out by one", function () { return boundary('3', 'out'); });
+    b('Alt+,', "5' boundary out by the step box", function () { return boundary('5', 'out', 'box'); });
+    b('Alt+.', "5' boundary in by the step box", function () { return boundary('5', 'in', 'box'); });
+    b('Alt+<', "3' boundary in by the step box", function () { return boundary('3', 'in', 'box'); });
+    b('Alt+>', "3' boundary out by the step box", function () { return boundary('3', 'out', 'box'); });
     b('c', 'Toggle single-codon stepping', function () {
       return editing() && clickIn(document.getElementById(D() + 'edit_mode_ctrls'), 'input[onchange*="single_codon"]');
     });
@@ -302,7 +336,6 @@
     c('3', "Toggle partial 3'", 'toggle_partial_stop');
     c('P', 'poly-A stop', 'polyA_stop');
     c('f', 'Toggle Align fewer refs', 'reduce_align');
-    c('X', 'Toggle Local BLAST', 'local_blast');
 
     b('G', 'Go to position', function () {
       openPanel(document.getElementById(D() + 'seqview-section'));
@@ -453,7 +486,6 @@
     b('Space', 'Check / uncheck cursor scaffold', function () { return toggleCursor(T()); });
     b('X', 'Include / ignore cursor scaffold', function () { return clickIn(cursorRow(T()), '[onclick*="-ignore"]'); });
     b('+', 'Zoom in (MapToRef viewer)', function () { return zoom(2); });
-    b('=', 'Zoom in (MapToRef viewer)', function () { return zoom(2); });
     b('-', 'Zoom out (MapToRef viewer)', function () { return zoom(0.5); });
     b('ArrowLeft', 'Pan left', function () { return pan(-0.25); });
     b('ArrowRight', 'Pan right', function () { return pan(0.25); });

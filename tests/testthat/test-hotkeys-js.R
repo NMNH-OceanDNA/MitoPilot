@@ -36,10 +36,10 @@ clicks <- function(b) {
   r <- js(b, "JSON.stringify(window.__clicks)")
   if (identical(r, "[]")) character(0) else jsonlite::fromJSON(r)
 }
-press <- function(b, key, shift = FALSE, target = "document") {
+press <- function(b, key, shift = FALSE, target = "document", alt = FALSE, code = "") {
   js(b, sprintf(
-    "(function(){var t=%s; t.dispatchEvent(new KeyboardEvent('keydown',{key:'%s',shiftKey:%s,bubbles:true,cancelable:true})); return true;})()",
-    target, key, tolower(shift)))
+    "(function(){var t=%s; t.dispatchEvent(new KeyboardEvent('keydown',{key:'%s',code:'%s',shiftKey:%s,altKey:%s,bubbles:true,cancelable:true})); return true;})()",
+    target, key, code, tolower(shift), tolower(alt)))
   invisible(clicks(b))
 }
 
@@ -47,6 +47,7 @@ test_that("hotkeys are off by default and the pill turns them on", {
   b <- hk_page()
   expect_false(js(b, "window.mpHotkeys.enabled()"))
   expect_true(js(b, "document.getElementById('mp-hotkeys-on') !== null"))
+  expect_true(js(b, "var p=document.getElementById('mp-hotkeys-pill'); p.parentElement.classList.contains('mp-header') && p.nextElementSibling.classList.contains('mp-help')"))
   press(b, "r")
   expect_equal(js(b, "window.__clicks.length"), 0L)
   js(b, "window.mpHotkeys.setEnabled(true)")
@@ -61,6 +62,9 @@ test_that("keyOf spells keys as the spec does", {
     return window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:k,shiftKey:(k==='L'||k==='<'||k==='?')}));})
     .concat([window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true}))]))")
   expect_equal(jsonlite::fromJSON(r), c("l", "L", ",", "<", "Space", "ArrowDown", "?", "Shift+ArrowRight"))
+  a <- js(b, "JSON.stringify([window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:',',code:'Comma',altKey:true})),
+    window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:'\u2265',code:'Period',altKey:true,shiftKey:true}))])")
+  expect_equal(jsonlite::fromJSON(a), c("Alt+,", "Alt+>"))
 })
 
 test_that("typing targets, modifier combos and SweetAlerts are ignored", {
@@ -190,7 +194,7 @@ test_that("edit-mode letters click their controls", {
   press(b, "e"); press(b, "E", TRUE); press(b, "z"); press(b, "5"); press(b, "3"); press(b, "P", TRUE)
   press(b, "f"); press(b, "X", TRUE); press(b, "c")
   expect_equal(clicks(b), c(paste0(D, c("edit_mode", "save_edits", "discard_edits", "toggle_partial_start",
-    "toggle_partial_stop", "polyA_stop")), "reduce_align", "local_blast"))
+    "toggle_partial_stop", "polyA_stop")), "reduce_align"))
   expect_equal(jsonlite::fromJSON(js(b, "JSON.stringify(window.__inputs.slice(-1)[0])"))$name, paste0(D, "single_codon"))
 })
 
@@ -327,4 +331,38 @@ test_that("held arrow keys move the table cursor three rows per repeat", {
   js(b, "document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',repeat:true,bubbles:true,cancelable:true}))")
   press(b, " ")
   expect_equal(clicks(b), "sel4")
+})
+
+
+test_that("Left/Right scroll the alignment when it is hovered; + is the only zoom-in key", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  press(b, "=")
+  expect_equal(clicks(b), character(0))
+  press(b, "a")
+  js(b, sprintf("document.querySelector('#%salignment_div .biojs_msa_rheader').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))", D))
+  press(b, "ArrowRight"); press(b, "ArrowRight"); press(b, "ArrowLeft")
+  expect_equal(js(b, sprintf("document.querySelector('#%salignment_div .biojs_msa_rheader').scrollLeft", D)), 25)
+  press(b, "+", TRUE)
+  expect_equal(clicks(b), "align-summary")
+})
+
+
+test_that("Alt + boundary keys move by the step box instead of one", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  js(b, sprintf("document.getElementById('%sedit_mode_ctrls').style.display=''", D))
+  press(b, ",", alt = TRUE, code = "Comma"); press(b, ".", alt = TRUE, code = "Period")
+  press(b, "<", shift = TRUE, alt = TRUE, code = "Comma"); press(b, ">", shift = TRUE, alt = TRUE, code = "Period")
+  r <- jsonlite::fromJSON(js(b, "JSON.stringify(window.__inputs.map(function(i){return i.name+'='+i.value;}))"))
+  expect_equal(r, paste0(D, c("start-add=box", "start-minus=box", "stop-minus=box", "stop-add=box")))
+  press(b, "v", alt = TRUE, code = "KeyV")
+  expect_equal(clicks(b), character(0))
+})
+
+
+test_that("the pill follows a header rendered or re-rendered after load", {
+  b <- hk_page()
+  js(b, "document.querySelector('.mp-header').remove()")
+  expect_true(js(b, "document.getElementById('mp-hotkeys-pill').parentElement === document.body"))
+  js(b, "var h=document.createElement('div'); h.className='mp-header'; h.innerHTML='<span>x</span><a class=\"mp-help\">Help</a>'; document.body.prepend(h)")
+  expect_true(js(b, "var p=document.getElementById('mp-hotkeys-pill'); p.parentElement.classList.contains('mp-header') && p.nextElementSibling.classList.contains('mp-help')"))
 })
