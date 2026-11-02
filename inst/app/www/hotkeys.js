@@ -22,13 +22,7 @@
     var box = document.getElementById('mp-hotkeys-on');
     if (box) box.checked = !!on;
   }
-  // Alt combos name the physical key (Option+, types a symbol on macOS).
-  var ALT_CODES = { Comma: [',', '<'], Period: ['.', '>'] };
   function keyOf(e) {
-    if (e.altKey) {
-      var c = ALT_CODES[e.code];
-      return c ? 'Alt+' + c[e.shiftKey ? 1 : 0] : 'Alt+' + e.key;
-    }
     if (e.key === ' ') return 'Space';
     if (e.key.length === 1) return e.key;
     return (e.shiftKey ? 'Shift+' : '') + e.key;
@@ -101,7 +95,7 @@
       if (k === 'Escape' || k === '?') { help(false); e.preventDefault(); }
       return;
     }
-    if (e.ctrlKey || e.metaKey) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     var t = e.target && e.target.closest ? e.target : null;
     if (t && t.closest(IGNORE)) {
       if (k === 'Escape' && t.matches(TEXTY)) { t.blur(); e.preventDefault(); }
@@ -325,10 +319,10 @@
     b('.', "5' boundary in by one", function () { return boundary('5', 'in'); });
     b('<', "3' boundary in by one", function () { return boundary('3', 'in'); });
     b('>', "3' boundary out by one", function () { return boundary('3', 'out'); });
-    b('Alt+,', "5' boundary out by the step box", function () { return boundary('5', 'out', 'box'); });
-    b('Alt+.', "5' boundary in by the step box", function () { return boundary('5', 'in', 'box'); });
-    b('Alt+<', "3' boundary in by the step box", function () { return boundary('3', 'in', 'box'); });
-    b('Alt+>', "3' boundary out by the step box", function () { return boundary('3', 'out', 'box'); });
+    b('[', "5' boundary out by the step box", function () { return boundary('5', 'out', 'box'); });
+    b(']', "5' boundary in by the step box", function () { return boundary('5', 'in', 'box'); });
+    b('{', "3' boundary in by the step box", function () { return boundary('3', 'in', 'box'); });
+    b('}', "3' boundary out by the step box", function () { return boundary('3', 'out', 'box'); });
     b('c', 'Toggle single-codon stepping', function () {
       return editing() && clickIn(document.getElementById(D() + 'edit_mode_ctrls'), 'input[onchange*="single_codon"]');
     });
