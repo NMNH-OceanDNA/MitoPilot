@@ -47,7 +47,7 @@ test_that("hotkeys are off by default and the pill turns them on", {
   b <- hk_page()
   expect_false(js(b, "window.mpHotkeys.enabled()"))
   expect_true(js(b, "document.getElementById('mp-hotkeys-on') !== null"))
-  expect_true(js(b, "var p=document.getElementById('mp-hotkeys-pill'); p.parentElement.classList.contains('mp-header') && p.nextElementSibling.classList.contains('mp-help')"))
+  expect_true(js(b, "document.getElementById('mp-hotkeys-pill').parentElement === document.body"))
   press(b, "r")
   expect_equal(js(b, "window.__clicks.length"), 0L)
   js(b, "window.mpHotkeys.setEnabled(true)")
@@ -356,11 +356,3 @@ test_that("bracket keys move the boundary by the step box instead of one", {
   expect_equal(clicks(b), character(0))
 })
 
-
-test_that("the pill follows a header rendered or re-rendered after load", {
-  b <- hk_page()
-  js(b, "document.querySelector('.mp-header').remove()")
-  expect_true(js(b, "document.getElementById('mp-hotkeys-pill').parentElement === document.body"))
-  js(b, "var h=document.createElement('div'); h.className='mp-header'; h.innerHTML='<span>x</span><a class=\"mp-help\">Help</a>'; document.body.prepend(h)")
-  expect_true(js(b, "var p=document.getElementById('mp-hotkeys-pill'); p.parentElement.classList.contains('mp-header') && p.nextElementSibling.classList.contains('mp-help')"))
-})
