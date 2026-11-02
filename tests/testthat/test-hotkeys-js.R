@@ -93,9 +93,12 @@ test_that("context follows the open modal, then the Step", {
 test_that("? opens a cheat sheet for the current context and Escape closes it", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
   js(b, "window.mpHotkeys.bind('page:Assemble','r','Refresh table',function(){return true;})")
+  js(b, "window.mpHotkeys.bind('page:Assemble','R','Run reports',function(){return true;})")
   press(b, "?", shift = TRUE)
   expect_false(js(b, "document.getElementById('mp-hotkeys-help').hidden"))
   expect_match(js(b, "document.getElementById('mp-hotkeys-help').textContent"), "Refresh table")
+  expect_match(js(b, "document.getElementById('mp-hotkeys-help').textContent"), "Shift+r", fixed = TRUE)
+  expect_false(grepl("Shift+R", js(b, "document.getElementById('mp-hotkeys-help').textContent"), fixed = TRUE))
   expect_match(js(b, "document.getElementById('mp-hotkeys-help').textContent"), "Mouse only")
   press(b, "Escape")
   expect_true(js(b, "document.getElementById('mp-hotkeys-help').hidden"))
