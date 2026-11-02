@@ -131,12 +131,14 @@
     });
   }
   // Single-select tables hide their selection column; a cell click selects.
-  function selectRow(row) {
+  // scroll=false leaves the window where it is (the details window keeps the
+  // user's place among the panels while the selected annotation changes).
+  function selectRow(row, scroll) {
     if (!row) return false;
     var el = row.querySelector('input.rt-select-input') || row.querySelector('.rt-td');
     if (!el) return false;
     el.click();
-    row.scrollIntoView({ block: 'nearest' });
+    if (scroll !== false) row.scrollIntoView({ block: 'nearest' });
     return true;
   }
   function stepRow(tableSel, by, fromRow) {
@@ -281,10 +283,10 @@
     function scrollWin(dy) { var el = scrollBox(); if (!el) return false; el.scrollTop += dy; return true; }
     b('ArrowDown', 'Scroll down', function () { return scrollWin(80); });
     b('ArrowUp', 'Scroll up', function () { return scrollWin(-80); });
-    b('Shift+ArrowDown', 'Next annotation', function () { return selectRow(stepRow(T(), 1, selRow())); });
-    b('Shift+ArrowUp', 'Previous annotation', function () { return selectRow(stepRow(T(), -1, selRow())); });
-    b('Home', 'First annotation', function () { var r = rows(T()); return selectRow(r[0]); });
-    b('End', 'Last annotation', function () { var r = rows(T()); return selectRow(r[r.length - 1]); });
+    b('Shift+ArrowDown', 'Next annotation', function () { return selectRow(stepRow(T(), 1, selRow()), false); });
+    b('Shift+ArrowUp', 'Previous annotation', function () { return selectRow(stepRow(T(), -1, selRow()), false); });
+    b('Home', 'First annotation', function () { var r = rows(T()); return selectRow(r[0], false); });
+    b('End', 'Last annotation', function () { var r = rows(T()); return selectRow(r[r.length - 1], false); });
 
     // Edit mode. Boundary keys move by exactly one codon or base: they post the
     // value "one", which the R handlers read as step size 1. Codon buttons when
