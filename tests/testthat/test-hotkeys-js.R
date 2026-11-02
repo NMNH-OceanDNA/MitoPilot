@@ -380,3 +380,12 @@ test_that("Shift+L unlocks when the window is locked (no lock button) in both de
   press(b, "L", TRUE)
   expect_equal(clicks(b), "assemble-assemble-coverage_details-unlock")
 })
+
+
+test_that("stepping annotations keeps the window scroll position", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  js(b, "document.querySelector('#shiny-modal .modal-body').scrollTop = 500")
+  press(b, "ArrowDown", TRUE); press(b, "End")
+  expect_equal(clicks(b), c("row3", "row3"))
+  expect_equal(js(b, "document.querySelector('#shiny-modal .modal-body').scrollTop"), 500)
+})
