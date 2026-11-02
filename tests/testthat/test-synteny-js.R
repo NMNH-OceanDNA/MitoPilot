@@ -1,37 +1,22 @@
 # tests/testthat/test-synteny-js.R
-.sy_state <- new.env()
-
 sy_page <- function() {
-  skip_if_not_installed("chromote")
-  skip_if(!nzchar(Sys.getenv("CHROMOTE_CHROME")) && is.null(tryCatch(chromote::find_chrome(), error = function(e) NULL)),
-          "no Chrome for chromote")
-  if (isTRUE(.sy_state$chrome_failed)) skip("Chrome did not start")
-  b <- tryCatch(chromote::ChromoteSession$new(), error = function(e) e)
-  if (inherits(b, "error")) {
-    .sy_state$chrome_failed <- TRUE
-    skip(paste("Chrome did not start:", conditionMessage(b)))
-  }
-  withr::defer(b$close(), envir = parent.frame())
-  file_url <- function(p) {
-    p <- normalizePath(p, winslash = "/", mustWork = TRUE)
-    paste0(if (startsWith(p, "/")) "file://" else "file:///", p)
-  }
+  b <- chromote_session_or_skip(envir = parent.frame())
   html <- readLines(testthat::test_path("synteny", "index.html"), warn = FALSE)
   for (f in c("seqviewer.js", "synteny.js")) {
     js_file <- system.file("app", "www", f, package = "MitoPilot")
-    html <- sub(sprintf('src="[^"]*%s"', f), sprintf('src="%s"', file_url(js_file)), html)
+    html <- sub(sprintf('src="[^"]*%s"', f), sprintf('src="%s"', chromote_file_url(js_file)), html)
   }
   page <- testthat::test_path("synteny", "index.generated.html")
   writeLines(html, page)
   withr::defer(unlink(page), envir = parent.frame())
-  b$Page$navigate(file_url(page))
+  chromote_navigate(b, chromote_file_url(page))
   Sys.sleep(1)
   if (!identical(js(b, "typeof window.mpsyn"), "object")) {
     stop("synteny.js did not load")
   }
   b
 }
-js <- function(b, code) b$Runtime$evaluate(code, returnByValue = TRUE)$result$value
+js <- chromote_js
 L <- function(r) jsonlite::fromJSON(r, simplifyVector = FALSE)
 
 test_that("column maps follow gaps, rotation and flip", {
