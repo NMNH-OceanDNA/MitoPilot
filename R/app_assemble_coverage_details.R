@@ -201,6 +201,10 @@ assembly_coverage_details_server <- function(id, rv) {
             uiOutput(ns("clip")) |> shinyjs::hidden(),
             actionButton(ns("align"), "Align", icon("align-justify"),
                          class = "btn-default") |> shinyjs::hidden(),
+            if (locked()) {
+              actionButton(ns("unlock"), "Unlock", icon = icon("lock-open"), class = "btn-default",
+                           title = "Unlock this sample and keep the window open")
+            },
             actionButton(ns("close_modal"), "Close", class = "btn-default"),
             if (!locked()) {
               actionButton(ns("lock"), "Lock", icon = icon("lock"), class = "btn-default",
@@ -228,6 +232,26 @@ assembly_coverage_details_server <- function(id, rv) {
       if (isTRUE(rv$data$assemble_lock[match(id, rv$data$ID)] == 1)) {
         rv$updating$assemble_lock <- 1
         trigger("coverage_modal")
+      }
+    })
+    # Unlock in place, behind the toolbar's unlock warning. assemble_lock_begin
+    # raises that confirm in this module's namespace, so it is answered here.
+    redraw_if_unlocked <- function() {
+      id <- rv$updating$ID
+      if (isTRUE(rv$data$assemble_lock[match(id, rv$data$ID)] == 0)) {
+        rv$updating$assemble_lock <- 0
+        trigger("coverage_modal")
+      }
+    }
+    observeEvent(input$unlock, {
+      req(locked())
+      assemble_lock_begin(rv, match(rv$updating$ID, rv$data$ID), unit = "assembly")
+      redraw_if_unlocked()
+    })
+    observeEvent(input$lock_confirm, {
+      if (isTRUE(input$lock_confirm)) {
+        assemble_lock_finish(rv)
+        redraw_if_unlocked()
       }
     })
 

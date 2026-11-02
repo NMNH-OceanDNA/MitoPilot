@@ -146,6 +146,7 @@
     this.viewStart = Math.max(1, Math.min(this.L - this.viewLen() + 1, this.viewStart));
   };
   Viewer.prototype.whole = function () { this.ppc = this.minPpc(); this.viewStart = 1; this.clamp(); this.draw(); };
+  Viewer.prototype.pan = function (frac) { this.viewStart += frac * this.viewLen(); this.clamp(); this.draw(); };
   Viewer.prototype.zoom = function (factor, atCol) {
     var centre = atCol || (this.viewStart + this.viewLen() / 2);
     var np = Math.min(MAX_PPC, Math.max(this.minPpc(), this.ppc * factor));
@@ -422,6 +423,7 @@
   };
   window.mpsyn.zoom = function (id, f) { var v = get(id); if (v) v.zoom(f); };
   window.mpsyn.whole = function (id) { var v = get(id); if (v) v.whole(); };
+  window.mpsyn.pan = function (id, frac) { var v = get(id); if (v) v.pan(frac); };
   window.mpsyn.fit = function (id, row) { var v = get(id); if (v) v.fit(row); };
   window.mpsyn.click = function (id, px, py) { var v = get(id); if (v) v.click(px, py); };
   window.mpsyn.hitTest = function (id, px, py) { var v = get(id); return v ? v.hitTest(px, py) : null; };

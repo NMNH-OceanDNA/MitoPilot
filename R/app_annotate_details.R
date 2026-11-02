@@ -923,6 +923,32 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       lock_unit()
       open_modal()
     })
+    # Unlock in place, behind the same warning the Annotate table shows.
+    unlock_unit <- function() {
+      rv$updating$annotate_lock <- 0
+      update_annotate_unit("annotate_lock")
+      rv$data <- rv$data |>
+        dplyr::rows_update(rv$updating[, c("ID", "path", "scaffold", "annotate_lock")], by = c("ID", "path", "scaffold"))
+      trigger("update_annotate_table")
+      trigger("refresh_export")
+      mp_toast("1 assembly unlocked.")
+      open_modal()
+    }
+    observeEvent(input$unlock, {
+      req(locked())
+      skipped <- mp_confirm(
+        "unlock_confirm",
+        title = "Unlock 1 assembly",
+        text = annotate_unlock_text(1),
+        action_label = "Unlock",
+        danger = TRUE,
+        skippable = TRUE
+      )
+      if (skipped) unlock_unit()
+    })
+    observeEvent(input$unlock_confirm, {
+      if (isTRUE(input$unlock_confirm) && locked()) unlock_unit()
+    })
 
     # Snapshot of the sample fields the figures actually use. Updated only when one
     # of them changes, so toggling unrelated state (reviewed / problematic / ID
@@ -2556,7 +2582,10 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     ## Edit start-add ----
     # Step magnitude (codons per click) comes from a numeric box (separate for
     # START and STOP); clamp to [1, 100] and fall back to 1 for empty/invalid.
+    # Hotkeys post "one" instead of the button's value: move by exactly 1.
+    step_one <- FALSE
     edit_step_size <- function(id) {
+      if (isTRUE(step_one)) return(1L)
       n <- suppressWarnings(as.integer(input[[id]]))
       if (length(n) == 0 || is.na(n) || n < 1L) 1L else min(n, 100L)
     }
@@ -2656,6 +2685,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       rv$annotations$start_codon[selected()] <- unname(codon)
     }))
     observeEvent(input$`start-add`, {
+      step_one <<- identical(input$`start-add`, "one")
       show_edit_waiter()
       trigger("start-add-simple")
       shinyjs::delay(50, {
@@ -2717,6 +2747,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       rv$annotations$start_codon[selected()] <- unname(codon)
     }))
     observeEvent(input$`start-minus`, {
+      step_one <<- identical(input$`start-minus`, "one")
       show_edit_waiter()
       trigger("start-minus-simple")
       shinyjs::delay(50, {
@@ -2801,6 +2832,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       rv$annotations$stop_codon[selected()] <- unname(codon)
     }))
     observeEvent(input$`stop-add`, {
+      step_one <<- identical(input$`stop-add`, "one")
       show_edit_waiter()
       trigger("stop-add-simple")
       shinyjs::delay(50, {
@@ -2889,6 +2921,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       rv$annotations$stop_codon[selected()] <- unname(codon)
     }))
     observeEvent(input$`stop-minus`, {
+      step_one <<- identical(input$`stop-minus`, "one")
       show_edit_waiter()
       trigger("stop-minus-simple")
       shinyjs::delay(50, {
@@ -2981,6 +3014,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     # boundary by N nucleotides. Moving an end auto-flags it as partial (the exact
     # boundary is uncertain); the PARTIAL toggle buttons let the user clear it.
     rrna_step_size <- function() {
+      if (isTRUE(step_one)) return(1L)
       n <- suppressWarnings(as.integer(input$rrna_step_size))
       if (length(n) == 0 || is.na(n) || n < 1L) 1L else min(n, 500L)
     }
@@ -3132,10 +3166,22 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       req(isTRUE(input$seg_overlap_confirm), !is.null(pend), rv$editing)
       apply_seg_move(pend$sel, pend$end, pend$pos1, pend$pos2, pend$is_rrna)
     })
-    observeEvent(input$`rrna-5-out`, adjust_rrna("5", "extend"))
-    observeEvent(input$`rrna-5-in`,  adjust_rrna("5", "trim"))
-    observeEvent(input$`rrna-3-out`, adjust_rrna("3", "extend"))
-    observeEvent(input$`rrna-3-in`,  adjust_rrna("3", "trim"))
+    observeEvent(input$`rrna-5-out`, {
+      step_one <<- identical(input$`rrna-5-out`, "one")
+      adjust_rrna("5", "extend")
+    })
+    observeEvent(input$`rrna-5-in`, {
+      step_one <<- identical(input$`rrna-5-in`, "one")
+      adjust_rrna("5", "trim")
+    })
+    observeEvent(input$`rrna-3-out`, {
+      step_one <<- identical(input$`rrna-3-out`, "one")
+      adjust_rrna("3", "extend")
+    })
+    observeEvent(input$`rrna-3-in`, {
+      step_one <<- identical(input$`rrna-3-in`, "one")
+      adjust_rrna("3", "trim")
+    })
 
     # Trim the stop codon by one terminal base (TAA -> TA -> T), shrinking the
     # CDS by 1 bp so it no longer overlaps a downstream feature. The removed
@@ -4585,7 +4631,10 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
           actionButton(ns("lock"), "Lock & Close", icon = icon("lock"))
         },
         dismiss = NULL,
-        extra = if (is_locked) NULL else tagList(
+        extra = if (is_locked) {
+          actionButton(ns("unlock"), "Unlock", icon = icon("lock-open"),
+                       title = "Unlock this assembly and keep the window open")
+        } else tagList(
           actionButton(ns("close"), "Close"),
           actionButton(ns("lock_only"), "Lock", icon = icon("lock"),
                        title = "Lock this assembly and keep the window open")

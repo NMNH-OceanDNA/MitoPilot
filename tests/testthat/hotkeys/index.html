@@ -1,0 +1,156 @@
+<!-- tests/testthat/hotkeys/index.html -->
+<!doctype html><meta charset="utf-8"><title>hotkeys test</title>
+<script>
+  // Shiny shim: record inputs; record clicks on fixture buttons.
+  window.__handlers = {}; window.__inputs = []; window.__clicks = [];
+  window.Shiny = {
+    addCustomMessageHandler: function (name, fn) { window.__handlers[name] = fn; },
+    setInputValue: function (name, value) { window.__inputs.push({ name: name, value: value }); }
+  };
+</script>
+<div class="mp-header"><span class="mp-app-name">MitoPilot</span><a class="mp-help" href="#">Help</a></div>
+<div id="mode">
+  <input type="radio" name="mode" value="Assemble" checked>
+  <input type="radio" name="mode" value="Annotate">
+  <input type="radio" name="mode" value="Export">
+</div>
+<div id="asmb_ctrls" style="display:none">
+  <button id="state" onclick="__clicks.push('dup-state')"></button>
+  <button id="lock" onclick="__clicks.push('dup-lock')"></button>
+</div>
+<div id="toolbar">
+  <button id="refresh" onclick="__clicks.push(this.id)"></button>
+  <button id="state" onclick="__clicks.push(this.id)"></button>
+  <button id="lock" onclick="__clicks.push(this.id)"></button>
+  <button id="run_modal" onclick="__clicks.push(this.id)"></button>
+  <button id="id_verified_top" onclick="__clicks.push(this.id)"></button>
+  <button id="problematic_top" onclick="__clicks.push(this.id)"></button>
+  <button id="partial_top" onclick="__clicks.push(this.id)"></button>
+  <button id="group" onclick="__clicks.push(this.id)"></button>
+  <button id="clear_group" onclick="__clicks.push(this.id)"></button>
+  <button id="export" onclick="__clicks.push(this.id)"></button>
+</div>
+<button id="assemble-meta_view_open" onclick="__clicks.push(this.id)"></button>
+<button id="annotate-meta_view_open" onclick="__clicks.push(this.id)"></button>
+<button id="export-meta_view_open" onclick="__clicks.push(this.id)"></button>
+<button id="workdir_browser-open_browser" onclick="__clicks.push(this.id)"></button>
+<button id="run_reports-open" onclick="__clicks.push(this.id)"></button>
+<input id="free-text">
+<div id="assemble-table" class="mp-sample-table"><input class="rt-search"><div class="rt-tbody">
+  <div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push('sel1')"><button class="icon-bttn-text" onclick="__clicks.push('det1'); Shiny.setInputValue('assemble-details', 1)"></button><a onclick="__clicks.push('out1'); Shiny.setInputValue('assemble-output', 1)"></a><a onclick="__clicks.push('spec1'); Shiny.setInputValue('assemble-specimen_open', 1)"></a></div>
+  <div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push('sel2')"><button class="icon-bttn-text" onclick="__clicks.push('det2'); Shiny.setInputValue('assemble-details', 2)"></button><a onclick="__clicks.push('out2'); Shiny.setInputValue('assemble-output', 2)"></a></div>
+  <div class="rt-tr" style="display:none"><input class="rt-select-input" type="checkbox" onclick="__clicks.push('sel3')"><button class="icon-bttn-text" onclick="__clicks.push('det3'); Shiny.setInputValue('assemble-details', 3)"></button></div>
+  <div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push('sel4')"><button class="icon-bttn-text" onclick="__clicks.push('det4'); Shiny.setInputValue('assemble-details', 4)"></button></div>
+</div></div>
+<div id="annotate-table" class="mp-sample-table"></div>
+<div id="export-table" class="mp-sample-table"></div>
+<script>
+  window.Reactable = {
+    toggleAllRowsSelected: function (id) { __clicks.push('all:' + id); },
+    gotoPage: function (id, p) { __clicks.push('page:' + p); },
+    getState: function () { return { page: 2 }; }
+  };
+  window.coverageModal = function () {
+    var C = 'assemble-assemble-coverage_details-';
+    var btn = function (id) { return '<button type="button" id="' + C + id + '" onclick="__clicks.push(this.id)"></button>'; };
+    window.showModal(
+      ['close_modal','lock','unlock','align','next_block','prev_block','build_resolved','trim_consensus'].map(btn).join('') +
+      '<div id="' + C + 'res_mode" class="shiny-input-radiogroup">' +
+        '<input type="radio" value="nmask" onclick="__clicks.push(\'res:\'+this.value)"><input type="radio" value="path" onclick="__clicks.push(\'res:\'+this.value)">' +
+        '<input type="radio" value="iupac" onclick="__clicks.push(\'res:\'+this.value)"><input type="radio" value="majority" onclick="__clicks.push(\'res:\'+this.value)"></div>' +
+      '<div id="' + C + 'table"><div class="rt-tbody">' +
+        '<div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push(\'scaf1\')"><a onclick="__clicks.push(\'ignore1\'); Shiny.setInputValue(\'' + C + 'ignore\', 1)"></a></div>' +
+        '<div class="rt-tr"><input class="rt-select-input" type="checkbox" onclick="__clicks.push(\'scaf2\')"><a onclick="__clicks.push(\'ignore2\'); Shiny.setInputValue(\'' + C + 'ignore\', 2)"></a></div>' +
+        '<div class="rt-tr rt-tr-pad"></div>' +
+      '</div></div>' +
+      '<input type="number" id="assemble-assemble-coverage_details-maptoref_viewer-goto">' +
+      '<input type="checkbox" id="assemble-assemble-coverage_details-maptoref_viewer-show_cov" onclick="__clicks.push(\'cov\')">' +
+      '<input type="checkbox" id="assemble-assemble-coverage_details-maptoref_viewer-show_nt" onclick="__clicks.push(\'nt\')">' +
+      '<input type="checkbox" id="assemble-assemble-coverage_details-maptoref_viewer-show_reads" onclick="__clicks.push(\'reads\')">' +
+      '<button type="button" data-mpseq="whole" onclick="__clicks.push(\'mtwhole\')"></button>' +
+      '<canvas id="assemble-assemble-coverage_details-maptoref_viewer-canvas" class="mp-seqview-canvas"></canvas>' +
+      '<canvas id="assemble-assemble-coverage_details-maptoref_viewer-reads" class="mp-seqview-canvas"></canvas>' +
+      '<textarea id="' + C + 'notes"></textarea>' +
+      '');
+  };
+  window.reviewModal = function () {
+    var E = 'export-';
+    var btn = function (id) { return '<button type="button" id="' + E + id + '" onclick="__clicks.push(this.id)"></button>'; };
+    window.showModal(
+      ['review_prev','review_next','skip_gene','review_done','cancel_review'].map(btn).join('') +
+      '<div id="' + E + 'review_table"><div class="rt-tbody">' +
+        '<div class="rt-tr"><a onclick="__clicks.push(\'pick1\'); Shiny.onInputChange(\'' + E + 'review_pick\', 1)"></a>' +
+          '<a onclick="__clicks.push(\'resolved1\'); Shiny.setInputValue(\'' + E + 'toggle_resolved\', 1)"></a>' +
+          '<button onclick="__clicks.push(\'goto1\'); Shiny.setInputValue(\'' + E + 'goto_annot\', 1)"></button></div>' +
+        '<div class="rt-tr"><a onclick="__clicks.push(\'pick2\'); Shiny.onInputChange(\'' + E + 'review_pick\', 2)"></a></div>' +
+        '<div class="rt-tr rt-tr-pad"></div>' +
+      '</div></div>');
+  };
+  window.stateModal = function () {
+    window.showModal('<div id="assemble-new_state">' +
+      '<input type="radio" value="1" onclick="__clicks.push(\'st1\')"><input type="radio" value="2" onclick="__clicks.push(\'st2\')"></div>' +
+      '<button id="assemble-update_state" onclick="__clicks.push(this.id)"></button>');
+  };
+</script>
+<div id="modal-host"></div>
+<script>
+  // Mirrors Shiny: #shiny-modal is the .modal element itself and is removed on close.
+  window.showModal = function (inner) {
+    window.closeModal();
+    var m = document.createElement('div'); m.id = 'shiny-modal'; m.className = 'modal in';
+    m.innerHTML = '<div class="modal-dialog"><div class="modal-body" style="height:300px;overflow:auto">' + inner + '<div style="height:3000px"></div></div></div>';
+    document.getElementById('modal-host').appendChild(m);
+  };
+  window.closeModal = function () { var m = document.getElementById('shiny-modal'); if (m) m.remove(); };
+</script>
+<script>
+  // Annotate details modal markup (ids from R/app_annotate_details.R), buttons record clicks.
+  window.detailsModal = function () {
+    var D = 'annotate-annotate-annotations-';
+    var btn = function (id) { return '<button type="button" id="' + D + id + '" onclick="__clicks.push(this.id)"></button>'; };
+    var ids = ['close','lock','lock_only','unlock','back_to_review','nav_next','nav_prev','ID_verified','reviewed','problematic',
+      'partial','delete','restore','merge','unjoin','assign_gene','auto_assign_orfs','confirm_merge','cancel_merge',
+      'edit_mode','save_edits','discard_edits','toggle_partial_start','toggle_partial_stop','polyA_stop'];
+    window.showModal(
+      ids.map(btn).join('') +
+      '<details id="' + D + 'annotation_table_details" open><summary>Annotation Table</summary>' +
+        '<div id="' + D + 'table"><div class="rt-tbody">' +
+          '<div class="rt-tr"><div class="rt-td" onclick="__clicks.push(\'row1\')"></div>' +
+            '<button class="icon-bttn-text" onclick="__clicks.push(\'fas1\'); Shiny.setInputValue(\'' + D + 'copy_fas\', 1)"></button></div>' +
+          '<div class="rt-tr rt-tr-selected"><div class="rt-td" onclick="__clicks.push(\'row2\')"></div>' +
+            '<button class="icon-bttn-text" onclick="__clicks.push(\'fas2\'); Shiny.setInputValue(\'' + D + 'copy_fas\', 2)"></button>' +
+            '<button class="icon-bttn-text" onclick="__clicks.push(\'faa2\'); Shiny.setInputValue(\'' + D + 'copy_faa\', 2)"></button></div>' +
+          '<div class="rt-tr"><div class="rt-td" onclick="__clicks.push(\'row3\')"></div></div>' +
+        '</div></div></details>' +
+      '<details id="' + D + 'seqview-section"><summary>Sequence</summary><div class="mp-seqview-controls">' +
+        '<input type="number" id="' + D + 'seqview-goto">' +
+        '<button type="button" data-mpseq="fit" onclick="__clicks.push(\'fit\')"></button>' +
+        '<button type="button" data-mpseq="whole" onclick="__clicks.push(\'whole\')"></button>' +
+        '<button type="button" data-mpseq="copy" onclick="__clicks.push(\'copy\')"></button></div>' +
+        '<canvas id="' + D + 'seqview-canvas" class="mp-seqview-canvas"></canvas></details>' +
+      '<details id="' + D + 'blast_synteny_details"><summary>BLAST Reference Synteny</summary>' +
+        '<button type="button" data-mpsyn="fit" onclick="__clicks.push(\'synfit\')"></button>' +
+        '<canvas id="' + D + 'synteny_canvas" class="mp-seqview-canvas"></canvas></details>' +
+      '<details id="' + D + 'alignment_div"><summary onclick="__clicks.push(\'align-summary\')">Alignment</summary>' +
+        '<div class="msaR"><div class="biojs_msa_rheader" style="width:100px;overflow:auto"><div style="width:1000px;height:10px"></div></div></div>' +
+        '<div id="' + D + 'edit_mode_ctrls" style="display:none">' +
+          '<div id="' + D + 'start_search_ctrl">START</div><div id="' + D + 'stop_search_ctrl">STOP</div>' +
+          '<button id="' + D + 'rrna-5-out"></button><button id="' + D + 'rrna-5-in"></button>' +
+          '<button id="' + D + 'rrna-3-in"></button><button id="' + D + 'rrna-3-out"></button>' +
+          '<label><input type="checkbox" onchange="Shiny.setInputValue(\'' + D + 'single_codon\', this.checked)"> single codon</label>' +
+        '</div>' +
+        '<div class="pretty"><input type="checkbox" id="' + D + 'reduce_align" onchange="__clicks.push(\'reduce_align\')"><div class="state"></div></div>' +
+        '<div class="pretty"><input type="checkbox" id="' + D + 'local_blast" onchange="__clicks.push(\'local_blast\')"><div class="state"></div></div>' +
+      '</details>' +
+      '<div id="' + D + 'join_preview">' +
+        '<span onclick="__clicks.push(\'seg1\'); Shiny.setInputValue(\'' + D + 'join_seg_click\', 4)"></span>' +
+        '<span class="mp-seg-active" onclick="__clicks.push(\'seg2\'); Shiny.setInputValue(\'' + D + 'join_seg_click\', 5)"></span>' +
+        '<span onclick="__clicks.push(\'seg3\'); Shiny.setInputValue(\'' + D + 'join_seg_click\', 6)"></span></div>' +
+      '<details><summary>Notes</summary><textarea id="' + D + 'notes"></textarea></details>' +
+      '<div id="' + D + 'merge_select_div" style="display:none"></div>' +
+      '');
+  };
+  window.mpseq = { zoom: function (id, f) { __clicks.push('zoom:' + id + ':' + f); }, pan: function (id, f) { __clicks.push('pan:' + id + ':' + f); } };
+  window.mpsyn = { zoom: function (id, f) { __clicks.push('syn:' + id + ':' + f); }, pan: function (id, f) { __clicks.push('synpan:' + id + ':' + f); } };
+</script>
+<script src="../../../inst/app/www/hotkeys.js"></script>

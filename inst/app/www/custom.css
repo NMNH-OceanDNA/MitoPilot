@@ -1195,3 +1195,22 @@ details.mp-nmnh-cols label { font-size: var(--mp-fs-meta); }
 /* Metadata viewer: per-value copy button, shown on row hover */
 .mp-meta-level .mp-meta-copy { padding: 0 4px; margin-left: 4px; opacity: 0; color: var(--mp-text-muted, #6c757d); }
 .mp-meta-level tr:hover .mp-meta-copy, .mp-meta-level .mp-meta-copy:focus-visible { opacity: 1; }
+
+/* Hotkeys: enable pill (bottom right, above modals), cheat sheet, table cursor */
+#mp-hotkeys-pill { position: fixed; right: 12px; bottom: 12px; z-index: 1060; display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; font-size: 12px; background: var(--mp-surface); border: 1px solid var(--mp-border); border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+#mp-hotkeys-pill label { margin: 0; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+#mp-hotkeys-pill input { margin: 0; }
+#mp-hotkeys-pill button { border: 1px solid var(--mp-border); background: var(--mp-primary-soft); border-radius: 50%;
+  width: 20px; height: 20px; padding: 0; line-height: 18px; font-weight: 600; }
+#mp-hotkeys-help { position: fixed; inset: 0; z-index: 1070; background: rgba(0,0,0,.35); display: flex;
+  align-items: center; justify-content: center; }
+#mp-hotkeys-help[hidden] { display: none; }
+.mp-hotkeys-help-box { background: var(--mp-surface); border-radius: 6px; padding: 16px 20px; max-height: 80vh;
+  overflow: auto; min-width: 320px; box-shadow: 0 4px 16px rgba(0,0,0,.3); font-size: 13px; }
+.mp-hotkeys-help-box h4 { margin-top: 0; }
+.mp-hotkeys-help-box td { padding: 2px 10px 2px 0; vertical-align: top; }
+.mp-hotkeys-help-box kbd { font-family: monospace; color: #000; text-shadow: none; box-shadow: none; background: var(--mp-primary-soft); border: 1px solid var(--mp-border);
+  border-radius: 3px; padding: 0 5px; white-space: nowrap; }
+[data-mp-kb-cursor] { outline: 2px solid var(--mp-primary); outline-offset: -2px; }
