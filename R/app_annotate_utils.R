@@ -879,3 +879,13 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
     )
   }
 }
+
+#' Unlock warning shared by the Annotate table and the Annotate details window.
+#' @noRd
+annotate_unlock_text <- function(n) {
+  paste0(
+    "Unlocking removes ", mp_n(n, "assembly"), " from Export. ",
+    "Any assembly whose state is Ready to run will be re-annotated by ",
+    "the next update, replacing your curated results."
+  )
+}
