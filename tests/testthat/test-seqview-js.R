@@ -1,41 +1,23 @@
-.sv_state <- new.env()
-
 sv_page <- function() {
-  skip_if_not_installed("chromote")
-  skip_if(!nzchar(Sys.getenv("CHROMOTE_CHROME")) && is.null(tryCatch(chromote::find_chrome(), error = function(e) NULL)),
-          "no Chrome for chromote")
-  # A runner can have Chrome yet fail to open its debugging port (seen on the
-  # Windows CI image); skip rather than fail, and remember the outcome so the
-  # remaining tests do not each wait out the launch timeout.
-  if (isTRUE(.sv_state$chrome_failed)) skip("Chrome did not start")
-  b <- tryCatch(chromote::ChromoteSession$new(), error = function(e) e)
-  if (inherits(b, "error")) {
-    .sv_state$chrome_failed <- TRUE
-    skip(paste("Chrome did not start:", conditionMessage(b)))
-  }
-  withr::defer(b$close(), envir = parent.frame())
+  b <- chromote_session_or_skip(envir = parent.frame())
   # The fixture's relative script path only resolves in the source tree; point
   # it at the installed copy so the test also runs under R CMD check.
-  file_url <- function(p) {
-    p <- normalizePath(p, winslash = "/", mustWork = TRUE)
-    paste0(if (startsWith(p, "/")) "file://" else "file:///", p)
-  }
   js_file <- system.file("app", "www", "seqviewer.js", package = "MitoPilot")
   html <- readLines(testthat::test_path("seqview", "index.html"), warn = FALSE)
-  html <- sub('src="[^"]*seqviewer\\.js"', sprintf('src="%s"', file_url(js_file)), html)
+  html <- sub('src="[^"]*seqviewer\\.js"', sprintf('src="%s"', chromote_file_url(js_file)), html)
   # Next to the fixture rather than in tempdir(): a sandboxed Chrome may not
   # be able to read /tmp.
   page <- testthat::test_path("seqview", "index.generated.html")
   writeLines(html, page)
   withr::defer(unlink(page), envir = parent.frame())
-  b$Page$navigate(file_url(page))
+  chromote_navigate(b, chromote_file_url(page))
   Sys.sleep(1)
   if (!identical(js(b, "typeof window.mpseq"), "object")) {
     stop("seqviewer.js did not load from ", js_file)
   }
   b
 }
-js <- function(b, code) b$Runtime$evaluate(code, returnByValue = TRUE)$result$value
+js <- chromote_js
 
 test_that("lanes pack overlapping features and keep a wrapped feature in one lane", {
   b <- sv_page()
