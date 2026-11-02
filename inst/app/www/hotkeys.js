@@ -28,11 +28,20 @@
     return (e.shiftKey ? 'Shift+' : '') + e.key;
   }
   function has(root, sel) { return !!(root && root.querySelector(sel)); }
+  // Module ids carry a runtime-nested prefix (e.g. annotate-annotate-annotations-),
+  // so take the prefix from a marker element's id instead of hardcoding it.
+  // mark.match identifies the element; mark.ctrl is the un-namespaced input id.
+  function nsFrom(mark) {
+    var el = document.querySelector('#shiny-modal [id$="' + mark.match + '"]');
+    return el ? el.id.slice(0, el.id.length - mark.ctrl.length) : null;
+  }
+  var DETAILS_MARK = { match: 'annotations-close', ctrl: 'close' };
+  var COVERAGE_MARK = { match: 'coverage_details-close_modal', ctrl: 'close_modal' };
   function context() {
     var m = document.getElementById('shiny-modal');
-    if (has(m, '#annotate-annotations-close')) return 'details';
-    if (has(m, '#assemble-coverage_details-close_modal')) return 'coverage';
-    if (has(m, '#export-review_next')) return 'review';
+    if (nsFrom(DETAILS_MARK)) return 'details';
+    if (nsFrom(COVERAGE_MARK)) return 'coverage';
+    if (has(m, '[id$="-review_next"]')) return 'review';
     if (has(m, '[id$="-update_state"]')) return 'state';
     if (m) return 'modal';
     var r = document.querySelector('#mode input[type=radio]:checked');
@@ -94,7 +103,7 @@
     if (document.querySelector('.swal2-container')) return;
     if (k === '?') { help(true); e.preventDefault(); return; }
     var b = bindings[context()], hit = b && b[k];
-    if (hit && hit.run()) e.preventDefault();
+    if (hit && hit.run(e)) e.preventDefault();
   }
   document.addEventListener('keydown', handle, true);
 
@@ -124,11 +133,12 @@
       return getComputedStyle(r).display !== 'none';
     });
   }
+  // Single-select tables hide their selection column; a cell click selects.
   function selectRow(row) {
     if (!row) return false;
-    var inp = row.querySelector('input.rt-select-input');
-    if (!inp) return false;
-    inp.click();
+    var el = row.querySelector('input.rt-select-input') || row.querySelector('.rt-td');
+    if (!el) return false;
+    el.click();
     row.scrollIntoView({ block: 'nearest' });
     return true;
   }
@@ -168,12 +178,12 @@
     var t = e.target;
     if (t && t.classList && t.classList.contains('mp-seqview-canvas')) lastCanvas = t.id.replace(/-reads$/, '-canvas');
   });
-  var DET = 'annotate-annotations-';
+  function DET() { return nsFrom(DETAILS_MARK) || ''; }
   function viewer() {
     var id = lastCanvas && document.getElementById(lastCanvas) ? lastCanvas : null;
     if (!id) {
       var first = document.querySelector('#shiny-modal .mp-seqview-canvas');
-      id = first ? first.id : DET + 'seqview-canvas';
+      id = first ? first.id : DET() + 'seqview-canvas';
     }
     var syn = /synteny_canvas$/.test(id);
     return { api: syn ? window.mpsyn : window.mpseq, id: id, attr: syn ? 'data-mpsyn' : 'data-mpseq' };
@@ -193,12 +203,12 @@
   (function () {
     var D = DET, ctx = 'details';
     function b(key, label, run) { bind(ctx, key, label, run); }
-    function c(key, label, id) { b(key, label, function () { return click(D + id); }); }
-    function notesDetails() { var n = document.getElementById(D + 'notes'); return n && n.closest('details'); }
-    function selectedRow() { return document.querySelector('#' + D + 'table .rt-tr.rt-tr-selected'); }
+    function c(key, label, id) { b(key, label, function () { return click(D() + id); }); }
+    function notesDetails() { var n = document.getElementById(D() + 'notes'); return n && n.closest('details'); }
+    function selectedRow() { return document.querySelector('#' + D() + 'table .rt-tr.rt-tr-selected'); }
 
     b('Escape', 'Close (cancels an open merge panel first)', function () {
-      return visible(D + 'merge_select_div') ? click(D + 'cancel_merge') : click(D + 'close');
+      return visible(D() + 'merge_select_div') ? click(D() + 'cancel_merge') : click(D() + 'close');
     });
     c('q', 'Close', 'close');
     c('Q', 'Lock and close', 'lock');
@@ -210,13 +220,13 @@
     [['t', 'annotation_table_details', 'Annotation Table'], ['s', 'seqview-section', 'Sequence'],
      ['b', 'blast_synteny_details', 'BLAST Reference Synteny'], ['a', 'alignment_div', 'Alignment']
     ].forEach(function (p) {
-      b(p[0], 'Toggle ' + p[2] + ' panel', function () { return panel(D + p[1], false); });
-      b(p[0].toUpperCase(), 'Open and scroll to ' + p[2], function () { return panel(D + p[1], true); });
+      b(p[0], 'Toggle ' + p[2] + ' panel', function () { return panel(D() + p[1], false); });
+      b(p[0].toUpperCase(), 'Open and scroll to ' + p[2], function () { return panel(D() + p[1], true); });
     });
     b('i', 'Toggle Notes panel', function () { return panel(notesDetails(), false); });
     b('I', 'Open Notes and start typing', function () {
       if (!panel(notesDetails(), true)) return false;
-      return focusId(D + 'notes');
+      return focusId(D() + 'notes');
     });
 
     c('v', 'Toggle ID verified', 'ID_verified');
@@ -228,7 +238,7 @@
     c('D', 'Restore deleted annotation', 'restore');
     c('m', 'Merge', 'merge');
     b('Enter', 'Confirm merge (merge panel open)', function () {
-      return visible(D + 'merge_select_div') && click(D + 'confirm_merge');
+      return visible(D() + 'merge_select_div') && click(D() + 'confirm_merge');
     });
     c('u', 'Un-join', 'unjoin');
     c('g', 'Assign gene name', 'assign_gene');
@@ -246,13 +256,13 @@
     b('C', 'Copy visible sequence', function () { return viewerButton('copy'); });
 
     // Annotation rows: single-select table, 50-row pages; walk DOM neighbours.
-    var T = '#' + D + 'table';
-    function selRow() { return document.querySelector(T + ' .rt-tr.rt-tr-selected'); }
-    b('ArrowDown', 'Next annotation', function () { return selectRow(stepRow(T, 1, selRow())); });
-    b('ArrowUp', 'Previous annotation', function () { return selectRow(stepRow(T, -1, selRow())); });
-    b('Home', 'First annotation', function () { var r = rows(T); return selectRow(r[0]); });
-    b('End', 'Last annotation', function () { var r = rows(T); return selectRow(r[r.length - 1]); });
-    function segs() { return Array.prototype.slice.call(document.querySelectorAll('#' + D + 'join_preview [onclick*="join_seg_click"]')); }
+    function T() { return '#' + D() + 'table'; }
+    function selRow() { return document.querySelector(T() + ' .rt-tr.rt-tr-selected'); }
+    b('ArrowDown', 'Next annotation', function () { return selectRow(stepRow(T(), 1, selRow())); });
+    b('ArrowUp', 'Previous annotation', function () { return selectRow(stepRow(T(), -1, selRow())); });
+    b('Home', 'First annotation', function () { var r = rows(T()); return selectRow(r[0]); });
+    b('End', 'Last annotation', function () { var r = rows(T()); return selectRow(r[r.length - 1]); });
+    function segs() { return Array.prototype.slice.call(document.querySelectorAll('#' + D() + 'join_preview [onclick*="join_seg_click"]')); }
     function stepSeg(by) {
       var ss = segs(); if (!ss.length) return false;
       var i = ss.findIndex(function (e) { return e.classList.contains('mp-seg-active'); });
@@ -266,15 +276,15 @@
     // Edit mode. Boundary keys move by exactly one codon or base: they post the
     // value "one", which the R handlers read as step size 1. Codon buttons when
     // the segment owns that end (wrapper visible), else the nucleotide nudge.
-    function editing() { return visible(D + 'edit_mode_ctrls'); }
+    function editing() { return visible(D() + 'edit_mode_ctrls'); }
     function boundary(end, dir) {
       if (!editing()) return false;
-      var codon = visible(D + (end === '5' ? 'start_search_ctrl' : 'stop_search_ctrl'));
+      var codon = visible(D() + (end === '5' ? 'start_search_ctrl' : 'stop_search_ctrl'));
       var id = codon
         ? (end === '5' ? (dir === 'out' ? 'start-add' : 'start-minus') : (dir === 'out' ? 'stop-add' : 'stop-minus'))
         : 'rrna-' + end + '-' + dir;
-      if (!codon && !document.getElementById(D + id)) return false;
-      return post(D + id, 'one');
+      if (!codon && !document.getElementById(D() + id)) return false;
+      return post(D() + id, 'one');
     }
     c('e', 'Edit mode', 'edit_mode');
     c('E', 'Save edits', 'save_edits');
@@ -284,7 +294,7 @@
     b('<', "3' boundary in by one", function () { return boundary('3', 'in'); });
     b('>', "3' boundary out by one", function () { return boundary('3', 'out'); });
     b('c', 'Toggle single-codon stepping', function () {
-      return editing() && clickIn(document.getElementById(D + 'edit_mode_ctrls'), 'input[onchange*="single_codon"]');
+      return editing() && clickIn(document.getElementById(D() + 'edit_mode_ctrls'), 'input[onchange*="single_codon"]');
     });
     c('5', "Toggle partial 5'", 'toggle_partial_start');
     c('3', "Toggle partial 3'", 'toggle_partial_stop');
@@ -293,8 +303,8 @@
     c('X', 'Toggle Local BLAST', 'local_blast');
 
     b('G', 'Go to position', function () {
-      openPanel(document.getElementById(D + 'seqview-section'));
-      return focusId(D + 'seqview-goto');
+      openPanel(document.getElementById(D() + 'seqview-section'));
+      return focusId(D() + 'seqview-goto');
     });
   })();
 
@@ -350,8 +360,8 @@
     });
     c('r', 'Refresh table', 'refresh');
     b('/', 'Search the table', function () { return focusIn(T + ' .rt-search'); });
-    b('ArrowDown', 'Move row cursor down', function () { return moveCursor(T, 1); });
-    b('ArrowUp', 'Move row cursor up', function () { return moveCursor(T, -1); });
+    b('ArrowDown', 'Move row cursor down', function (e) { return moveCursor(T, e && e.repeat ? 3 : 1); });
+    b('ArrowUp', 'Move row cursor up', function (e) { return moveCursor(T, e && e.repeat ? -3 : -1); });
     b('Space', 'Check / uncheck cursor row', function () { return toggleCursor(T); });
     b('x', 'Check / uncheck cursor row', function () { return toggleCursor(T); });
     b('X', 'Check rows from last toggled to cursor', function () { return extendCursor(T); });
@@ -407,9 +417,11 @@
 
   // ---- Assemble details modal ----
   (function () {
-    var C = 'assemble-coverage_details-', ctx = 'coverage', T = '#' + C + 'table';
+    function C() { return nsFrom(COVERAGE_MARK) || ''; }
+    var ctx = 'coverage';
+    function T() { return '#' + C() + 'table'; }
     function b(key, label, run) { bind(ctx, key, label, run); }
-    function c(key, label, id) { b(key, label, function () { return click(C + id); }); }
+    function c(key, label, id) { b(key, label, function () { return click(C() + id); }); }
     function inModal(sel) { return clickIn(document.getElementById('shiny-modal'), sel); }
     c('Escape', 'Close', 'close_modal');
     c('q', 'Close', 'close_modal');
@@ -422,22 +434,22 @@
     [['path', "Use one path's bases"], ['majority', 'Coverage-majority base'],
      ['iupac', 'IUPAC ambiguity'], ['nmask', 'Mask with N']].forEach(function (mode, i) {
       b(String(i + 1), 'Resolve mode: ' + mode[1], function () {
-        var r = document.querySelector('#' + C + 'res_mode input[type=radio][value="' + mode[0] + '"]');
+        var r = document.querySelector('#' + C() + 'res_mode input[type=radio][value="' + mode[0] + '"]');
         if (!r) return false;
         r.click(); return true;
       });
     });
     c('B', 'Build resolved assembly', 'build_resolved');
     c('T', 'Trim to consensus', 'trim_consensus');
-    b('i', 'Focus notes', function () { return focusId(C + 'notes'); });
+    b('i', 'Focus notes', function () { return focusId(C() + 'notes'); });
     b('I', 'Scroll to and focus notes', function () {
-      var el = document.getElementById(C + 'notes'); if (!el) return false;
+      var el = document.getElementById(C() + 'notes'); if (!el) return false;
       el.scrollIntoView({ block: 'start', behavior: 'smooth' }); el.focus(); return true;
     });
-    b('ArrowDown', 'Move scaffold cursor down', function () { return moveCursor(T, 1); });
-    b('ArrowUp', 'Move scaffold cursor up', function () { return moveCursor(T, -1); });
-    b('Space', 'Check / uncheck cursor scaffold', function () { return toggleCursor(T); });
-    b('X', 'Include / ignore cursor scaffold', function () { return clickIn(cursorRow(T), '[onclick*="-ignore"]'); });
+    b('ArrowDown', 'Move scaffold cursor down', function (e) { return moveCursor(T(), e && e.repeat ? 3 : 1); });
+    b('ArrowUp', 'Move scaffold cursor up', function (e) { return moveCursor(T(), e && e.repeat ? -3 : -1); });
+    b('Space', 'Check / uncheck cursor scaffold', function () { return toggleCursor(T()); });
+    b('X', 'Include / ignore cursor scaffold', function () { return clickIn(cursorRow(T()), '[onclick*="-ignore"]'); });
     b('+', 'Zoom in (MapToRef viewer)', function () { return zoom(2); });
     b('=', 'Zoom in (MapToRef viewer)', function () { return zoom(2); });
     b('-', 'Zoom out (MapToRef viewer)', function () { return zoom(0.5); });
@@ -459,8 +471,8 @@
     c('[', 'Previous gene', 'review_prev');
     c('ArrowRight', 'Next gene', 'review_next');
     c(']', 'Next gene', 'review_next');
-    b('ArrowDown', 'Move sample cursor down', function () { return moveCursor(T, 1); });
-    b('ArrowUp', 'Move sample cursor up', function () { return moveCursor(T, -1); });
+    b('ArrowDown', 'Move sample cursor down', function (e) { return moveCursor(T, e && e.repeat ? 3 : 1); });
+    b('ArrowUp', 'Move sample cursor up', function (e) { return moveCursor(T, e && e.repeat ? -3 : -1); });
     b('h', 'Highlight cursor sample in the alignment', function () { return clickIn(cursorRow(T), '[onclick*="review_pick"]'); });
     b('x', 'Toggle resolved for cursor sample', function () { return clickIn(cursorRow(T), '[onclick*="toggle_resolved"]'); });
     b('Space', 'Toggle resolved for cursor sample', function () { return clickIn(cursorRow(T), '[onclick*="toggle_resolved"]'); });
@@ -472,7 +484,7 @@
   window.mpHotkeys = {
     enabled: enabled, setEnabled: setEnabled, keyOf: keyOf, context: context,
     bindings: bindings, bind: bind, click: click, clickIn: clickIn, handle: handle, help: help,
-    panel: panel, viewer: viewer, details: DET,
+    panel: panel, viewer: viewer, nsFrom: nsFrom,
     rows: rows, selectRow: selectRow, stepRow: stepRow,
     moveCursor: moveCursor, cursorRow: cursorRow, setCursor: setCursor
   };

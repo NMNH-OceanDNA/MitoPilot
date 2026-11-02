@@ -82,7 +82,7 @@ test_that("context follows the open modal, then the Step", {
   expect_equal(js(b, "window.mpHotkeys.context()"), "page:Export")
   js(b, "window.showModal('<button id=\"x-update_state\"></button>')")
   expect_equal(js(b, "window.mpHotkeys.context()"), "state")
-  js(b, "window.showModal('<button id=\"annotate-annotations-close\"></button>')")
+  js(b, "window.showModal('<button id=\"annotate-annotate-annotations-close\"></button>')")
   expect_equal(js(b, "window.mpHotkeys.context()"), "details")
   js(b, "window.showModal('<p>Work dirs</p>')")
   expect_equal(js(b, "window.mpHotkeys.context()"), "modal")
@@ -102,7 +102,7 @@ test_that("? opens a cheat sheet for the current context and Escape closes it", 
 })
 
 # ---- Annotate details modal ----
-D <- "annotate-annotations-"
+D <- "annotate-annotate-annotations-"
 
 test_that("details modal: lifecycle, flags and actions click their buttons", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
@@ -253,18 +253,18 @@ test_that("assemble details: block nav, resolve mode, cursor and viewer keys", {
   press(b, "]"); press(b, "p"); press(b, "3"); press(b, "4"); press(b, "a"); press(b, "L", TRUE); press(b, "B", TRUE); press(b, "T", TRUE)
   press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, "ArrowDown"); press(b, " "); press(b, "X", TRUE)
   press(b, "W", TRUE); press(b, "c"); press(b, "t"); press(b, "R", TRUE); press(b, "ArrowRight"); press(b, "G", TRUE)
-  expect_equal(js(b, "document.activeElement.id"), "assemble-coverage_details-maptoref_viewer-goto")
+  expect_equal(js(b, "document.activeElement.id"), "assemble-assemble-coverage_details-maptoref_viewer-goto")
   press(b, "q", target = "document.body")
-  expect_equal(clicks(b), c(paste0("assemble-coverage_details-", c("next_block", "prev_block")), "res:iupac", "res:nmask",
-    paste0("assemble-coverage_details-", c("align", "lock", "build_resolved", "trim_consensus")),
+  expect_equal(clicks(b), c(paste0("assemble-assemble-coverage_details-", c("next_block", "prev_block")), "res:iupac", "res:nmask",
+    paste0("assemble-assemble-coverage_details-", c("align", "lock", "build_resolved", "trim_consensus")),
     "scaf2", "ignore2", "mtwhole", "cov", "nt", "reads",
-    "pan:assemble-coverage_details-maptoref_viewer-canvas:0.25", "assemble-coverage_details-close_modal"))
+    "pan:assemble-assemble-coverage_details-maptoref_viewer-canvas:0.25", "assemble-assemble-coverage_details-close_modal"))
 })
 
 test_that("assemble details: I focuses the notes box", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.coverageModal()")
   press(b, "I", TRUE)
-  expect_equal(js(b, "document.activeElement.id"), "assemble-coverage_details-notes")
+  expect_equal(js(b, "document.activeElement.id"), "assemble-assemble-coverage_details-notes")
 })
 
 test_that("outlier review: gene arrows, sample cursor, per-row actions, no key for Continue", {
@@ -312,7 +312,16 @@ test_that("focus on a checkbox or the pill does not swallow keys; Escape leaves 
 
 test_that("hovering the reads track still drives the main viewer (review Important 7)", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.coverageModal()")
-  js(b, "document.getElementById('assemble-coverage_details-maptoref_viewer-reads').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))")
+  js(b, "document.getElementById('assemble-assemble-coverage_details-maptoref_viewer-reads').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))")
   press(b, "+", TRUE)
-  expect_equal(clicks(b), "zoom:assemble-coverage_details-maptoref_viewer-canvas:2")
+  expect_equal(clicks(b), "zoom:assemble-assemble-coverage_details-maptoref_viewer-canvas:2")
+})
+
+
+test_that("held arrow keys move the table cursor three rows per repeat", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true)")
+  press(b, "ArrowDown")
+  js(b, "document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',repeat:true,bubbles:true,cancelable:true}))")
+  press(b, " ")
+  expect_equal(clicks(b), "sel4")
 })
