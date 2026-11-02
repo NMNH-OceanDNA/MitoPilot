@@ -110,30 +110,17 @@
   document.addEventListener('keydown', handle, true);
 
   // ---- pill ----
-  var pillEl = null;
-  // Lives in the header just left of Help. The header is Shiny-rendered after
-  // load and can re-render, so (re)place the pill whenever the DOM changes;
-  // bottom-right corner while there is no header.
-  function placePill() {
-    var d = pillEl, helpLink = document.querySelector('.mp-header .mp-help');
-    if (helpLink) {
-      if (d.nextElementSibling !== helpLink) helpLink.parentElement.insertBefore(d, helpLink);
-    } else if (d.parentElement !== document.body) {
-      document.body.appendChild(d);
-    }
-  }
   function pill() {
-    if (pillEl) return;
-    var d = pillEl = document.createElement('div');
+    if (document.getElementById('mp-hotkeys-pill')) return;
+    var d = document.createElement('div');
     d.id = 'mp-hotkeys-pill';
     d.innerHTML = '<label><input type="checkbox" id="mp-hotkeys-on"> Hotkeys</label>' +
       '<button type="button" id="mp-hotkeys-help-btn" aria-label="Keyboard shortcuts">?</button>';
+    document.body.appendChild(d);
     var box = d.querySelector('#mp-hotkeys-on');
     box.checked = enabled();
     box.addEventListener('change', function () { setEnabled(box.checked); });
     d.querySelector('#mp-hotkeys-help-btn').addEventListener('click', function () { help(true); });
-    placePill();
-    if (window.MutationObserver) new MutationObserver(placePill).observe(document.body, { childList: true, subtree: true });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pill); else pill();
 
