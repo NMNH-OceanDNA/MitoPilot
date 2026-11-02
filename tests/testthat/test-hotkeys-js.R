@@ -62,9 +62,7 @@ test_that("keyOf spells keys as the spec does", {
     return window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:k,shiftKey:(k==='L'||k==='<'||k==='?')}));})
     .concat([window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true}))]))")
   expect_equal(jsonlite::fromJSON(r), c("l", "L", ",", "<", "Space", "ArrowDown", "?", "Shift+ArrowRight"))
-  a <- js(b, "JSON.stringify([window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:',',code:'Comma',altKey:true})),
-    window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:'\u2265',code:'Period',altKey:true,shiftKey:true}))])")
-  expect_equal(jsonlite::fromJSON(a), c("Alt+,", "Alt+>"))
+  expect_equal(js(b, "window.mpHotkeys.keyOf(new KeyboardEvent('keydown',{key:'{',shiftKey:true}))"), "{")
 })
 
 test_that("typing targets, modifier combos and SweetAlerts are ignored", {
@@ -347,14 +345,14 @@ test_that("Left/Right scroll the alignment when it is hovered; + is the only zoo
 })
 
 
-test_that("Alt + boundary keys move by the step box instead of one", {
+test_that("bracket keys move the boundary by the step box instead of one", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
   js(b, sprintf("document.getElementById('%sedit_mode_ctrls').style.display=''", D))
-  press(b, ",", alt = TRUE, code = "Comma"); press(b, ".", alt = TRUE, code = "Period")
-  press(b, "<", shift = TRUE, alt = TRUE, code = "Comma"); press(b, ">", shift = TRUE, alt = TRUE, code = "Period")
+  press(b, "["); press(b, "]"); press(b, "{", TRUE); press(b, "}", TRUE)
   r <- jsonlite::fromJSON(js(b, "JSON.stringify(window.__inputs.map(function(i){return i.name+'='+i.value;}))"))
   expect_equal(r, paste0(D, c("start-add=box", "start-minus=box", "stop-minus=box", "stop-add=box")))
-  press(b, "v", alt = TRUE, code = "KeyV")
+  press(b, ",", alt = TRUE, code = "Comma"); press(b, "v", alt = TRUE, code = "KeyV")
+  expect_equal(js(b, "window.__inputs.length"), 4L)
   expect_equal(clicks(b), character(0))
 })
 
