@@ -101,7 +101,7 @@ test_that("? opens a cheat sheet for the current context and Escape closes it", 
   expect_match(js(b, "document.getElementById('mp-hotkeys-help').textContent"), "Refresh table")
   expect_match(js(b, "document.getElementById('mp-hotkeys-help').textContent"), "Shift+r", fixed = TRUE)
   expect_false(grepl("Shift+R", js(b, "document.getElementById('mp-hotkeys-help').textContent"), fixed = TRUE))
-  expect_match(js(b, "document.getElementById('mp-hotkeys-help').textContent"), "Mouse only")
+  expect_false(grepl("Mouse only", js(b, "document.getElementById('mp-hotkeys-help').textContent"), fixed = TRUE))
   press(b, "Escape")
   expect_true(js(b, "document.getElementById('mp-hotkeys-help').hidden"))
 })
@@ -336,10 +336,19 @@ test_that("held arrow keys move the table cursor three rows per repeat", {
 })
 
 
-test_that("Left/Right scroll the alignment when it is hovered; + is the only zoom-in key", {
+test_that("zoom aliases: + or = in, - or _ out; the cheat sheet lists each pair once", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
-  press(b, "=")
-  expect_equal(clicks(b), character(0))
+  press(b, "="); press(b, "+", TRUE); press(b, "-"); press(b, "_", TRUE)
+  expect_equal(clicks(b), paste0("zoom:", D, "seqview-canvas:", c(2, 2, 0.5, 0.5)))
+  press(b, "?", TRUE)
+  txt <- js(b, "document.getElementById('mp-hotkeys-help').textContent")
+  expect_match(txt, "+ or =", fixed = TRUE)
+  expect_match(txt, "- or _", fixed = TRUE)
+  expect_equal(js(b, "Array.from(document.querySelectorAll('#mp-hotkeys-help kbd')).filter(function(k){return /[+=_-]/.test(k.textContent) && k.textContent.length <= 6;}).length"), 2L)
+})
+
+test_that("Left/Right scroll the alignment when it is hovered", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
   press(b, "a")
   js(b, sprintf("document.querySelector('#%salignment_div .biojs_msa_rheader').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))", D))
   press(b, "ArrowRight"); press(b, "ArrowRight"); press(b, "ArrowLeft")
