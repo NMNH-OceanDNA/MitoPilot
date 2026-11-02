@@ -112,6 +112,10 @@ test_that(".gbif_get maps HTTP status to readable errors", {
 test_that("live GBIF lookup works", {
   skip_on_cran()
   skip_if_offline("api.gbif.org")
-  out <- .gbif_fetch_chain("6186461308")
+  # A GBIF outage (5xx) is not a MitoPilot failure.
+  out <- tryCatch(.gbif_fetch_chain("6186461308"), error = function(e) {
+    if (grepl("HTTP 5[0-9]{2}", conditionMessage(e))) skip(conditionMessage(e))
+    stop(e)
+  })
   expect_true("Occurrence" %in% out$level)
 })
