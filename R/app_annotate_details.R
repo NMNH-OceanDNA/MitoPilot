@@ -1419,7 +1419,6 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         is_active <- isTRUE(real_idx == sel)
         col <- palette[((i - 1) %% length(palette)) + 1]
         tags$span(
-          class = if (is_active) "mp-seg-active",
           title = stringr::str_glue(
             "exon {i}: aa {aa1}-{aa2}, nt {segs$pos1[i]}-{segs$pos2[i]}"
           ),

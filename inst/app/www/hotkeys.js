@@ -271,20 +271,19 @@
     // Annotation rows: single-select table, 50-row pages; walk DOM neighbours.
     function T() { return '#' + D() + 'table'; }
     function selRow() { return document.querySelector(T() + ' .rt-tr.rt-tr-selected'); }
-    b('ArrowDown', 'Next annotation', function () { return selectRow(stepRow(T(), 1, selRow())); });
-    b('ArrowUp', 'Previous annotation', function () { return selectRow(stepRow(T(), -1, selRow())); });
+    // Plain arrows scroll the window; Shift+arrows step through annotations.
+    function scrollBox() {
+      var cands = document.querySelectorAll('#shiny-modal .modal-body, #shiny-modal');
+      for (var i = 0; i < cands.length; i++) if (cands[i].scrollHeight > cands[i].clientHeight) return cands[i];
+      return null;
+    }
+    function scrollWin(dy) { var el = scrollBox(); if (!el) return false; el.scrollTop += dy; return true; }
+    b('ArrowDown', 'Scroll down', function () { return scrollWin(80); });
+    b('ArrowUp', 'Scroll up', function () { return scrollWin(-80); });
+    b('Shift+ArrowDown', 'Next annotation', function () { return selectRow(stepRow(T(), 1, selRow())); });
+    b('Shift+ArrowUp', 'Previous annotation', function () { return selectRow(stepRow(T(), -1, selRow())); });
     b('Home', 'First annotation', function () { var r = rows(T()); return selectRow(r[0]); });
     b('End', 'Last annotation', function () { var r = rows(T()); return selectRow(r[r.length - 1]); });
-    function segs() { return Array.prototype.slice.call(document.querySelectorAll('#' + D() + 'join_preview [onclick*="join_seg_click"]')); }
-    function stepSeg(by) {
-      var ss = segs(); if (!ss.length) return false;
-      var i = ss.findIndex(function (e) { return e.classList.contains('mp-seg-active'); });
-      var j = i < 0 ? (by > 0 ? 0 : ss.length - 1) : Math.max(0, Math.min(ss.length - 1, i + by));
-      if (j === i) return false;
-      ss[j].click(); return true;
-    }
-    b('Shift+ArrowDown', 'Next segment of a joined gene', function () { return stepSeg(1); });
-    b('Shift+ArrowUp', 'Previous segment of a joined gene', function () { return stepSeg(-1); });
 
     // Edit mode. Boundary keys move by exactly one codon or base: they post the
     // value "one", which the R handlers read as step size 1. Codon buttons when
