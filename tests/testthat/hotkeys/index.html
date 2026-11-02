@@ -8,6 +8,7 @@
     setInputValue: function (name, value) { window.__inputs.push({ name: name, value: value }); }
   };
 </script>
+<div class="mp-header"><span class="mp-app-name">MitoPilot</span><a class="mp-help" href="#">Help</a></div>
 <div id="mode">
   <input type="radio" name="mode" value="Assemble" checked>
   <input type="radio" name="mode" value="Annotate">
@@ -131,6 +132,7 @@
         '<button type="button" data-mpsyn="fit" onclick="__clicks.push(\'synfit\')"></button>' +
         '<canvas id="' + D + 'synteny_canvas" class="mp-seqview-canvas"></canvas></details>' +
       '<details id="' + D + 'alignment_div"><summary onclick="__clicks.push(\'align-summary\')">Alignment</summary>' +
+        '<div class="msaR"><div class="biojs_msa_rheader" style="width:100px;overflow:auto"><div style="width:1000px;height:10px"></div></div></div>' +
         '<div id="' + D + 'edit_mode_ctrls" style="display:none">' +
           '<div id="' + D + 'start_search_ctrl">START</div><div id="' + D + 'stop_search_ctrl">STOP</div>' +
           '<button id="' + D + 'rrna-5-out"></button><button id="' + D + 'rrna-5-in"></button>' +
