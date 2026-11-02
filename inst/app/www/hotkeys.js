@@ -228,7 +228,7 @@
     });
     c('q', 'Close', 'close');
     c('Q', 'Lock and close', 'lock');
-    c('L', 'Lock, stay open', 'lock_only');
+    b('L', 'Lock / Unlock, stay open', function () { return click(D() + 'lock_only') || click(D() + 'unlock'); });
     c('Backspace', 'Back to Review (outlier review only)', 'back_to_review');
     c('Shift+ArrowRight', 'Next sample', 'nav_next');
     c('Shift+ArrowLeft', 'Previous sample', 'nav_prev');
@@ -441,7 +441,7 @@
     function inModal(sel) { return clickIn(document.getElementById('shiny-modal'), sel); }
     c('Escape', 'Close', 'close_modal');
     c('q', 'Close', 'close_modal');
-    c('L', 'Lock', 'lock');
+    b('L', 'Lock / Unlock', function () { return click(C() + 'lock') || click(C() + 'unlock'); });
     c('a', 'Align paths', 'align');
     c(']', 'Next conflict block', 'next_block');
     c('n', 'Next conflict block', 'next_block');

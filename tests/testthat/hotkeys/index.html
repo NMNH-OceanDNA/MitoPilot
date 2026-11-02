@@ -54,7 +54,7 @@
     var C = 'assemble-assemble-coverage_details-';
     var btn = function (id) { return '<button type="button" id="' + C + id + '" onclick="__clicks.push(this.id)"></button>'; };
     window.showModal(
-      ['close_modal','lock','align','next_block','prev_block','build_resolved','trim_consensus'].map(btn).join('') +
+      ['close_modal','lock','unlock','align','next_block','prev_block','build_resolved','trim_consensus'].map(btn).join('') +
       '<div id="' + C + 'res_mode" class="shiny-input-radiogroup">' +
         '<input type="radio" value="nmask" onclick="__clicks.push(\'res:\'+this.value)"><input type="radio" value="path" onclick="__clicks.push(\'res:\'+this.value)">' +
         '<input type="radio" value="iupac" onclick="__clicks.push(\'res:\'+this.value)"><input type="radio" value="majority" onclick="__clicks.push(\'res:\'+this.value)"></div>' +
@@ -108,7 +108,7 @@
   window.detailsModal = function () {
     var D = 'annotate-annotate-annotations-';
     var btn = function (id) { return '<button type="button" id="' + D + id + '" onclick="__clicks.push(this.id)"></button>'; };
-    var ids = ['close','lock','lock_only','back_to_review','nav_next','nav_prev','ID_verified','reviewed','problematic',
+    var ids = ['close','lock','lock_only','unlock','back_to_review','nav_next','nav_prev','ID_verified','reviewed','problematic',
       'partial','delete','restore','merge','unjoin','assign_gene','auto_assign_orfs','confirm_merge','cancel_merge',
       'edit_mode','save_edits','discard_edits','toggle_partial_start','toggle_partial_stop','polyA_stop'];
     window.showModal(

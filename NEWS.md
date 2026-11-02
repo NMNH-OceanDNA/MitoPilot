@@ -1,5 +1,6 @@
 # MitoPilot (development version)
 
+- **Details windows.** A locked sample or assembly can be unlocked from the Assemble and Annotate details windows with a new Unlock button (left of Close), behind the same warning the table shows. Shift+L locks or unlocks from there when hotkeys are on.
 - **Keyboard shortcuts.** A "Hotkeys" switch at the bottom right of the window turns on keyboard shortcuts (off by default, remembered by the browser); press `?` for the list that applies to the window you are in. Arrow keys walk table rows, Space selects, Enter opens details; in the Annotate details window arrows move between annotations, Shift+Left/Right between samples, letters toggle panels and flags, and `,` `.` `<` `>` nudge a gene boundary by one codon or base in edit mode.
 - **Annotate details.** Partial gene ends are dashed in the synteny viewer as in the Sequence viewer, for sample and reference genes alike; reference partial flags come from the GenBank record (new `partial_start`/`partial_stop` columns, filled for references fetched from now on) and show in the gene tooltip.
 - **Annotate details.** The reference picker, "Set ... as best reference" button, and poor-reference flag sit on one line; the synteny section lines up with the Sequence panel; the nucleotide boundaries readout in the alignment editor is a single line.

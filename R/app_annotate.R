@@ -857,11 +857,7 @@ annotate_server <- function(id) {
         skipped <- mp_confirm(
           "unlock_confirm",
           title = paste("Unlock", mp_n(n_changed, "assembly")),
-          text = paste0(
-            "Unlocking removes ", mp_n(n_changed, "assembly"), " from Export. ",
-            "Any assembly whose state is Ready to run will be re-annotated by ",
-            "the next update, replacing your curated results."
-          ),
+          text = annotate_unlock_text(n_changed),
           action_label = "Unlock",
           danger = TRUE,
           skippable = TRUE

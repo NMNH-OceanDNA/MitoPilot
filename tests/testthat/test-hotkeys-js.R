@@ -369,3 +369,14 @@ test_that("bracket keys move the boundary by the step box instead of one", {
   expect_equal(clicks(b), character(0))
 })
 
+
+
+test_that("Shift+L unlocks when the window is locked (no lock button) in both details windows", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  js(b, sprintf("document.getElementById('%slock_only').remove()", D))
+  press(b, "L", TRUE)
+  expect_equal(clicks(b), paste0(D, "unlock"))
+  js(b, "window.__clicks = []; window.coverageModal(); document.getElementById('assemble-assemble-coverage_details-lock').remove()")
+  press(b, "L", TRUE)
+  expect_equal(clicks(b), "assemble-assemble-coverage_details-unlock")
+})
