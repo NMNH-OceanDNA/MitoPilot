@@ -2563,7 +2563,20 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       role <- seg_role(selected())
       shinyjs::toggle("start_search_ctrl", condition = role$is_5)
       shinyjs::toggle("stop_search_ctrl", condition = role$is_3)
+      nt_toggle(selected())
     })
+
+    # Nucleotide controls: rRNA rows show both ends; a joined-PCG segment only
+    # its junction ends (the terminal ends use codon search).
+    nt_toggle <- function(sel) {
+      show <- nt_nudge_row(sel)
+      shinyjs::toggle("nt_edit_ctrls", condition = show)
+      if (!show) return(invisible(NULL))
+      role <- seg_role(sel)
+      is_pcg <- identical(rv$annotations$type[sel], "PCG")
+      shinyjs::toggle("nt5_ctrl", condition = !(is_pcg && role$is_5))
+      shinyjs::toggle("nt3_ctrl", condition = !(is_pcg && role$is_3))
+    }
 
     # Re-toggle codon search controls when the active segment changes within a
     # join edit session.
@@ -2572,6 +2585,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       role <- seg_role(selected())
       shinyjs::toggle("start_search_ctrl", condition = role$is_5)
       shinyjs::toggle("stop_search_ctrl", condition = role$is_3)
+      nt_toggle(selected())
     })
 
     ## Re align if user wants to show fewer reference samples ----
@@ -2620,13 +2634,15 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       )
     }
     # Keep the displayed box value inside [1, 100] when the user types directly.
-    for (.id in c("start_step_size", "stop_step_size")) {
+    # Typed step sizes stay inside the box limits (codons 1-100, bases 1-500).
+    step_limits <- c(start_step_size = 100L, stop_step_size = 100L, rrna5_step_size = 500L, rrna3_step_size = 500L)
+    for (.id in names(step_limits)) {
       local({
-        id <- .id
+        id <- .id; lim <- step_limits[[id]]
         observeEvent(input[[id]], {
           n <- input[[id]]
           if (length(n) == 0 || is.na(n)) return()
-          clamped <- max(1, min(as.integer(n), 100))
+          clamped <- max(1, min(as.integer(n), lim))
           if (!identical(as.integer(n), as.integer(clamped))) {
             updateNumericInput(session, id, value = clamped)
           }
@@ -3013,9 +3029,9 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     # rRNAs do not code, so there is no codon search: the user nudges the 5'/3'
     # boundary by N nucleotides. Moving an end auto-flags it as partial (the exact
     # boundary is uncertain); the PARTIAL toggle buttons let the user clear it.
-    rrna_step_size <- function() {
+    rrna_step_size <- function(end) {
       if (isTRUE(step_one)) return(1L)
-      n <- suppressWarnings(as.integer(input$rrna_step_size))
+      n <- suppressWarnings(as.integer(input[[paste0("rrna", end, "_step_size")]]))
       if (length(n) == 0 || is.na(n) || n < 1L) 1L else min(n, 500L)
     }
     # TRUE when the active row should expose the nucleotide-boundary nudge:
@@ -3026,69 +3042,10 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         (identical(rv$annotations$type[sel], "PCG") && seg_role(sel)$join)
       )
     }
-    output$rrna_edit_ctrls <- renderUI({
-      req(rv$editing)
-      sel <- selected()
-      req(length(sel) == 1)
-      req(nt_nudge_row(sel))
-      nudge <- function(id, sym) {
-        tags$button(
-          class = "icon-circle grow",
-          onclick = stringr::str_glue(
-            "Shiny.setInputValue('{ns(id)}', Math.random(), {{priority: 'event'}})"
-          ),
-          tags$span(style = "font-size: 0.75em;", sym)
-        )
-      }
-      # Caption distinguishes the nucleotide nudge from the codon-search box.
-      role <- seg_role(sel)
-      cap <- "Nucleotide edit"
-      # For a joined PCG the start/stop-owning terminal end is edited via codon
-      # search (not nucleotides), so only expose the nt nudge on junction (non-
-      # terminal) ends. rRNA has no codon search, so it keeps both ends.
-      is_pcg <- identical(rv$annotations$type[sel], "PCG")
-      show_5 <- !(is_pcg && role$is_5)
-      show_3 <- !(is_pcg && role$is_3)
-      seg_5 <- if (show_5) list(
-        tags$span(style = "font-weight: bold;", "5'"),
-        nudge("rrna-5-out", "+"),   # extend 5' (grow upstream)
-        nudge("rrna-5-in", "\u2212")
-      )
-      seg_3 <- if (show_3) list(
-        tags$span(style = "font-weight: bold;", "3'"),
-        nudge("rrna-3-in", "\u2212"),
-        nudge("rrna-3-out", "+")    # extend 3' (grow downstream)
-      )
-      step_box <- list(
-        div(
-          class = "mp-step-box",
-          style = "width: 56px; margin: 0 0.2em;",
-          numericInput(
-            # Retain the chosen step across re-renders of this renderUI (it
-            # re-renders on each nudge because it depends on rv$editing).
-            ns("rrna_step_size"), label = NULL,
-            value = isolate(input$rrna_step_size) %||% 1,
-            min = 1, max = 500, step = 1, width = "56px"
-          )
-        ),
-        tags$span(style = "font-size: 0.75em; color: #666; margin-right: 0.4em;", "nt")
-      )
-      tagList(div(
-        class = "mp-edit-group",
-        style = "display: flex; align-items: center;",
-        tags$span(class = "mp-edit-group-label", cap),
-        div(
-          style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 0.4em;",
-          seg_5, step_box, seg_3
-        )
-        )
-      )
-    })
-
     # Move an rRNA boundary by the step size. `end` is "5"/"3"; `action` is
     # "extend"/"trim". Strand decides which physical coordinate each end maps to.
     pending_seg_move <- NULL
-    adjust_rrna <- function(end, action) {
+    adjust_rrna <- function(end, action) edit_guard({
       sel <- selected()
       req(rv$editing, length(sel) == 1)
       req(nt_nudge_row(sel))
@@ -3101,7 +3058,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
           return(invisible(NULL))
         }
       }
-      step <- rrna_step_size()
+      step <- rrna_step_size(end)
       dir <- rv$annotations$direction[sel]
       pos1 <- rv$annotations$pos1[sel]
       pos2 <- rv$annotations$pos2[sel]
@@ -3117,6 +3074,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       pos1 <- if (unit_is_circ()) circ_edit_pos(pos1, rv$editing$assembly) else max(1L, as.integer(pos1))
       pos2 <- if (unit_is_circ()) circ_edit_pos(pos2, rv$editing$assembly) else min(as.integer(width), as.integer(pos2))
       req(edit_shrink_ok(pos1, pos2, rv$editing$assembly))
+      if (outward) req(edit_grow_ok(pos1, pos2, rv$editing$assembly))
       # Warn (but do not block) when the move would overlap a neighbouring
       # segment of the same joined gene: already-overlapping segments can only be
       # separated by moving through the overlap.
@@ -3137,7 +3095,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         return(invisible(NULL))
       }
       apply_seg_move(sel, end, pos1, pos2, is_rrna)
-    }
+    })
 
     # Commit a boundary move (shared by the direct path and the overlap
     # confirmation).
@@ -3157,6 +3115,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         }
         if (!is.null(rv$alignment)) rv$alignment$partial <- partial_label(sel)
       }
+      # Keep the edited end in view after the re-alignment (3' = right end).
+      rv$editing$stop_aln <- identical(end, "3")
       show_edit_waiter()
       shinyjs::delay(50, trigger("re_align"))
     }
@@ -4191,6 +4151,23 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     paste(topo_icon, topo)
   )
   is_locked <- isTRUE(rv$updating[["annotate_lock"]] == 1)
+  # Nucleotide nudge button / step box, matching the codon-search controls.
+  nt_button <- function(id, icon_name, title) {
+    tags$button(
+      id = ns(id), type = "button", class = "icon-circle grow", title = title, `aria-label` = title,
+      onclick = stringr::str_glue(
+        "Shiny.setInputValue('{ns(id)}', '{icon_name}', {{priority: 'event'}})"
+      ),
+      icon(icon_name)
+    )
+  }
+  nt_step_box <- function(id) {
+    div(
+      class = "mp-step-box", style = "width: 56px;",
+      numericInput(ns(id), label = NULL, value = 1, min = 1, max = 500, step = 1, width = "56px") |>
+        mp_named_input("Bases per click")
+    )
+  }
   off <- function(x) if (is_locked) shinyjs::disabled(x) else x
 
   modalDialog(
@@ -4556,9 +4533,30 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
               )
             )
             ),
-            # rRNA nucleotide-boundary nudge controls (shown for rRNA only); kept
-            # left of the partial buttons.
-            uiOutput(ns("rrna_edit_ctrls"), inline = TRUE),
+            # Nucleotide boundary controls: rRNA rows (both ends) and joined-PCG
+            # segments (junction ends only). Shown/hidden per row by nt_toggle().
+            div(
+              id = ns("nt_edit_ctrls"),
+              class = "mp-edit-group",
+              style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 1.5em;",
+              tags$span(class = "mp-edit-group-label", "Nucleotide edit"),
+              div(
+                id = ns("nt5_ctrl"),
+                style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 0.4em;",
+                tags$span(style = "font-weight: bold;", "5'"),
+                nt_button("rrna-5-out", "plus", "Extend the 5' end upstream (longer feature)"),
+                nt_button("rrna-5-in", "minus", "Trim the 5' end downstream (shorter feature)"),
+                nt_step_box("rrna5_step_size")
+              ),
+              div(
+                id = ns("nt3_ctrl"),
+                style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 0.4em;",
+                tags$span(style = "font-weight: bold;", "3'"),
+                nt_button("rrna-3-in", "minus", "Trim the 3' end upstream (shorter feature)"),
+                nt_button("rrna-3-out", "plus", "Extend the 3' end downstream (longer feature)"),
+                nt_step_box("rrna3_step_size")
+              )
+            ) |> shinyjs::hidden(),
             # Manual partial-end flags + poly-A stop trim (PCG/rRNA). Rendered
             # reactively so button state reflects the selected gene.
             uiOutput(ns("partial_ctrls"), inline = TRUE)

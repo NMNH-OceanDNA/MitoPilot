@@ -298,7 +298,7 @@
       var id = codon
         ? (end === '5' ? (dir === 'out' ? 'start-add' : 'start-minus') : (dir === 'out' ? 'stop-add' : 'stop-minus'))
         : 'rrna-' + end + '-' + dir;
-      if (!codon && !document.getElementById(D() + id)) return false;
+      if (!codon && !usable(document.getElementById(D() + id))) return false;
       return post(D() + id, step || 'one');
     }
     c('e', 'Edit mode', 'edit_mode');
