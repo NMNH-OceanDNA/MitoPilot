@@ -98,7 +98,7 @@
   window.showModal = function (inner) {
     window.closeModal();
     var m = document.createElement('div'); m.id = 'shiny-modal'; m.className = 'modal in';
-    m.innerHTML = '<div class="modal-dialog"><div class="modal-body">' + inner + '</div></div>';
+    m.innerHTML = '<div class="modal-dialog"><div class="modal-body" style="height:300px;overflow:auto">' + inner + '<div style="height:3000px"></div></div></div>';
     document.getElementById('modal-host').appendChild(m);
   };
   window.closeModal = function () { var m = document.getElementById('shiny-modal'); if (m) m.remove(); };

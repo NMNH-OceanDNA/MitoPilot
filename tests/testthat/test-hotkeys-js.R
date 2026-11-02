@@ -163,16 +163,20 @@ test_that("details modal: bindings survive a re-rendered modal (Review Focus 2)"
   expect_equal(clicks(b), paste0(D, "ID_verified"))
 })
 
-test_that("details modal: arrows walk the annotation rows without wrapping", {
+test_that("details modal: Shift+Up/Down walk the annotation rows without wrapping", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
-  press(b, "ArrowDown"); press(b, "ArrowUp"); press(b, "Home"); press(b, "End")
+  press(b, "ArrowDown", TRUE); press(b, "ArrowUp", TRUE); press(b, "Home"); press(b, "End")
   expect_equal(clicks(b), c("row3", "row1", "row1", "row3"))
 })
 
-test_that("details modal: Shift+Up/Down cycle join segments around the active one", {
+test_that("details modal: plain Up/Down scroll the window and never touch rows", {
   b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
-  press(b, "ArrowDown", TRUE); press(b, "ArrowUp", TRUE)
-  expect_equal(clicks(b), c("seg3", "seg1"))
+  press(b, "ArrowDown"); press(b, "ArrowDown")
+  top <- js(b, "document.querySelector('#shiny-modal .modal-body').scrollTop")
+  expect_gt(top, 0)
+  press(b, "ArrowUp")
+  expect_lt(js(b, "document.querySelector('#shiny-modal .modal-body').scrollTop"), top)
+  expect_equal(clicks(b), character(0))
 })
 
 test_that("boundary keys route to codon or nucleotide buttons by wrapper visibility (Review Focus 3)", {
