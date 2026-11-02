@@ -389,3 +389,12 @@ test_that("stepping annotations keeps the window scroll position", {
   expect_equal(clicks(b), c("row3", "row3"))
   expect_equal(js(b, "document.querySelector('#shiny-modal .modal-body').scrollTop"), 500)
 })
+
+
+test_that("boundary keys do nothing when both the codon box and the nudge button are hidden", {
+  b <- hk_page(); js(b, "window.mpHotkeys.setEnabled(true); window.detailsModal()")
+  js(b, sprintf("document.getElementById('%sedit_mode_ctrls').style.display=''", D))
+  js(b, sprintf("document.getElementById('%sstart_search_ctrl').style.display='none'; document.getElementById('%srrna-5-out').style.display='none'", D, D))
+  press(b, ",")
+  expect_equal(js(b, "window.__inputs.length"), 0L)
+})
