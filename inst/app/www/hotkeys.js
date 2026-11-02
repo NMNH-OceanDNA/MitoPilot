@@ -8,11 +8,6 @@
   var IGNORE = 'input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]), ' +
     'textarea, select, [contenteditable], .selectize-input, .bootstrap-select';
   var TEXTY = 'input, textarea';
-  var MOUSE_ONLY = [
-    'Continue export / Stop without exporting', 'Run pipeline start / stop',
-    'Build joined assembly', 'Linearize, trim ends, restore assembly',
-    'Circularize details and specimen tabs'
-  ];
   var bindings = {};
   var helpEl = null;
 
@@ -47,8 +42,9 @@
     var r = document.querySelector('#mode input[type=radio]:checked');
     return 'page:' + (r ? r.value : 'Assemble');
   }
-  function bind(ctx, key, label, run) {
-    (bindings[ctx] || (bindings[ctx] = {}))[key] = { label: label, run: run };
+  // opts.show: text for the cheat sheet; opts.alias: hide this key from it.
+  function bind(ctx, key, label, run, opts) {
+    (bindings[ctx] || (bindings[ctx] = {}))[key] = { label: label, run: run, show: opts && opts.show, alias: !!(opts && opts.alias) };
   }
   function usable(el) { return !!el && el.offsetParent !== null && !el.disabled; }
   // Toolbar ids repeat across the Step panels; click the copy that is shown.
@@ -78,12 +74,11 @@
     if (show === undefined) show = helpEl.hidden;
     if (!show) { helpEl.hidden = true; return; }
     var ctx = context(), b = bindings[ctx] || {};
-    var rows = Object.keys(b).map(function (k) {
-      return '<tr><td><kbd>' + keyLabel(k) + '</kbd></td><td>' + b[k].label + '</td></tr>';
+    var rows = Object.keys(b).filter(function (k) { return !b[k].alias; }).map(function (k) {
+      return '<tr><td><kbd>' + (b[k].show || keyLabel(k)) + '</kbd></td><td>' + b[k].label + '</td></tr>';
     }).join('');
     helpEl.innerHTML = '<div class="mp-hotkeys-help-box"><h4>Keyboard shortcuts: ' + ctx.replace('page:', '') +
-      '</h4><table>' + rows + '</table><p class="text-muted">Mouse only: ' + MOUSE_ONLY.join('; ') +
-      '.</p><p class="text-muted">Press ? or Escape to close.</p></div>';
+      '</h4><table>' + rows + '</table><p class="text-muted">Press ? or Escape to close.</p></div>';
     helpEl.hidden = false;
   }
 
@@ -209,6 +204,13 @@
     return clickIn(sec || document.getElementById('shiny-modal'), '[' + v.attr + '="' + action + '"]');
   }
   function zoom(f) { var v = viewer(); if (v.api && v.api.zoom) { v.api.zoom(v.id, f); return true; } return false; }
+  // + or = zooms in, - or _ zooms out; the sheet lists each pair once.
+  function zoomKeys(ctx, what) {
+    bind(ctx, '+', 'Zoom in (' + what + ')', function () { return zoom(2); }, { show: '+ or =' });
+    bind(ctx, '=', 'Zoom in (' + what + ')', function () { return zoom(2); }, { alias: true });
+    bind(ctx, '-', 'Zoom out (' + what + ')', function () { return zoom(0.5); }, { show: '- or _' });
+    bind(ctx, '_', 'Zoom out (' + what + ')', function () { return zoom(0.5); }, { alias: true });
+  }
   function pan(f) { var v = viewer(); if (v.api && v.api.pan) { v.api.pan(v.id, f); return true; } return false; }
   function visible(id) { var el = document.getElementById(id); return !!el && el.offsetParent !== null; }
   function focusId(id) { var el = document.getElementById(id); if (!el) return false; el.focus(); return true; }
@@ -260,8 +262,7 @@
     b('y', 'Copy nucleotide FASTA', function () { return clickIn(selectedRow(), 'button[onclick*="copy_fas"]'); });
     b('Y', 'Copy amino-acid FASTA', function () { return clickIn(selectedRow(), 'button[onclick*="copy_faa"]'); });
 
-    b('+', 'Zoom in (hovered viewer)', function () { return zoom(2); });
-    b('-', 'Zoom out (hovered viewer)', function () { return zoom(0.5); });
+    zoomKeys(ctx, 'hovered viewer');
     b('ArrowLeft', 'Pan left (hovered viewer or alignment)', function () { return pan(-0.25); });
     b('ArrowRight', 'Pan right (hovered viewer or alignment)', function () { return pan(0.25); });
     b('F', 'Fit selected gene', function () { return viewerButton('fit'); });
@@ -465,8 +466,7 @@
     b('ArrowUp', 'Move scaffold cursor up', function (e) { return moveCursor(T(), e && e.repeat ? -3 : -1); });
     b('Space', 'Check / uncheck cursor scaffold', function () { return toggleCursor(T()); });
     b('X', 'Include / ignore cursor scaffold', function () { return clickIn(cursorRow(T()), '[onclick*="-ignore"]'); });
-    b('+', 'Zoom in (MapToRef viewer)', function () { return zoom(2); });
-    b('-', 'Zoom out (MapToRef viewer)', function () { return zoom(0.5); });
+    zoomKeys(ctx, 'MapToRef viewer');
     b('ArrowLeft', 'Pan left', function () { return pan(-0.25); });
     b('ArrowRight', 'Pan right', function () { return pan(0.25); });
     b('W', 'Whole genome', function () { return viewerButton('whole'); });
