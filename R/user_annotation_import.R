@@ -401,16 +401,25 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   out[ft %in% c("CDS", "mRNA")] <- "PCG"
   out[ft %in% c("tRNA", "tRNA_gene")] <- "tRNA"
   out[ft %in% c("rRNA", "rRNA_gene")] <- "rRNA"
+  out[tolower(ft) %in% c("d_loop", "d-loop", "rep_origin", "origin_of_replication")] <- "ctrl"
   out
 }
 
 #' Guess canonical gene name and type for imported features. Vectorised.
 #' @noRd
-guess_gene <- function(raw_name, feature_type, raw_product = NA) {
-  n <- max(length(raw_name), length(feature_type), length(raw_product))
+guess_gene <- function(raw_name, feature_type, raw_product = NA, raw_note = NA) {
+  n <- max(length(raw_name), length(feature_type), length(raw_product), length(raw_note))
   raw_name <- rep_len(as.character(raw_name), n)
   raw_product <- rep_len(as.character(raw_product), n)
+  raw_note <- rep_len(as.character(raw_note), n)
   mt <- rep_len(.gff_type_to_mito(feature_type), n)
+  hit <- function(p) Reduce(`|`, lapply(list(raw_name, raw_product, raw_note), grepl,
+                                        pattern = p, ignore.case = TRUE, perl = TRUE))
+  cr <- mt %in% "ctrl"
+  ctrl <- (cr | hit(paste0("control region|d-loop|d loop|displacement loop|",
+                           "^(D[-_ ]?loop|CR|OH|control[ _]region|rep_origin)$"))) &
+    !hit("L-strand|light[- ]strand|\\bOL\\b|origin of L")
+  mt[cr] <- NA_character_
   one <- function(nm, pr, ty) {
     tys <- if (is.na(ty)) c("PCG", "rRNA", "tRNA") else ty
     for (t in tys) {
@@ -428,9 +437,10 @@ guess_gene <- function(raw_name, feature_type, raw_product = NA) {
   }, raw_name, raw_product, mt, USE.NAMES = FALSE)
   gene <- as.character(gene)
   keep <- !is.na(gene) & gene %in% MITO_GENE_CHOICES
-  gene[!keep] <- NA_character_
-  type <- vapply(gene, function(g) if (is.na(g)) NA_character_ else mito_gene_type(g),
-                 character(1), USE.NAMES = FALSE)
+  gene[!keep | cr] <- NA_character_
+  gene[ctrl] <- "ctrl"
+  type <- vapply(gene, function(g) if (is.na(g)) NA_character_ else if (g == "ctrl") "ctrl" else
+    mito_gene_type(g), character(1), USE.NAMES = FALSE)
   dplyr::tibble(gene = gene, type = type)
 }
 
@@ -515,7 +525,8 @@ resolve_user_annotations <- function(con, ID) {
                 paste0("import: ", ua$note), NA)
   parts <- cbind(join, ifelse(ua$pseudo %in% 1L, "import: pseudogene", NA), imp)
   notes <- apply(parts, 1, function(x) Reduce(semicolon_paste, x[!is.na(x)], NA_character_))
-  type <- vapply(ua$gene, mito_gene_type, character(1), USE.NAMES = FALSE)
+  type <- vapply(ua$gene, function(g) if (g == "ctrl") "ctrl" else mito_gene_type(g),
+                 character(1), USE.NAMES = FALSE)
   aa <- .ua_trn_aa(ua$gene)
   out <- dplyr::tibble(
     contig = ua$contig, type = type, gene = ua$gene,
@@ -524,6 +535,7 @@ resolve_user_annotations <- function(con, ID) {
       ua$gene == "rrnL" ~ "16S ribosomal RNA",
       ua$gene == "rrnS" ~ "12S ribosomal RNA",
       type == "tRNA" & !is.na(aa) ~ paste0("tRNA-", aa),
+      type == "ctrl" ~ "d-loop",
       .default = NA_character_
     ),
     pos1 = ua$pos1, pos2 = ua$pos2,
@@ -594,7 +606,7 @@ confirm_user_annotations <- function(con, project_dir) {
 set_gene_name_map <- function(con, raw_name, feature_type, gene) {
   gene <- as.character(gene)
   gene[is.na(gene) | gene == "(drop)"] <- NA_character_
-  bad <- !is.na(gene) & !gene %in% MITO_GENE_CHOICES
+  bad <- !is.na(gene) & !gene %in% MITO_IMPORT_GENE_CHOICES
   if (any(bad)) stop("set_gene_name_map: unknown gene '", gene[bad][1], "'")
   DBI::dbExecute(con, "UPDATE gene_name_map SET gene = ?, manual = 1, confirmed = 0
                        WHERE raw_name = ? AND feature_type = ?",

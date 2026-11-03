@@ -41,6 +41,10 @@ MITO_EXTRA_PCG_GENES <- c(
 #' @noRd
 MITO_GENE_CHOICES <- c(MITO_RRNA_GENES, MITO_PCG_GENES, MITO_EXTRA_PCG_GENES, MITO_TRNA_GENES)
 
+#' Gene choices for the user-annotation import, adding the control region.
+#' @noRd
+MITO_IMPORT_GENE_CHOICES <- c(MITO_GENE_CHOICES, "ctrl")
+
 #' Minimum BLAST similarity (%) for an auto-suggested ORF gene assignment.
 #' @noRd
 ORF_ASSIGN_SIM_THRESHOLD <- 60

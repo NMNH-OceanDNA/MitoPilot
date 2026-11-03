@@ -109,7 +109,8 @@ import_user_annotations <- function(con, mapping, assembly_path, annotation_path
   ua <- dplyr::bind_rows(lapply(parsed, `[[`, "rows"))
   DBI::dbAppendTable(con, "user_annotations", ua)
 
-  ua$guess <- guess_gene(ua$raw_name, dplyr::na_if(ua$feature_type, ""), ua$raw_product)$gene
+  ua$guess <- guess_gene(ua$raw_name, dplyr::na_if(ua$feature_type, ""), ua$raw_product,
+                         ua$note)$gene
   gm <- ua |>
     dplyr::group_by(raw_name, feature_type) |>
     dplyr::summarise(

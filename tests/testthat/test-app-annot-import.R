@@ -50,6 +50,7 @@ test_that("annot_import pick, reset, and confirm", {
     expect_equal(rows()$raw_name, c("ORF1", "COX1"))
     expect_equal(rows()$status, c("unmapped", "auto"))
     expect_match(output$tbl, "x-pick", fixed = TRUE)
+    expect_match(output$tbl, "ctrl (control region)", fixed = TRUE)
 
     session$setInputs(pick = list(raw_name = "ORF1", feature_type = "CDS", gene = "nad6"))
     gm <- DBI::dbGetQuery(con, "SELECT gene, manual FROM gene_name_map WHERE raw_name = 'ORF1'")

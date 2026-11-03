@@ -21,15 +21,16 @@
 #'     `hypothetical protein` (nad6), and `ORF123` (atp6) are not, so map them
 #'     by hand. `COX11`, `cytochrome oxidase subnit I`, and `rrnX` are stray
 #'     calls in the control region; leave them unmapped.
-#'   \item `GB_DROP` (Xyrichtys novacula): a feature table with a `D-loop`, a
-#'     control-region `misc_feature`, a `rep_origin`, and a `repeat_region`
-#'     (unmapped, so dropped), plus a `gap` and an `STS` (dropped on import), a
+#'   \item `GB_DROP` (Xyrichtys novacula): a feature table with a `D-loop` and a
+#'     control-region `misc_feature` (both guessed as the control region,
+#'     `ctrl`), a light-strand `rep_origin` and a `repeat_region` (unmapped, so
+#'     dropped), plus a `gap` and an `STS` (dropped on import), a
 #'     pseudogene (nad6), ribosomal slippage (atp8 in two parts), a 5' partial
 #'     nad1 with `codon_start` 2, a 3' partial rrnL, and nad5 spanning the
 #'     origin.
 #'   \item `GB_MITOS` (Beryx splendens): a MITOS2-style GFF with lowercase
-#'     names, numbered tRNAs (`trnL1(tag)`, `trnS2(tga)`), `OH` and `OL`
-#'     (unmapped), and cob spanning the origin as one row.
+#'     names, numbered tRNAs (`trnL1(tag)`, `trnS2(tga)`), `OH` (guessed as
+#'     `ctrl`), `OL` (unmapped), and cob spanning the origin as one row.
 #' }
 #'
 #' @param path path to the directory for the test project (default = current

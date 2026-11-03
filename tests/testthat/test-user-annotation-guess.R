@@ -27,15 +27,27 @@ test_that("guess_gene maps names", {
   chk("COX1 intron ORF", "CDS", NA, NA_character_, NA_character_)
   chk("cob_i1_orf", "CDS", NA, NA_character_, NA_character_)
   chk("nad4 like", "CDS", NA, NA_character_, NA_character_)
-  chk("D-loop", "misc_feature", NA, NA_character_, NA_character_)
-  chk("OH", "gene", NA, NA_character_, NA_character_)
+  chk("D-loop", "misc_feature", NA, "ctrl", "ctrl")
+  chk("OH", "gene", NA, "ctrl", "ctrl")
+  chk(NA, "D-loop", NA, "ctrl", "ctrl")
+  chk("", "D_loop", NA, "ctrl", "ctrl")
+  chk("control region", "misc_feature", NA, "ctrl", "ctrl")
+  chk("CR", NA, NA, "ctrl", "ctrl")
+  chk("putative control region", "misc_feature", NA, "ctrl", "ctrl")
+  chk("x1", "origin_of_replication", NA, "ctrl", "ctrl")
+  chk("OL", "rep_origin", NA, NA_character_, NA_character_)
+  chk("tandem repeat", "misc_feature", NA, NA_character_, NA_character_)
   chk("ORF1", "CDS", NA, NA_character_, NA_character_)
 })
 
 test_that("guess_gene is vectorised", {
   r <- guess_gene(c("COX1", "OH"), c("CDS", "gene"))
   expect_equal(nrow(r), 2L)
-  expect_equal(r$gene, c("cox1", NA))
+  expect_equal(r$gene, c("cox1", "ctrl"))
+  r <- guess_gene(c("", NA, "misc_feature"), c("misc_feature", "rep_origin", "misc_feature"),
+                  NA, c("control region", "L-strand origin", NA))
+  expect_equal(r$gene, c("ctrl", NA, NA))
+  expect_equal(r$type, c("ctrl", NA, NA))
 })
 
 test_that("parse_anticodon", {

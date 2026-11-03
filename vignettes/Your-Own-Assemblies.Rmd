@@ -383,8 +383,10 @@ Copies of the original files are kept in `<project>/user_annotations/raw/`.
 When you launch the app, an "Imported gene names" window lists every raw name
 with its mapping. Fix any wrong guesses, then press Confirm. The "Gene names"
 button in the toolbar reopens the window, and pipeline runs (Update) are blocked
-until you confirm. Names that cannot be mapped, such as D-loop or ORFs, are
-dropped, and the window shows how many. If you edit the mapping after
+until you confirm. Control-region names (D-loop, control region, OH) import as
+MitoPilot's control region feature (`ctrl`, exported as `D-loop`). Names that
+cannot be mapped, such as ORFs or the light-strand origin (OL), are dropped,
+and the window shows how many. If you edit the mapping after
 confirming, the gate closes again; confirming re-queues only the samples whose
 annotation actually changed.
 
@@ -411,6 +413,6 @@ To try it, `new_test_project_userAnnot()` creates a six-sample demo built from
 RefSeq fish mitogenomes, with small simulated reads. The annotations come as an
 NCBI GFF3, an NCBI `.tbl`, a BED, a MITOS GFF, a GFF3 full of odd and misspelled
 gene names, and a `.tbl` with features that are dropped or flagged on import
-(D-loop, gaps, a pseudogene, ribosomal slippage, partial ends, and a gene that
+(a D-loop, gaps, a pseudogene, ribosomal slippage, partial ends, and a gene that
 spans the origin). Some names are deliberately left for you to map in the
 "Imported gene names" window; see `?new_test_project_userAnnot` for the list.

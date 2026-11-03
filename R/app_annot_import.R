@@ -13,14 +13,15 @@ annot_import_table <- function(con, ns) {
   status <- ifelse(gm$manual %in% 1L, "edited", ifelse(is.na(gm$gene), "unmapped", "auto"))
   pick <- function(value, index) {
     cur <- gm$gene[index] %|NA|% "(drop)"
-    opts <- unique(c("(drop)", MITO_GENE_CHOICES, cur))
+    opts <- unique(c("(drop)", MITO_IMPORT_GENE_CHOICES, cur))
     as.character(tags$select(
       class = "form-control input-sm", `aria-label` = paste("Gene for", gm$raw_name[index]),
       onchange = sprintf(
         "Shiny.setInputValue('%s', {raw_name: %s, feature_type: %s, gene: this.value}, {priority: 'event'})",
         ns("pick"), jsonlite::toJSON(gm$raw_name[index], auto_unbox = TRUE),
         jsonlite::toJSON(gm$feature_type[index], auto_unbox = TRUE)),
-      lapply(opts, function(o) tags$option(value = o, selected = if (identical(o, cur)) NA, o))
+      lapply(opts, function(o) tags$option(value = o, selected = if (identical(o, cur)) NA,
+                                           if (o == "ctrl") "ctrl (control region)" else o))
     ))
   }
   d <- data.frame(raw_name = gm$raw_name,

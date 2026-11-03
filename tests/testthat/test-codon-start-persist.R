@@ -164,15 +164,14 @@ test_that("shipped user annotation fixtures parse", {
     GB_NCBI = character(0), GB_TBL = character(0), GB_BED = character(0),
     GB_TYPOS = c("COX11", "NDH4K", "ATP88", "cytochrome oxidase subnit I", "tRNA-Xxx",
                  "rrnX", "hypothetical protein", "ORF123"),
-    GB_DROP = c("", "control region", "putative light strand origin of replication",
-                "tandem repeat"),
-    GB_MITOS = c("OH", "OL"))
+    GB_DROP = c("putative light strand origin of replication", "tandem repeat"),
+    GB_MITOS = "OL")
   p <- list()
   for (i in seq_len(nrow(map))) {
     len <- unname(Biostrings::fasta.seqlengths(file.path(td, "assemblies", map$Assembly[i])))
     p[[map$ID[i]]] <- parse_user_annotation(file.path(td, "annotations", map$Annotation[i]), len)
     x <- p[[map$ID[i]]]
-    g <- guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene
+    g <- guess_gene(x$raw_name, x$feature_type, x$raw_product, x$note)$gene
     expect_setequal(unique(dplyr::coalesce(x$raw_name[is.na(g)], "")), unmapped[[map$ID[i]]])
   }
   ok <- c("mt-Co1" = "cox1", "MT-ND4L" = "nad4l", "cytb" = "cob", "COII" = "cox2",
@@ -184,6 +183,11 @@ test_that("shipped user annotation fixtures parse", {
   expect_equal(guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene,
                c("cox1", "nad4l", "trnL", "trnS"))
   d <- p$GB_DROP
+  x <- d[d$feature_type %in% c("D-loop", "misc_feature"), ]
+  expect_equal(nrow(x), 2L)
+  expect_equal(guess_gene(x$raw_name, x$feature_type, x$raw_product, x$note)$gene, c("ctrl", "ctrl"))
+  x <- p$GB_MITOS[p$GB_MITOS$raw_name %in% "OH", ]
+  expect_equal(guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene, "ctrl")
   expect_equal(d$codon_start[d$raw_name %in% "ND1"], 2L)
   expect_equal(d$partial_start[d$raw_name %in% "ND1"], 1L)
   dr <- attr(d, "dropped_types")
