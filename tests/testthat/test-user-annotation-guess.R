@@ -17,6 +17,7 @@ test_that("guess_gene maps names", {
   chk("tRNA-Ser(uca)", NA, NA, "trnS", "tRNA")
   chk("TRNF", "gene", "tRNA-Phe", "trnF", "tRNA")
   chk("cox1", NA, NA, "cox1", "PCG")
+  chk("COI CDS 5' Partial CDS", "CDS", NA, "cox1", "PCG")
   chk("D-loop", "misc_feature", NA, NA_character_, NA_character_)
   chk("OH", "gene", NA, NA_character_, NA_character_)
   chk("ORF1", "CDS", NA, NA_character_, NA_character_)

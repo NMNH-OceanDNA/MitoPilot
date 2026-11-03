@@ -411,13 +411,19 @@ guess_gene <- function(raw_name, feature_type, raw_product = NA) {
   raw_name <- rep_len(as.character(raw_name), n)
   raw_product <- rep_len(as.character(raw_product), n)
   mt <- rep_len(.gff_type_to_mito(feature_type), n)
-  gene <- mapply(function(nm, pr, ty) {
+  one <- function(nm, pr, ty) {
     tys <- if (is.na(ty)) c("PCG", "rRNA", "tRNA") else ty
     for (t in tys) {
       g <- normalize_mito_gene(nm, t, pr)
       if (!is.na(g) && !startsWith(g, "?")) return(g)
     }
     NA_character_
+  }
+  gene <- mapply(function(nm, pr, ty) {
+    g <- one(nm, pr, ty)
+    tok <- sub("[[:space:]_].*$", "", nm)
+    if (is.na(g) && !is.na(tok) && nzchar(tok) && tok != nm) g <- one(tok, pr, ty)
+    g
   }, raw_name, raw_product, mt, USE.NAMES = FALSE)
   gene <- as.character(gene)
   keep <- !is.na(gene) & gene %in% MITO_GENE_CHOICES
@@ -471,4 +477,125 @@ parse_anticodon <- function(x) {
   }
   add_pcg_codons(ann, assembly, genetic_code) |>
     dplyr::arrange(contig, pos1)
+}
+
+.ua_trn_aa <- function(gene) unname(trnA_key_MITOS[sub("^(trn[LS])$", "\\11", gene)])
+
+#' Imported features for one sample as annotate()'s user-annotation CSV
+#'
+#' Attribute `warnings`: JOIN groups whose members map to different genes.
+#' @noRd
+resolve_user_annotations <- function(con, ID) {
+  ua <- DBI::dbGetQuery(con, "
+    SELECT u.*, m.gene FROM user_annotations u LEFT JOIN gene_name_map m
+      ON u.raw_name = m.raw_name AND u.feature_type = m.feature_type
+    WHERE u.ID = ? ORDER BY u.feature_idx", params = list(ID))
+  ua <- ua |>
+    dplyr::group_by(segment_group) |>
+    dplyr::mutate(split = !is.na(segment_group) & dplyr::n_distinct(gene) > 1L) |>
+    dplyr::ungroup()
+  bad <- ua[ua$split, ]
+  warn <- vapply(split(bad, bad$segment_group), function(b) paste0(
+    ID, ": segments of ", paste(unique(b$raw_name), collapse = "/"), " map to different genes (",
+    paste(unique(dplyr::coalesce(b$gene, "dropped")), collapse = ", "),
+    "); kept as separate features"), character(1), USE.NAMES = FALSE)
+  ua <- ua[!is.na(ua$gene), ]
+  g <- ifelse(ua$split, NA, ua$segment_group)
+  g <- match(g, unique(g[!is.na(g)]))
+  join <- ifelse(is.na(g), NA, paste0(
+    "JOIN: mode=", ua$segment_mode, " group=", g,
+    ifelse(is.na(ua$segment_note), "", paste0(" note=", ua$segment_note))))
+  imp <- ifelse(!is.na(ua$note) & nzchar(ua$note) &
+                  !(!is.na(join) & dplyr::coalesce(ua$note == ua$segment_note, FALSE)),
+                paste0("import: ", ua$note), NA)
+  parts <- cbind(join, ifelse(ua$pseudo %in% 1L, "import: pseudogene", NA), imp)
+  notes <- apply(parts, 1, function(x) Reduce(semicolon_paste, x[!is.na(x)], NA_character_))
+  type <- vapply(ua$gene, mito_gene_type, character(1), USE.NAMES = FALSE)
+  aa <- .ua_trn_aa(ua$gene)
+  out <- dplyr::tibble(
+    contig = ua$contig, type = type, gene = ua$gene,
+    product = dplyr::case_when(
+      type == "PCG" ~ unname(CDS_key[ua$gene]),
+      ua$gene == "rrnL" ~ "16S ribosomal RNA",
+      ua$gene == "rrnS" ~ "12S ribosomal RNA",
+      type == "tRNA" & !is.na(aa) ~ paste0("tRNA-", aa),
+      .default = NA_character_
+    ),
+    pos1 = ua$pos1, pos2 = ua$pos2,
+    length = ifelse(ua$pos1 > ua$pos2, ua$contig_length - ua$pos1 + 1L + ua$pos2,
+                    ua$pos2 - ua$pos1 + 1L),
+    direction = ua$direction, anticodon = ua$anticodon,
+    partial_start = ua$partial_start, partial_stop = ua$partial_stop,
+    codon_start = ua$codon_start, notes = as.character(notes), tool = rep("user", nrow(ua))
+  ) |>
+    dplyr::arrange(contig, pos1)
+  structure(out, warnings = warn)
+}
+
+#' Write every sample's resolved CSV; returns IDs whose file content changed
+#'
+#' Attribute `warnings`: collected from resolve_user_annotations().
+#' @noRd
+write_user_annotation_csvs <- function(con, project_dir) {
+  ids <- DBI::dbGetQuery(con, "SELECT ID FROM samples")$ID
+  dir <- file.path(project_dir, "user_annotations")
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  warn <- character(0)
+  changed <- vapply(ids, function(id) {
+    r <- resolve_user_annotations(con, id)
+    warn <<- c(warn, attr(r, "warnings"))
+    txt <- readr::format_csv(r, na = "")
+    fn <- file.path(dir, paste0(id, "_annotations.csv"))
+    old <- if (file.exists(fn)) readChar(fn, file.size(fn), useBytes = TRUE) else NA_character_
+    if (identical(old, txt)) return(FALSE)
+    writeChar(txt, fn, eos = NULL)
+    TRUE
+  }, logical(1), USE.NAMES = FALSE)
+  structure(ids[changed], warnings = warn)
+}
+
+#' TRUE when every gene_name_map row is confirmed
+#' @noRd
+user_annot_confirmed <- function(con) {
+  x <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS n, SUM(confirmed = 1) AS k FROM gene_name_map")
+  x$n > 0 && identical(as.numeric(x$n), as.numeric(x$k))
+}
+
+#' Confirm the gene-name mapping, write CSVs, requeue changed samples
+#'
+#' @return list(kept, dropped, requeued, warnings)
+#' @noRd
+confirm_user_annotations <- function(con, project_dir) {
+  changed <- write_user_annotation_csvs(con, project_dir)
+  DBI::dbWithTransaction(con, {
+    DBI::dbExecute(con, "UPDATE gene_name_map SET confirmed = 1, time_stamp = ?",
+                   params = list(as.numeric(Sys.time())))
+    if (length(changed)) {
+      DBI::dbExecute(con, paste0(
+        "UPDATE annotate SET annotate_switch = 1 WHERE annotate_lock = 0 AND ID IN (",
+        paste(rep("?", length(changed)), collapse = ", "), ")"), params = as.list(changed))
+    }
+  })
+  n <- DBI::dbGetQuery(con, "
+    SELECT SUM(m.gene IS NOT NULL) AS kept, SUM(m.gene IS NULL) AS dropped
+    FROM user_annotations u LEFT JOIN gene_name_map m
+      ON u.raw_name = m.raw_name AND u.feature_type = m.feature_type")
+  list(kept = as.integer(n$kept), dropped = as.integer(n$dropped),
+       requeued = as.character(changed), warnings = attr(changed, "warnings"))
+}
+
+#' Set the gene for a raw name; NA or "(drop)" drops it
+#' @noRd
+set_gene_name_map <- function(con, raw_name, feature_type, gene) {
+  gene <- as.character(gene)
+  gene[is.na(gene) | gene == "(drop)"] <- NA_character_
+  DBI::dbExecute(con, "UPDATE gene_name_map SET gene = ?, manual = 1, confirmed = 0
+                       WHERE raw_name = ? AND feature_type = ?",
+                 params = list(gene, raw_name, dplyr::coalesce(feature_type, "")))
+}
+
+#' Restore every gene to its automatic guess
+#' @noRd
+reset_gene_name_map <- function(con) {
+  DBI::dbExecute(con, "UPDATE gene_name_map SET gene = guess, manual = 0, confirmed = 0")
 }
