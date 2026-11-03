@@ -24,7 +24,7 @@ ua_app_session <- function(con, td) {
   ms$userData$con <- con
   ms$userData$dir <- td
   ms$userData$user_annot <- TRUE
-  for (f in c("refresh_assemble", "refresh_annotate")) gargoyle::init(f, session = ms)
+  for (f in c("refresh_assemble", "refresh_annotate", "annot_import_state")) gargoyle::init(f, session = ms)
   ms
 }
 
@@ -37,6 +37,24 @@ test_that("run gate blocks only unconfirmed user annotation projects", {
   expect_true(annot_import_blocks_run(list(userData = list(user_annot = TRUE, con = con))))
   confirm_user_annotations(con, td)
   expect_false(annot_import_blocks_run(list(userData = list(user_annot = TRUE, con = con))))
+})
+
+test_that("annot_import_notice reports unmapped counts until confirmed", {
+  testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
+  td <- ua_app_project(withr::local_tempdir())
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(td, ".sqlite"))
+  withr::defer(DBI::dbDisconnect(con))
+  expect_equal(annot_import_notice(con),
+               "Gene names not confirmed: 1 unmapped of 2. Pipeline runs are blocked.")
+  confirm_user_annotations(con, td)
+  expect_null(annot_import_notice(con))
+})
+
+test_that("mp_app_header renders the notice with a Review button", {
+  h <- as.character(mp_app_header(tempdir(), notice = "Gene names not confirmed"))
+  expect_match(h, "mp-header-notice", fixed = TRUE)
+  expect_match(h, "gene_names_header", fixed = TRUE)
+  expect_false(grepl("gene_names_header", as.character(mp_app_header(tempdir())), fixed = TRUE))
 })
 
 test_that("annot_import pick, reset, and confirm", {
@@ -52,17 +70,23 @@ test_that("annot_import pick, reset, and confirm", {
     expect_match(output$tbl, "x-pick", fixed = TRUE)
     expect_match(output$tbl, "ctrl (control region)", fixed = TRUE)
 
+    st <- session$userData$annot_import_state()
     session$setInputs(pick = list(raw_name = "ORF1", feature_type = "CDS", gene = "nad6"))
+    expect_gt(session$userData$annot_import_state(), st)
     gm <- DBI::dbGetQuery(con, "SELECT gene, manual FROM gene_name_map WHERE raw_name = 'ORF1'")
     expect_equal(gm$gene, "nad6")
     expect_equal(gm$manual, 1L)
     expect_equal(rows()$status[rows()$raw_name == "ORF1"], "edited")
 
+    st <- session$userData$annot_import_state()
     session$setInputs(reset = 1)
+    expect_gt(session$userData$annot_import_state(), st)
     expect_true(is.na(DBI::dbGetQuery(con, "SELECT gene FROM gene_name_map WHERE raw_name = 'ORF1'")$gene))
 
     session$setInputs(pick = list(raw_name = "ORF1", feature_type = "CDS", gene = "nad6"))
+    st <- session$userData$annot_import_state()
     session$setInputs(confirm = 1)
+    expect_gt(session$userData$annot_import_state(), st)
     expect_true(user_annot_confirmed(con))
     expect_true(file.exists(file.path(td, "user_annotations", "UA_LINEAR_annotations.csv")))
     expect_equal(DBI::dbGetQuery(con, "SELECT annotate_switch FROM annotate")$annotate_switch, 1L)

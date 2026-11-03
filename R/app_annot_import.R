@@ -4,6 +4,15 @@ annot_import_blocks_run <- function(session) {
   isTRUE(session$userData$user_annot) && !user_annot_confirmed(session$userData$con)
 }
 
+#' Header notice for unconfirmed gene names, NULL once confirmed
+#' @noRd
+annot_import_notice <- function(con) {
+  if (user_annot_confirmed(con)) return(NULL)
+  n <- DBI::dbGetQuery(con, "SELECT SUM(gene IS NULL) AS u, COUNT(*) AS t FROM gene_name_map")
+  sprintf("Gene names not confirmed: %d unmapped of %d. Pipeline runs are blocked.",
+          as.integer(n$u %|NA|% 0L), as.integer(n$t))
+}
+
 #' Imported gene-name review table
 #' @noRd
 annot_import_table <- function(con, ns) {
@@ -82,7 +91,6 @@ annot_import_server <- function(id) {
     on("annot_import", show_modal())
 
     session$onFlushed(function() {
-      if (isTRUE(session$userData$startup_alert)) return(invisible())
       if (!user_annot_confirmed(session$userData$con)) withReactiveDomain(session, isolate(show_modal()))
     }, once = TRUE)
 
@@ -90,10 +98,12 @@ annot_import_server <- function(id) {
       e <- input$pick
       set_gene_name_map(session$userData$con, e$raw_name, e$feature_type, e$gene)
       bump()
+      trigger("annot_import_state")
     })
     observeEvent(input$reset, {
       reset_gene_name_map(session$userData$con)
       bump()
+      trigger("annot_import_state")
     })
     observeEvent(input$confirm, {
       res <- tryCatch(confirm_user_annotations(session$userData$con, session$userData$dir),
@@ -109,6 +119,7 @@ annot_import_server <- function(id) {
       removeModal()
       trigger("refresh_assemble")
       trigger("refresh_annotate")
+      trigger("annot_import_state")
     })
     observeEvent(input$closed, {
       if (!user_annot_confirmed(session$userData$con)) {
