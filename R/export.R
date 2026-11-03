@@ -738,6 +738,7 @@ export_files <- function(
             cur$stop_codon <- spliced$stop_codon
             cur$partial_start <- spliced$partial_start
             cur$partial_stop <- spliced$partial_stop
+            cur$codon_start <- spliced$codon_start
             cur$length <- spliced$length
             # Gene span across all exons, from the splice helper: sorting by
             # pos1 and taking the outer bounds reports a near-whole-circle span
@@ -803,8 +804,9 @@ export_files <- function(
             paste0("\t\t\ttransl_except\t", transl_except) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
           }
-          if (!cur$start_codon %in% start_codons) {
-            paste("\t\t\tcodon_start\t", 1) |>
+          cs <- codon_offset(cur$codon_start)
+          if (cs > 1L || !cur$start_codon %in% start_codons) {
+            paste("\t\t\tcodon_start\t", cs) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
           }
           # frameshift/RNA-editing join: INSDC requires the ribosomal_slippage
@@ -907,8 +909,9 @@ export_files <- function(
               paste0("\t\t\ttransl_except\t", gene_transl_except) |>
                 cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
             }
-            if (!cur$start_codon %in% start_codons || isTRUE(as.integer(cur$partial_start) == 1L)) {
-              paste("\t\t\tcodon_start\t", 1) |>
+            cs <- codon_offset(cur$codon_start)
+            if (cs > 1L || !cur$start_codon %in% start_codons || isTRUE(as.integer(cur$partial_start) == 1L)) {
+              paste("\t\t\tcodon_start\t", cs) |>
                 cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
             }
             note_out <- add_gap_note(note)
@@ -982,8 +985,9 @@ export_files <- function(
             paste0("\t\t\ttransl_except\t", transl_except) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
           }
-          if (!cur$start_codon %in% start_codons) {
-            paste("\t\t\tcodon_start\t", 1) |>
+          cs <- codon_offset(cur$codon_start)
+          if (cs > 1L || !cur$start_codon %in% start_codons) {
+            paste("\t\t\tcodon_start\t", cs) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
           }
           if (length(note_out) > 0) {
@@ -1074,8 +1078,9 @@ export_files <- function(
               paste0("\t\t\ttransl_except\t", gene_transl_except) |>
                 cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
             }
-            if (!cur$start_codon %in% start_codons || isTRUE(as.integer(cur$partial_start) == 1L)) {
-              paste("\t\t\tcodon_start\t", 1) |>
+            cs <- codon_offset(cur$codon_start)
+            if (cs > 1L || !cur$start_codon %in% start_codons || isTRUE(as.integer(cur$partial_start) == 1L)) {
+              paste("\t\t\tcodon_start\t", cs) |>
                 cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
             }
             note_out <- add_gap_note(note)

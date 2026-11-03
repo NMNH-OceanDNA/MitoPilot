@@ -458,8 +458,8 @@ curate_mito_core <- function(
       )
     }
 
-    # JOIN members keep the coordinates they arrived with
-    if (is_join_member(notes)) {
+    # JOIN members and frame-offset CDSs keep the coordinates they arrived with
+    if (skip_boundary_curation(notes, cur$codon_start)) {
       return(cur)
     }
 
@@ -870,7 +870,7 @@ curate_mito_core <- function(
   ## Stop codon trimming ----
   for (idx in seq_len(nrow(annotations))) {
     if (annotations$type[idx] != "PCG") next
-    if (is_join_member(annotations$notes[idx])) next
+    if (skip_boundary_curation(annotations$notes[idx], annotations$codon_start[idx])) next
     gene <- annotations$gene[idx]
     overlap_rules <- rules[[gene]][["overlap"]]
     stop_opts <- rules[[gene]][["stop_codons"]]

@@ -235,6 +235,7 @@ backwards_compatibility <- function(
       "tool" %in% DBI::dbListFields(con, "annotations") &&
       "partial_start" %in% DBI::dbListFields(con, "annotations") &&
       "partial_stop" %in% DBI::dbListFields(con, "annotations") &&
+      "codon_start" %in% DBI::dbListFields(con, "annotations") &&
       "blast_ref_annotations" %in% DBI::dbListTables(con) &&
       "blast_ref_alignment" %in% DBI::dbListTables(con) &&
       "assembly_backup" %in% DBI::dbListTables(con) &&
@@ -769,6 +770,10 @@ backwards_compatibility <- function(
   if(!("partial_stop" %in% annotations_fields)){
     message("added 'partial_stop' column to annotations table")
     DBI::dbExecute(con, "ALTER TABLE annotations ADD COLUMN partial_stop INTEGER")
+  }
+  if(!("codon_start" %in% annotations_fields)){
+    message("added 'codon_start' column to annotations table")
+    DBI::dbExecute(con, "ALTER TABLE annotations ADD COLUMN codon_start INTEGER")
   }
   # if linear_complete column doesn't exist on curate_opts, add it (default 0)
   if(!("linear_complete" %in% DBI::dbListFields(con, "curate_opts"))){
