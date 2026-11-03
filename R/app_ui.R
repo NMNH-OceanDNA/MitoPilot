@@ -49,6 +49,10 @@ app_ui <- function(request) {
                 title = MP_LOCK_DEF("assemble"),
                 needs_selection = TRUE
               ),
+              shinyjs::hidden(mp_toolbar_button(
+                "gene_names", "Gene names", icon = mp_icon("tags"),
+                title = "Review imported gene name mapping"
+              )),
               mp_toolbar_button(
                 "run_modal", "Update",
                 icon = mp_icon("circle-play"), emphasis = "primary",
@@ -84,6 +88,10 @@ app_ui <- function(request) {
                 title = "Mark or clear partial on the selected assemblies",
                 needs_selection = TRUE
               ),
+              shinyjs::hidden(mp_toolbar_button(
+                "gene_names_annot", "Gene names", icon = mp_icon("tags"),
+                title = "Review imported gene name mapping"
+              )),
               mp_toolbar_button(
                 "run_modal", "Update",
                 icon = mp_icon("circle-play"), emphasis = "primary",
