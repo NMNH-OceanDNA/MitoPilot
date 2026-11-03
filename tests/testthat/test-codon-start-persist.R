@@ -162,7 +162,7 @@ test_that("shipped user annotation fixtures parse", {
   expect_setequal(list.files(file.path(td, "annotations")), map$Annotation)
   unmapped <- list(
     GB_NCBI = character(0), GB_TBL = character(0), GB_BED = character(0),
-    GB_TYPOS = c("COX11", "NDH4K", "ATP88", "cytochrome oxidase subnit I", "tRNA-Xxx",
+    GB_TYPOS = c("COX11", "NDH4K", "ATP88", "NADH dehydrogenase subnit 3", "tRNA-Xxx",
                  "rrnX", "hypothetical protein", "ORF123"),
     GB_DROP = c("putative light strand origin of...", "tandem repeat"),
     GB_MITOS = "OL")
@@ -174,9 +174,12 @@ test_that("shipped user annotation fixtures parse", {
     g <- guess_gene(x$raw_name, x$feature_type, x$raw_product, x$note)$gene
     expect_setequal(unique(dplyr::coalesce(x$raw_name[is.na(g)], "")), unmapped[[map$ID[i]]])
   }
-  ok <- c("mt-Co1" = "cox1", "MT-ND4L" = "nad4l", "cytb" = "cob", "COII" = "cox2",
-          "tRNA-Leu (CUN)" = "trnL", "trnS2(tga)" = "trnS", "12S rRNA" = "rrnS",
-          "l-rRNA" = "rrnL", "cytochrome c oxidase subunit III" = "cox3")
+  ok <- c("mt-Nd2" = "nad2", "MT-ND5" = "nad5", "cytb" = "cob", "COII" = "cox2",
+          "COIII" = "cox3", "tRNA-Leu (CUN)" = "trnL", "trnS2(tga)" = "trnS",
+          "l-rRNA" = "rrnL")
+  # every GB_TYPOS feature is a real gene: none in the control region
+  expect_equal(nrow(p$GB_TYPOS), 37L)
+  expect_false(any(p$GB_TYPOS$pos1 <= 600 | p$GB_TYPOS$pos2 <= 600))
   x <- p$GB_TYPOS[match(names(ok), p$GB_TYPOS$raw_name), ]
   expect_equal(guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene, unname(ok))
   x <- p$GB_MITOS[match(c("cox1", "nad4l", "trnL1(tag)", "trnS2(tga)"), p$GB_MITOS$raw_name), ]

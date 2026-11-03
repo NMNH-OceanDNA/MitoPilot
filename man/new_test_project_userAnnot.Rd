@@ -62,13 +62,14 @@ deliberately wrong so the gene-name review has work to do.
     anticodons. Every name is guessed.
   \item `GB_BED` (Gadus morhua): BED, with feature types inferred from the
     names and nad1 split into two blocks (a joined feature).
-  \item `GB_TYPOS` (Thunnus thynnus): a GFF3 with odd names. `mt-Co1`,
-    `MT-ND4L`, `cytb`, `COII`, `tRNA-Leu (CUN)`, `trnS2(tga)`, `12S rRNA`,
-    `l-rRNA`, and a product-only `cytochrome c oxidase subunit III` are
-    guessed. `NDH4K` (nad4), `ATP88` (atp8), `tRNA-Xxx` (trnC),
-    `hypothetical protein` (nad6), and `ORF123` (atp6) are not, so map them
-    by hand. `COX11`, `cytochrome oxidase subnit I`, and `rrnX` are stray
-    calls in the control region; leave them unmapped.
+  \item `GB_TYPOS` (Thunnus thynnus): a GFF3 with odd names on the record's
+    37 real genes. `mt-Nd2`, `MT-ND5`, `cytb`, `COII`, `COIII`,
+    `tRNA-Leu (CUN)`, `trnS2(tga)`, and `l-rRNA` are guessed. `COX11` (cox1),
+    `NDH4K` (nad4l), `ATP88` (atp8), a product-only
+    `NADH dehydrogenase subnit 3` (nad3), `tRNA-Xxx` (trnK), `rrnX` (rrnS),
+    `hypothetical protein` (nad6), and `ORF123` (atp6) are not. Each sits on
+    a real gene, so mapping it by hand to the gene in brackets gives a valid
+    annotation.
   \item `GB_DROP` (Xyrichtys novacula): a feature table with a `D-loop` and a
     control-region `misc_feature` (both guessed as the control region,
     `ctrl`), a light-strand `rep_origin` and a `repeat_region` (unmapped, so

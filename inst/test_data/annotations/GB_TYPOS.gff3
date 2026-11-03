@@ -1,10 +1,7 @@
 ##gff-version 3
 NC_014052	Genbank	region	1	16527	.	+	.	ID=region1;Is_circular=true
-NC_014052	Genbank	CDS	31	330	.	+	0	ID=cds38;Name=COX11
-NC_014052	Genbank	CDS	361	510	.	+	0	ID=cds39;product=cytochrome oxidase subnit I
-NC_014052	Genbank	rRNA	541	700	.	+	.	ID=rrna40;gene=rrnX;product=ribosomal RNA
 NC_014052	Genbank	tRNA	866	933	.	+	.	ID=trna1;Name=tRNA-Phe
-NC_014052	Genbank	rRNA	934	1880	.	+	.	ID=rrna2;Name=12S rRNA
+NC_014052	Genbank	rRNA	934	1880	.	+	.	ID=rrna2;gene=rrnX;product=ribosomal RNA
 NC_014052	Genbank	tRNA	1881	1953	.	+	.	ID=trna3;Name=tRNA-Val
 NC_014052	Genbank	rRNA	1954	3645	.	+	.	ID=rrna4;Name=l-rRNA
 NC_014052	Genbank	tRNA	3646	3719	.	+	.	ID=trna5;Name=tRNA-Leu
@@ -12,29 +9,29 @@ NC_014052	Genbank	CDS	3720	4694	.	+	0	ID=cds6;Name=NADH dehydrogenase subunit 1
 NC_014052	Genbank	tRNA	4699	4769	.	+	.	ID=trna7;Name=tRNA-Ile
 NC_014052	Genbank	tRNA	4769	4839	.	-	.	ID=trna8;Name=tRNA-Gln
 NC_014052	Genbank	tRNA	4839	4907	.	+	.	ID=trna9;Name=tRNA-Met
-NC_014052	Genbank	CDS	4908	5953	.	+	0	ID=cds10;Name=NADH dehydrogenase subunit 2
+NC_014052	Genbank	CDS	4908	5953	.	+	0	ID=cds10;Name=mt-Nd2
 NC_014052	Genbank	tRNA	5954	6023	.	+	.	ID=trna11;Name=tRNA-Trp
 NC_014052	Genbank	tRNA	6025	6093	.	-	.	ID=trna12;Name=tRNA-Ala
 NC_014052	Genbank	tRNA	6096	6168	.	-	.	ID=trna13;Name=tRNA-Asn
-NC_014052	Genbank	tRNA	6204	6271	.	-	.	ID=trna14;Name=tRNA-Xxx
+NC_014052	Genbank	tRNA	6204	6271	.	-	.	ID=trna14;Name=tRNA-Cys
 NC_014052	Genbank	tRNA	6272	6339	.	-	.	ID=trna15;Name=tRNA-Tyr
-NC_014052	Genbank	CDS	6341	7891	.	+	0	ID=cds16;Name=mt-Co1
+NC_014052	Genbank	CDS	6341	7891	.	+	0	ID=cds16;Name=COX11
 NC_014052	Genbank	tRNA	7892	7962	.	-	.	ID=trna17;Name=trnS2(tga)
 NC_014052	Genbank	tRNA	7966	8038	.	+	.	ID=trna18;Name=tRNA-Asp
 NC_014052	Genbank	CDS	8047	8737	.	+	0	ID=cds19;Name=COII
-NC_014052	Genbank	tRNA	8738	8811	.	+	.	ID=trna20;Name=tRNA-Lys
+NC_014052	Genbank	tRNA	8738	8811	.	+	.	ID=trna20;Name=tRNA-Xxx
 NC_014052	Genbank	CDS	8813	8980	.	+	0	ID=cds21;Name=ATP88
 NC_014052	Genbank	CDS	8971	9654	.	+	0	ID=cds22;Name=ORF123
-NC_014052	Genbank	CDS	9654	10438	.	+	0	ID=cds23;product=cytochrome c oxidase subunit III
+NC_014052	Genbank	CDS	9654	10438	.	+	0	ID=cds23;Name=COIII
 NC_014052	Genbank	tRNA	10439	10509	.	+	.	ID=trna24;Name=tRNA-Gly
-NC_014052	Genbank	CDS	10510	10858	.	+	0	ID=cds25;Name=NADH dehydrogenase subunit 3
+NC_014052	Genbank	CDS	10510	10858	.	+	0	ID=cds25;product=NADH dehydrogenase subnit 3
 NC_014052	Genbank	tRNA	10859	10927	.	+	.	ID=trna26;Name=tRNA-Arg
-NC_014052	Genbank	CDS	10929	11225	.	+	0	ID=cds27;Name=MT-ND4L
-NC_014052	Genbank	CDS	11219	12599	.	+	0	ID=cds28;Name=NDH4K
+NC_014052	Genbank	CDS	10929	11225	.	+	0	ID=cds27;Name=NDH4K
+NC_014052	Genbank	CDS	11219	12599	.	+	0	ID=cds28;Name=NADH dehydrogenase subunit 4
 NC_014052	Genbank	tRNA	12600	12669	.	+	.	ID=trna29;Name=tRNA-His
 NC_014052	Genbank	tRNA	12670	12737	.	+	.	ID=trna30;Name=tRNA-Ser
 NC_014052	Genbank	tRNA	12742	12814	.	+	.	ID=trna31;Name=tRNA-Leu (CUN)
-NC_014052	Genbank	CDS	12815	14653	.	+	0	ID=cds32;Name=NADH dehydrogenase subunit 5
+NC_014052	Genbank	CDS	12815	14653	.	+	0	ID=cds32;Name=MT-ND5
 NC_014052	Genbank	CDS	14650	15171	.	-	0	ID=cds33;Name=hypothetical protein
 NC_014052	Genbank	tRNA	15173	15241	.	-	.	ID=trna34;Name=tRNA-Glu
 NC_014052	Genbank	CDS	15246	16386	.	+	0	ID=cds35;Name=cytb
