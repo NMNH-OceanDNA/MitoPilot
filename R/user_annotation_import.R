@@ -442,3 +442,33 @@ parse_anticodon <- function(x) {
   }
   vapply(as.character(x), one, character(1), USE.NAMES = FALSE)
 }
+
+#' Read an imported annotation CSV as annotate()'s merged table
+#'
+#' Keeps rows on contigs present in `assembly`, checks coordinates against
+#' contig widths, and fills PCG codons and translation.
+#'
+#' @param fn path to the CSV
+#' @param assembly DNAStringSet
+#' @param genetic_code NCBI genetic code id
+#'
+#' @noRd
+.read_user_annotations <- function(fn, assembly, genetic_code) {
+  ann <- readr::read_csv(fn, col_types = readr::cols(.default = "c"), na = c("", "NA")) |>
+    dplyr::mutate(dplyr::across(
+      dplyr::any_of(c("pos1", "pos2", "length", "partial_start", "partial_stop", "codon_start")),
+      as.integer
+    ))
+  lens <- stats::setNames(Biostrings::width(assembly), sub("\\s.*$", "", names(assembly)))
+  ann <- ann[ann$contig %in% names(lens), ]
+  for (ctg in unique(ann$contig)) {
+    rows <- ann$contig == ctg
+    n <- sum(pmax(ann$pos1[rows], ann$pos2[rows]) > lens[[ctg]], na.rm = TRUE)
+    if (n > 0) {
+      stop("user annotations: ", n, " feature(s) extend past the end of contig ", ctg,
+           call. = FALSE)
+    }
+  }
+  add_pcg_codons(ann, assembly, genetic_code) |>
+    dplyr::arrange(contig, pos1)
+}
