@@ -463,6 +463,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       isolate(rv$annotations) |>
         reactable(
           compact = TRUE,
+          striped = TRUE,
           wrap = FALSE,
           width = "100%",
           onClick = "select",
