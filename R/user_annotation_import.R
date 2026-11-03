@@ -88,6 +88,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   if (!length(x)) NA_character_ else gsub("[\t\r\n]", " ", gsub(";", ",", paste(x, collapse = ", ")))
 }
 
+.ua_note_name <- function(x) substr(trimws(x), 1L, 40L)
+
 .ua_feat <- function(type, raw_name, segs, direction = "+", raw_product = NA_character_,
                      anticodon_raw = NA_character_, p5 = FALSE, p3 = FALSE,
                      cs_attr = NA_integer_, slip = FALSE, exception = NA_character_,
@@ -244,7 +246,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
       v <- vapply(ga, .ua_get, character(1), key)
       v[!is.na(v)][1]
     }
-    nm <- dplyr::coalesce(gene[i], get1("Name"), get1("product"), id[i])
+    nm <- dplyr::coalesce(gene[i], get1("Name"), get1("product"), id[i],
+                          .ua_note_name(get1("Note")))
     txt <- c(vapply(ga, .ua_get, character(1), "Name"), vapply(ga, .ua_get, character(1), "Note"))
     minus <- cols[i, 7] %in% "-"
     lo_open <- any(vapply(ga, .ua_has, logical(1), "start_range"))
@@ -369,7 +372,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
     exc <- .ua_get(q, "exception")
     .ua_feat(
       type = f$key,
-      raw_name = dplyr::coalesce(.ua_get(q, "gene"), .ua_get(q, "product"), rest[1]),
+      raw_name = dplyr::coalesce(.ua_get(q, "gene"), .ua_get(q, "product"),
+                                 .ua_note_name(rest[1])),
       segs = data.frame(
         pos1 = vapply(iv, function(v) min(num(v)), integer(1)),
         pos2 = vapply(iv, function(v) max(num(v)), integer(1)),
@@ -413,12 +417,13 @@ guess_gene <- function(raw_name, feature_type, raw_product = NA, raw_note = NA) 
   raw_product <- rep_len(as.character(raw_product), n)
   raw_note <- rep_len(as.character(raw_note), n)
   mt <- rep_len(.gff_type_to_mito(feature_type), n)
-  hit <- function(p) Reduce(`|`, lapply(list(raw_name, raw_product, raw_note), grepl,
-                                        pattern = p, ignore.case = TRUE, perl = TRUE))
+  hit <- function(p, x = list(raw_name, raw_product, raw_note)) {
+    Reduce(`|`, lapply(x, grepl, pattern = p, ignore.case = TRUE, perl = TRUE))
+  }
+  cr_re <- paste0("control region|d-loop|d loop|displacement loop|",
+                  "^(D[-_ ]?loop|CR|OH|control[ _]region|rep_origin)$")
   cr <- mt %in% "ctrl"
-  ctrl <- (cr | hit(paste0("control region|d-loop|d loop|displacement loop|",
-                           "^(D[-_ ]?loop|CR|OH|control[ _]region|rep_origin)$"))) &
-    !hit("L-strand|light[- ]strand|\\bOL\\b|origin of L")
+  ol <- hit("L-strand|light[- ]strand|\\bOL\\b|origin of L")
   mt[cr] <- NA_character_
   one <- function(nm, pr, ty) {
     tys <- if (is.na(ty)) c("PCG", "rRNA", "tRNA") else ty
@@ -438,6 +443,8 @@ guess_gene <- function(raw_name, feature_type, raw_product = NA, raw_note = NA) 
   gene <- as.character(gene)
   keep <- !is.na(gene) & gene %in% MITO_GENE_CHOICES
   gene[!keep | cr] <- NA_character_
+  ctrl <- !ol & (cr | hit(cr_re, list(raw_name)) |
+                   (is.na(gene) & hit(cr_re, list(raw_product, raw_note))))
   gene[ctrl] <- "ctrl"
   type <- vapply(gene, function(g) if (is.na(g)) NA_character_ else if (g == "ctrl") "ctrl" else
     mito_gene_type(g), character(1), USE.NAMES = FALSE)

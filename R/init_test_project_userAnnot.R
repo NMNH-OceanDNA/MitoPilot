@@ -27,7 +27,8 @@
 #'     dropped), plus a `gap` and an `STS` (dropped on import), a
 #'     pseudogene (nad6), ribosomal slippage (atp8 in two parts), a 5' partial
 #'     nad1 with `codon_start` 2, a 3' partial rrnL, and nad5 spanning the
-#'     origin.
+#'     origin. The two control-region features are adjacent, so validate
+#'     reports `extra: ctrl` on purpose.
 #'   \item `GB_MITOS` (Beryx splendens): a MITOS2-style GFF with lowercase
 #'     names, numbered tRNAs (`trnL1(tag)`, `trnS2(tga)`), `OH` (guessed as
 #'     `ctrl`), `OL` (unmapped), and cob spanning the origin as one row.

@@ -48,6 +48,12 @@ test_that("guess_gene is vectorised", {
                   NA, c("control region", "L-strand origin", NA))
   expect_equal(r$gene, c("ctrl", NA, NA))
   expect_equal(r$type, c("ctrl", NA, NA))
+  r <- guess_gene(c("trnP", "nad5", "COX1", NA, ""),
+                  c("tRNA", "CDS", "CDS", "rep_origin", "misc_feature"), NA,
+                  c("adjacent to control region", "overlaps D-loop", "cr", "H-strand origin",
+                    "control region"))
+  expect_equal(r$gene, c("trnP", "nad5", "cox1", "ctrl", "ctrl"))
+  expect_equal(guess_gene("YP_1", "CDS", "D-loop adjacent cytochrome b")$gene, "cob")
 })
 
 test_that("parse_anticodon", {

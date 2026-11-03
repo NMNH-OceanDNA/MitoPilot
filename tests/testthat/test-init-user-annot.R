@@ -179,3 +179,19 @@ test_that("reads are optional: no_raw_data = FALSE requires R1/R2", {
     path = fx$proj, mapping_fn = fx$map, assembly_path = fx$asm,
     annotation_path = fx$ann, data_path = fx$asm, Rproj = FALSE)), "R1")
 })
+
+test_that("unnamed features fall back to their note as raw name", {
+  testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
+  fx <- ua_fixture(withr::local_tempdir(), lin_gff = c(
+    "CDS\t100\t300\t.\t+\t0\tID=c1;Name=COI",
+    "misc_feature\t4000\t4100\t.\t+\t.\tNote=control region",
+    "misc_feature\t4200\t4300\t.\t+\t.\tNote=tandem repeat"
+  ))
+  ua_init(fx)
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(fx$proj, ".sqlite"))
+  withr::defer(DBI::dbDisconnect(con))
+  gm <- DBI::dbGetQuery(con, "SELECT raw_name, gene FROM gene_name_map
+                              WHERE feature_type = 'misc_feature' ORDER BY raw_name")
+  expect_equal(gm$raw_name, c("control region", "tandem repeat"))
+  expect_equal(gm$gene, c("ctrl", NA))
+})
