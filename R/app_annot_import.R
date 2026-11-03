@@ -13,42 +13,129 @@ annot_import_notice <- function(con) {
           as.integer(n$u %|NA|% 0L), as.integer(n$t))
 }
 
+#' Status chip counts for the gene-name review
+#' @noRd
+annot_import_counts <- function(con) {
+  x <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS a, SUM(COALESCE(manual, 0) = 1) AS e,
+                               SUM(gene IS NULL AND COALESCE(manual, 0) != 1) AS u FROM gene_name_map")
+  e <- as.integer(x$e %|NA|% 0L)
+  u <- as.integer(x$u %|NA|% 0L)
+  list(all = as.integer(x$a), unmapped = u, edited = e, auto = as.integer(x$a) - u - e)
+}
+
+#' Gene-name review rows, unmapped first, or in the order of `keys`
+#' @noRd
+annot_import_data <- function(con, keys = NULL) {
+  gm <- DBI::dbGetQuery(con, "SELECT raw_name, feature_type, gene, manual, n_samples, n_features
+                              FROM gene_name_map")
+  ua <- DBI::dbGetQuery(con, "SELECT DISTINCT raw_name, feature_type, ID, source_file, note
+                              FROM user_annotations ORDER BY ID")
+  k <- paste(gm$raw_name, gm$feature_type, sep = "\r")
+  ku <- factor(paste(ua$raw_name, ua$feature_type, sep = "\r"), levels = k)
+  agg <- function(x, sep) {
+    vapply(split(x, ku), function(v) paste(sort(unique(v[!is.na(v) & nzchar(v)])), collapse = sep), "")
+  }
+  ext <- tolower(tools::file_ext(ua$source_file))
+  ftype <- dplyr::coalesce(c(gff3 = "GFF3", gff = "GFF3", bed = "BED", tbl = "TBL")[ext], toupper(ext))
+  stem <- sub("\\.\\.\\.$", "", gm$raw_name)
+  full <- vapply(split(ua$note, ku), function(v) v[!is.na(v)][1] %|NA|% "", "")
+  full <- ifelse(endsWith(gm$raw_name, "...") & startsWith(full, stem), full, gm$raw_name)
+  status <- ifelse(gm$manual %in% 1L, "edited", ifelse(is.na(gm$gene), "unmapped", "auto"))
+  cls <- vapply(gm$gene, function(g) if (is.na(g)) "none" else if (g == "ctrl") "ctrl" else mito_gene_type(g), "")
+  d <- data.frame(raw_name = gm$raw_name, title = full, ftype = unname(agg(ftype, "/")), class = unname(cls),
+                  ids = unname(agg(ua$ID, ", ")), n_samples = gm$n_samples, n_features = gm$n_features,
+                  gene = gm$gene, status = status, feature_type = gm$feature_type)
+  o <- if (is.null(keys)) {
+    order(match(status, c("unmapped", "edited", "auto")), tolower(d$raw_name), d$feature_type)
+  } else {
+    match(keys, k)
+  }
+  d <- d[o, , drop = FALSE]
+  rownames(d) <- NULL
+  d
+}
+
 #' Imported gene-name review table
 #' @noRd
-annot_import_table <- function(con, ns) {
-  gm <- DBI::dbGetQuery(con, "SELECT raw_name, feature_type, gene, manual, n_samples, n_features
-                              FROM gene_name_map
-                              ORDER BY gene IS NOT NULL, feature_type, raw_name")
-  status <- ifelse(gm$manual %in% 1L, "edited", ifelse(is.na(gm$gene), "unmapped", "auto"))
-  pick <- function(value, index) {
-    cur <- gm$gene[index] %|NA|% "(drop)"
-    opts <- unique(c("(drop)", MITO_IMPORT_GENE_CHOICES, cur))
-    as.character(tags$select(
-      class = "form-control input-sm", `aria-label` = paste("Gene for", gm$raw_name[index]),
-      onchange = sprintf(
-        "Shiny.setInputValue('%s', {raw_name: %s, feature_type: %s, gene: this.value}, {priority: 'event'})",
-        ns("pick"), jsonlite::toJSON(gm$raw_name[index], auto_unbox = TRUE),
-        jsonlite::toJSON(gm$feature_type[index], auto_unbox = TRUE)),
-      lapply(opts, function(o) tags$option(value = o, selected = if (identical(o, cur)) NA,
-                                           if (o == "ctrl") "ctrl (control region)" else o))
+annot_import_table <- function(con, ns, d = annot_import_data(con)) {
+  tbl <- ns("tbl")
+  js <- htmlwidgets::JS
+  sel_filter <- function(id, choices) function(values, name) {
+    tags$select(class = "form-control input-sm mp-gn-filter", `data-tbl` = tbl, `data-col` = id,
+                `aria-label` = paste("Filter", name),
+                onchange = sprintf("Reactable.setFilter('%s', '%s', this.value || undefined)", tbl, id),
+                tags$option(value = "", "All"), lapply(choices, function(o) tags$option(value = o, o)))
+  }
+  exact <- js("function(rows, id, v) { return rows.filter(function(r) {
+    return String(r.values[id]).split('/').indexOf(v) >= 0; }); }")
+  opts <- c("(drop)", MITO_IMPORT_GENE_CHOICES)
+  opts <- jsonlite::toJSON(unname(Map(c, opts, ifelse(opts == "ctrl", "ctrl (control region)", opts))))
+  yes <- function(v) if (v %in% 1L) "yes" else ""
+  details <- function(i) {
+    s <- gene_name_map_samples(con, d$raw_name[i], d$feature_type[i])
+    div(class = "mp-gn-detail", reactable::reactable(
+      s, compact = TRUE, pagination = FALSE, striped = TRUE, height = if (nrow(s) > 6) 200,
+      columns = list(
+        ID = reactable::colDef(name = "Sample", minWidth = 100),
+        feature_type = reactable::colDef(name = "Type", width = 80),
+        n_features = reactable::colDef(name = "Features", width = 80),
+        pos1 = reactable::colDef(name = "Start", width = 60),
+        pos2 = reactable::colDef(name = "End", width = 60),
+        direction = reactable::colDef(name = "Strand", width = 65),
+        partial_start = reactable::colDef(name = "5' part.", width = 65, cell = yes),
+        partial_stop = reactable::colDef(name = "3' part.", width = 65, cell = yes),
+        codon_start = reactable::colDef(name = "Codon", width = 65),
+        segment_group = reactable::colDef(name = "Seg.", width = 50),
+        pseudo = reactable::colDef(name = "Pseudo", width = 70, cell = yes),
+        note = reactable::colDef(name = "Note", minWidth = 120, html = TRUE, cell = rt_longtext()),
+        source_file = reactable::colDef(name = "File", minWidth = 100)
+      )
     ))
   }
-  d <- data.frame(raw_name = gm$raw_name,
-                  feature_type = ifelse(nzchar(gm$feature_type), gm$feature_type, "BED"),
-                  n_samples = gm$n_samples, n_features = gm$n_features,
-                  gene = gm$gene, status = status)
+  first <- if (any(d$status == "unmapped")) "unmapped" else ""
   reactable::reactable(
-    d, compact = TRUE, pagination = FALSE,
+    d, compact = TRUE, pagination = FALSE, height = 420, searchable = TRUE, striped = TRUE,
+    resizable = TRUE, onClick = "expand", class = "mp-gn-tbl", details = details,
     columns = list(
-      raw_name = reactable::colDef(name = "Raw name", minWidth = 160),
-      feature_type = reactable::colDef(name = "File type", width = 110),
-      n_samples = reactable::colDef(name = "Samples", width = 90),
-      n_features = reactable::colDef(name = "Features", width = 90),
-      gene = reactable::colDef(name = "Gene", width = 140, html = TRUE, cell = pick),
-      status = reactable::colDef(name = "Status", width = 100, html = TRUE,
-                                 cell = rt_pill(c(auto = "success", edited = "info", unmapped = "warning")))
+      raw_name = reactable::colDef(
+        name = "Raw name", width = 220, filterable = TRUE, html = TRUE,
+        cell = js("function(ci) { return '<abbr class=\"mp-abbr\" title=\"' + mpGN.esc(ci.row.title) +
+          '\">' + mpGN.esc(ci.value) + '</abbr>'; }")),
+      title = reactable::colDef(show = FALSE),
+      ftype = reactable::colDef(name = "File type", width = 90, filterable = TRUE, filterMethod = exact,
+                                filterInput = sel_filter("ftype", c("GFF3", "BED", "TBL"))),
+      class = reactable::colDef(name = "Class", width = 80, filterable = TRUE, filterMethod = exact,
+                                filterInput = sel_filter("class", c("PCG", "tRNA", "rRNA", "ctrl", "none"))),
+      ids = reactable::colDef(show = FALSE),
+      n_samples = reactable::colDef(
+        name = "Samples", width = 80, align = "center", html = TRUE,
+        cell = js("function(ci) { return '<span title=\"' + mpGN.esc(ci.row.ids) + '\">' + ci.value + '</span>'; }")),
+      n_features = reactable::colDef(name = "Features", width = 80, align = "center"),
+      gene = reactable::colDef(name = "Gene", width = 180, filterable = TRUE, html = TRUE,
+                               cell = js(sprintf("function(ci) { return mpGN.select(ci, '%s', %s); }",
+                                                 ns("pick"), opts))),
+      status = reactable::colDef(
+        name = "Status", width = 100, html = TRUE, filterable = TRUE, filterMethod = exact,
+        filterInput = sel_filter("status", c("unmapped", "edited", "auto")),
+        cell = rt_pill(c(auto = "success", edited = "info", unmapped = "warning"))),
+      feature_type = reactable::colDef(show = FALSE)
     )
-  )
+  ) |> htmlwidgets::onRender(sprintf("function() { mpGN.init('%s', '%s'); }", tbl, first))
+}
+
+#' Status chips above the gene-name review table
+#' @noRd
+annot_import_chips <- function(con, ns) {
+  n <- annot_import_counts(con)
+  tbl <- ns("tbl")
+  chip <- function(v, lbl, k) {
+    tags$button(type = "button", class = "btn btn-default btn-sm mp-gn-chip", `data-tbl` = tbl,
+                `data-v` = v, onclick = sprintf("mpGN.chip('%s', '%s')", tbl, v), sprintf("%s (%d)", lbl, k))
+  }
+  div(class = "mp-gn-chips", role = "group", `aria-label` = "Filter by status",
+      chip("", "All", n$all), chip("unmapped", "Unmapped", n$unmapped),
+      chip("edited", "Edited", n$edited), chip("auto", "Auto", n$auto),
+      tags$script(HTML(sprintf("mpGN.mark('%s');", tbl))))
 }
 
 #' Imported gene-name review module
@@ -58,10 +145,19 @@ annot_import_server <- function(id) {
     ns <- session$ns
     ver <- reactiveVal(0L)
     bump <- function() ver(isolate(ver()) + 1L)
+    cver <- reactiveVal(0L)
+    keys <- NULL
 
     output$tbl <- reactable::renderReactable({
       ver()
-      annot_import_table(session$userData$con, ns)
+      d <- annot_import_data(session$userData$con)
+      keys <<- paste(d$raw_name, d$feature_type, sep = "\r")
+      annot_import_table(session$userData$con, ns, d)
+    })
+    output$chips <- renderUI({
+      ver()
+      cver()
+      annot_import_chips(session$userData$con, ns)
     })
 
     show_modal <- function() {
@@ -76,6 +172,7 @@ annot_import_server <- function(id) {
           "Confirm writes the annotations and queues changed samples for annotation; ",
           "pipeline runs stay blocked until you confirm."
         ),
+        uiOutput(ns("chips")),
         reactable::reactableOutput(ns("tbl")),
         tags$script(HTML(sprintf(
           "$('#shiny-modal').one('hidden.bs.modal', function() { Shiny.setInputValue('%s', Date.now(), {priority: 'event'}); });",
@@ -97,7 +194,9 @@ annot_import_server <- function(id) {
     observeEvent(input$pick, {
       e <- input$pick
       set_gene_name_map(session$userData$con, e$raw_name, e$feature_type, e$gene)
-      bump()
+      session$sendCustomMessage("mp-gn-data", list(
+        tbl = ns("tbl"), data = lapply(annot_import_data(session$userData$con, keys), I)))
+      cver(isolate(cver()) + 1L)
       trigger("annot_import_state")
     })
     observeEvent(input$reset, {

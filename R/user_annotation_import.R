@@ -88,7 +88,15 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   if (!length(x)) NA_character_ else gsub("[\t\r\n]", " ", gsub(";", ",", paste(x, collapse = ", ")))
 }
 
-.ua_note_name <- function(x) substr(trimws(x), 1L, 40L)
+.ua_note_name <- function(x) {
+  x <- trimws(x)
+  long <- !is.na(x) & nchar(x) > 40L
+  cut <- substr(x[long], 1L, 41L)
+  y <- sub("[[:space:][:punct:]]*\\s\\S*$", "", cut)
+  y[y == cut] <- substr(cut[y == cut], 1L, 40L)
+  x[long] <- paste0(y, "...")
+  x
+}
 
 .ua_feat <- function(type, raw_name, segs, direction = "+", raw_product = NA_character_,
                      anticodon_raw = NA_character_, p5 = FALSE, p3 = FALSE,
@@ -618,6 +626,17 @@ set_gene_name_map <- function(con, raw_name, feature_type, gene) {
   DBI::dbExecute(con, "UPDATE gene_name_map SET gene = ?, manual = 1, confirmed = 0
                        WHERE raw_name = ? AND feature_type = ?",
                  params = list(gene, raw_name, dplyr::coalesce(feature_type, "")))
+}
+
+#' Features carrying one imported name, one row per feature
+#' @noRd
+gene_name_map_samples <- function(con, raw_name, feature_type) {
+  DBI::dbGetQuery(con, "
+    SELECT ID, feature_type, COUNT(*) OVER (PARTITION BY ID) AS n_features, pos1, pos2,
+           direction, partial_start, partial_stop, codon_start, segment_group, pseudo,
+           note, source_file
+    FROM user_annotations WHERE raw_name = ? AND feature_type = ?
+    ORDER BY ID, pos1", params = list(raw_name, dplyr::coalesce(feature_type, "")))
 }
 
 #' Restore every gene to its automatic guess

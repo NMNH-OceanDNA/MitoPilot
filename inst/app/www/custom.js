@@ -356,3 +356,46 @@ $(document).on('shiny:value', function(e) {
 
 // A "?" inside a <summary> opens its popover without folding the section
 $(document).on('click', 'summary .mp-help-icon', function(e) { e.preventDefault(); });
+
+// Imported gene-name review: chips and selects follow the table's filters.
+window.mpGN = {
+  esc: function(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  },
+  select: function(ci, input, opts) {
+    var e = mpGN.esc, cur = ci.value === null || ci.value === undefined ? '(drop)' : String(ci.value);
+    if (!opts.some(function(o) { return o[0] === cur; })) opts = opts.concat([[cur, cur]]);
+    return '<select class="form-control input-sm" aria-label="Gene for ' + e(ci.row.raw_name) +
+      '" data-input="' + input + '" data-raw="' + e(ci.row.raw_name) + '" data-ft="' + e(ci.row.feature_type) +
+      '" onclick="event.stopPropagation()" onchange="mpGN.pick(this)">' +
+      opts.map(function(o) {
+        return '<option value="' + e(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + e(o[1]) + '</option>';
+      }).join('') + '</select>';
+  },
+  pick: function(el) {
+    Shiny.setInputValue(el.dataset.input, { raw_name: el.dataset.raw, feature_type: el.dataset.ft, gene: el.value },
+                        { priority: 'event' });
+  },
+  chip: function(tbl, v) { Reactable.setFilter(tbl, 'status', v || undefined); },
+  mark: function(tbl) {
+    var f = {};
+    try { Reactable.getState(tbl).filters.forEach(function(x) { f[x.id] = x.value; }); } catch (e) { return; }
+    document.querySelectorAll('.mp-gn-chip[data-tbl="' + tbl + '"]').forEach(function(el) {
+      el.classList.toggle('active', el.dataset.v === (f.status || ''));
+    });
+    document.querySelectorAll('select.mp-gn-filter[data-tbl="' + tbl + '"]').forEach(function(el) {
+      el.value = f[el.dataset.col] || '';
+    });
+  },
+  init: function(tbl, v) {
+    mpMV.whenReady(tbl, function() {
+      if (v) Reactable.setFilter(tbl, 'status', v);
+      Reactable.onStateChange(tbl, function() { mpGN.mark(tbl); });
+      mpGN.mark(tbl);
+    });
+  }
+};
+$(document).ready(function() {
+  Shiny.addCustomMessageHandler('mp-gn-data', function(m) { Reactable.setData(m.tbl, m.data); });
+});
