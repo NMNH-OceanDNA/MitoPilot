@@ -392,3 +392,53 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   })
   .ua_finish(feats, seqid, contig_length, dropped, NA)
 }
+
+#' Map a GFF/tbl feature type to a MitoPilot gene type (NA if ambiguous).
+#' @noRd
+.gff_type_to_mito <- function(feature_type) {
+  ft <- as.character(feature_type)
+  out <- rep(NA_character_, length(ft))
+  out[ft %in% c("CDS", "mRNA")] <- "PCG"
+  out[ft %in% c("tRNA", "tRNA_gene")] <- "tRNA"
+  out[ft %in% c("rRNA", "rRNA_gene")] <- "rRNA"
+  out
+}
+
+#' Guess canonical gene name and type for imported features. Vectorised.
+#' @noRd
+guess_gene <- function(raw_name, feature_type, raw_product = NA) {
+  n <- max(length(raw_name), length(feature_type), length(raw_product))
+  raw_name <- rep_len(as.character(raw_name), n)
+  raw_product <- rep_len(as.character(raw_product), n)
+  mt <- rep_len(.gff_type_to_mito(feature_type), n)
+  gene <- mapply(function(nm, pr, ty) {
+    tys <- if (is.na(ty)) c("PCG", "rRNA", "tRNA") else ty
+    for (t in tys) {
+      g <- normalize_mito_gene(nm, t, pr)
+      if (!is.na(g) && !startsWith(g, "?")) return(g)
+    }
+    NA_character_
+  }, raw_name, raw_product, mt, USE.NAMES = FALSE)
+  gene <- as.character(gene)
+  keep <- !is.na(gene) & gene %in% MITO_GENE_CHOICES
+  gene[!keep] <- NA_character_
+  type <- vapply(gene, function(g) if (is.na(g)) NA_character_ else mito_gene_type(g),
+                 character(1), USE.NAMES = FALSE)
+  dplyr::tibble(gene = gene, type = type)
+}
+
+#' Extract an uppercase DNA anticodon from NCBI, export-note, or name forms.
+#' @noRd
+parse_anticodon <- function(x) {
+  one <- function(s) {
+    if (is.na(s)) return(NA_character_)
+    pats <- c("seq:([acgtuACGTU]{3})", "anticodon:([acgtuACGTU]{3})",
+              "\\(([acgtuACGTU]{3})\\)\\s*$", "-([ACGTU]{3})$")
+    for (p in pats) {
+      m <- regmatches(s, regexec(p, s))[[1]]
+      if (length(m) == 2) return(chartr("U", "T", toupper(m[2])))
+    }
+    NA_character_
+  }
+  vapply(as.character(x), one, character(1), USE.NAMES = FALSE)
+}
