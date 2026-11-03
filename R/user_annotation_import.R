@@ -422,7 +422,8 @@ guess_gene <- function(raw_name, feature_type, raw_product = NA) {
   gene <- mapply(function(nm, pr, ty) {
     g <- one(nm, pr, ty)
     tok <- sub("[[:space:]_].*$", "", nm)
-    if (is.na(g) && !is.na(tok) && nzchar(tok) && tok != nm) g <- one(tok, pr, ty)
+    if (is.na(g) && !is.na(tok) && nzchar(tok) && tok != nm &&
+        !grepl("orf|intron|like", nm, ignore.case = TRUE)) g <- one(tok, pr, ty)
     g
   }, raw_name, raw_product, mt, USE.NAMES = FALSE)
   gene <- as.character(gene)
