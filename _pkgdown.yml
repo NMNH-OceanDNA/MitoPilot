@@ -138,6 +138,7 @@ reference:
   - new_project_userAnnot
   - new_test_project
   - new_test_project_userAsmb
+  - new_test_project_userAnnot
 
 - title: "Project database"
   desc: >

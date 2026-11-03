@@ -1,0 +1,6 @@
+ID,Taxon,R1,R2,Assembly,Topology,Annotation,Donors
+UA_LINEAR,Conger oceanicus,UA_LINEAR_R1.fastq.gz,UA_LINEAR_R2.fastq.gz,UA_LINEAR.fasta,linear,UA_LINEAR_ncbi.gff3,SRR22396843
+UA_CIRCULAR,Xyrichtys novacula,UA_CIRCULAR_R1.fastq.gz,UA_CIRCULAR_R2.fastq.gz,UA_CIRCULAR.fasta,circular,UA_CIRCULAR_mitos.gff,SRR22396640
+UA_CIRCULAR_MESSY,Xyrichtys novacula,UA_CIRCULAR_MESSY_R1.fastq.gz,UA_CIRCULAR_MESSY_R2.fastq.gz,UA_CIRCULAR.fasta,circular,UA_CIRCULAR_messy.gff3,SRR22396640
+UA_LINEAR_BED,Conger oceanicus,UA_LINEAR_BED_R1.fastq.gz,UA_LINEAR_BED_R2.fastq.gz,UA_LINEAR.fasta,linear,UA_LINEAR.bed,SRR22396843
+UA_CIRCULAR_TBL,Xyrichtys novacula,UA_CIRCULAR_TBL_R1.fastq.gz,UA_CIRCULAR_TBL_R2.fastq.gz,UA_CIRCULAR.fasta,circular,UA_CIRCULAR_export.tbl,SRR22396640
