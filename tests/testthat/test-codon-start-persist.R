@@ -157,13 +157,28 @@ test_that("GFF phase follows codon_start across JOIN exons", {
 })
 
 test_that("shipped user annotation fixtures parse", {
-  fx <- system.file("test_data", "annotations", package = "MitoPilot")
-  fns <- list.files(fx, full.names = TRUE)
-  expect_length(fns, 5L)
-  for (fn in fns) {
-    len <- if (grepl("^UA_LINEAR", basename(fn))) 18024L else 17265L
-    expect_no_error(parse_user_annotation(fn, len))
+  td <- system.file("test_data", package = "MitoPilot")
+  map <- utils::read.csv(file.path(td, "mapping_test_userAnnot.csv"))
+  expect_setequal(list.files(file.path(td, "annotations")), map$Annotation)
+  unmapped <- list(
+    GB_NCBI = character(0), GB_TBL = character(0), GB_BED = character(0),
+    GB_TYPOS = c("COX11", "NDH4K", "ATP88", "cytochrome oxidase subnit I", "tRNA-Xxx",
+                 "rrnX", "hypothetical protein", "ORF123"),
+    GB_DROP = c("", "control region", "putative light strand origin of replication",
+                "tandem repeat"),
+    GB_MITOS = c("OH", "OL"))
+  p <- list()
+  for (i in seq_len(nrow(map))) {
+    len <- unname(Biostrings::fasta.seqlengths(file.path(td, "assemblies", map$Assembly[i])))
+    p[[map$ID[i]]] <- parse_user_annotation(file.path(td, "annotations", map$Annotation[i]), len)
+    x <- p[[map$ID[i]]]
+    g <- guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene
+    expect_setequal(unique(dplyr::coalesce(x$raw_name[is.na(g)], "")), unmapped[[map$ID[i]]])
   }
-  messy <- parse_user_annotation(file.path(fx, "UA_CIRCULAR_messy.gff3"), 17265L)
-  expect_equal(messy$codon_start[messy$raw_name == "ND4"], 3L)
+  d <- p$GB_DROP
+  expect_equal(d$codon_start[d$raw_name %in% "ND1"], 2L)
+  expect_equal(d$partial_start[d$raw_name %in% "ND1"], 1L)
+  dr <- attr(d, "dropped_types")
+  expect_length(dr, 2L)
+  expect_equal(dr[c("STS", "gap")], c(STS = 1L, gap = 1L))
 })

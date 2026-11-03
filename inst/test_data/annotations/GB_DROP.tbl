@@ -1,0 +1,273 @@
+>Feature NC_083028
+16365	17265	gene
+1	944
+			gene	ND5
+			locus_tag	RVC07_mgp03
+16365	17265	CDS
+1	944
+			product	NADH dehydrogenase subunit 5
+			transl_table	2
+1467	940	gene
+			gene	ND6
+			locus_tag	RVC07_mgp02
+1467	940	CDS
+			product	NADH dehydrogenase subunit 6
+			transl_table	2
+			pseudo
+1538	1468	gene
+			gene	trnE
+			locus_tag	RVC07_mgt20
+1538	1468	tRNA
+			product	tRNA-Glu
+			anticodon	(pos:complement(1504..1506),aa:Glu,seq:ttc)
+			note	anticodon:ttc
+1566	2706	gene
+			gene	CYTB
+			locus_tag	RVC07_mgp01
+1566	2706	CDS
+			product	cytochrome b
+			transl_table	2
+			transl_except	(pos:2706,aa:TERM)
+			note	TAA stop codon is completed by the addition of 3' A residues to the mRNA
+2707	2777	gene
+			gene	trnT
+			locus_tag	RVC07_mgt21
+2707	2777	tRNA
+			product	tRNA-Thr
+			anticodon	(pos:2738..2740,aa:Thr,seq:tgt)
+			note	anticodon:tgt
+2846	2777	gene
+			gene	trnP
+			locus_tag	RVC07_mgt22
+2846	2777	tRNA
+			product	tRNA-Pro
+			anticodon	(pos:complement(2813..2815),aa:Pro,seq:tgg)
+			note	anticodon:tgg
+2847	3400	D-loop
+3401	3765	misc_feature
+			note	control region
+3447	3507	repeat_region
+			rpt_type	tandem
+			note	tandem repeat
+3547	3596	gap
+			estimated_length	50
+3617	3697	STS
+			standard_name	MtCR-STS1
+3766	3833	gene
+			gene	trnF
+			locus_tag	RVC07_mgt01
+3766	3833	tRNA
+			product	tRNA-Phe
+			anticodon	(pos:3796..3798,aa:Phe,seq:gaa)
+			note	anticodon:gaa
+3834	4782	gene
+			gene	rrn12
+			locus_tag	RVC07_mgr02
+3834	4782	rRNA
+			product	12S ribosomal RNA
+5063	5136	gene
+			gene	trnV
+			locus_tag	RVC07_mgt02
+5063	5136	tRNA
+			product	tRNA-Val
+			anticodon	(pos:5098..5100,aa:Val,seq:tac)
+			note	anticodon:tac
+5416	>7190	gene
+			gene	rrn16
+			locus_tag	RVC07_mgr01
+5416	>7190	rRNA
+			product	16S ribosomal RNA
+7191	7264	gene
+			gene	trnL
+			locus_tag	RVC07_mgt03
+7191	7264	tRNA
+			product	tRNA-Leu
+			anticodon	(pos:7226..7228,aa:Leu,seq:taa)
+			note	anticodon:taa
+<7267	8236	gene
+			gene	ND1
+			locus_tag	RVC07_mgp13
+<7267	8236	CDS
+			product	NADH dehydrogenase subunit 1
+			codon_start	2
+			transl_table	2
+8241	8312	gene
+			gene	trnI
+			locus_tag	RVC07_mgt04
+8241	8312	tRNA
+			product	tRNA-Ile
+			anticodon	(pos:8273..8275,aa:Ile,seq:gat)
+			note	anticodon:gat
+8382	8312	gene
+			gene	trnQ
+			locus_tag	RVC07_mgt05
+8382	8312	tRNA
+			product	tRNA-Gln
+			anticodon	(pos:complement(8348..8350),aa:Gln,seq:ttg)
+			note	anticodon:ttg
+8382	8450	gene
+			gene	trnM
+			locus_tag	RVC07_mgt06
+8382	8450	tRNA
+			product	tRNA-Met
+			anticodon	(pos:8412..8414,aa:Met,seq:cat)
+			note	anticodon:cat
+8451	9495	gene
+			gene	ND2
+			locus_tag	RVC07_mgp12
+8451	9495	CDS
+			product	NADH dehydrogenase subunit 2
+			transl_table	2
+			transl_except	(pos:9495,aa:TERM)
+			note	TAA stop codon is completed by the addition of 3' A residues to the mRNA
+9496	9568	gene
+			gene	trnW
+			locus_tag	RVC07_mgt07
+9496	9568	tRNA
+			product	tRNA-Trp
+			anticodon	(pos:9530..9532,aa:Trp,seq:tca)
+			note	anticodon:tca
+9639	9571	gene
+			gene	trnA
+			locus_tag	RVC07_mgt08
+9639	9571	tRNA
+			product	tRNA-Ala
+			anticodon	(pos:complement(9607..9609),aa:Ala,seq:tgc)
+			note	anticodon:tgc
+9713	9641	gene
+			gene	trnN
+			locus_tag	RVC07_mgt09
+9713	9641	tRNA
+			product	tRNA-Asn
+			anticodon	(pos:complement(9678..9680),aa:Asn,seq:gtt)
+			note	anticodon:gtt
+9751	9714	rep_origin
+			note	putative light strand origin of replication
+9818	9752	gene
+			gene	trnC
+			locus_tag	RVC07_mgt10
+9818	9752	tRNA
+			product	tRNA-Cys
+			anticodon	(pos:complement(9788..9790),aa:Cys,seq:gca)
+			note	anticodon:gca
+9888	9819	gene
+			gene	trnY
+			locus_tag	RVC07_mgt11
+9888	9819	tRNA
+			product	tRNA-Tyr
+			anticodon	(pos:complement(9855..9857),aa:Tyr,seq:gta)
+			note	anticodon:gta
+9890	11440	gene
+			gene	COX1
+			locus_tag	RVC07_mgp11
+9890	11440	CDS
+			product	cytochrome c oxidase subunit I
+			transl_table	2
+11511	11441	gene
+			gene	trnS
+			locus_tag	RVC07_mgt12
+11511	11441	tRNA
+			product	tRNA-Ser
+			anticodon	(pos:complement(11477..11479),aa:Ser,seq:tga)
+			note	anticodon:tga
+11515	11583	gene
+			gene	trnD
+			locus_tag	RVC07_mgt13
+11515	11583	tRNA
+			product	tRNA-Asp
+			anticodon	(pos:11545..11547,aa:Asp,seq:gtc)
+			note	anticodon:gtc
+11591	12281	gene
+			gene	COX2
+			locus_tag	RVC07_mgp10
+11591	12281	CDS
+			product	cytochrome c oxidase subunit II
+			transl_table	2
+			transl_except	(pos:12281,aa:TERM)
+			note	TAA stop codon is completed by the addition of 3' A residues to the mRNA
+12282	12356	gene
+			gene	trnK
+			locus_tag	RVC07_mgt14
+12282	12356	tRNA
+			product	tRNA-Lys
+			anticodon	(pos:12316..12318,aa:Lys,seq:ttt)
+			note	anticodon:ttt
+12358	12525	gene
+			gene	ATP8
+			locus_tag	RVC07_mgp09
+12358	12465	CDS
+12466	12525
+			product	ATP synthase F0 subunit 8
+			transl_table	2
+			exception	ribosomal slippage
+12516	13199	gene
+			gene	ATP6
+			locus_tag	RVC07_mgp08
+12516	13199	CDS
+			product	ATP synthase F0 subunit 6
+			transl_table	2
+13199	13983	gene
+			gene	COX3
+			locus_tag	RVC07_mgp07
+13199	13983	CDS
+			product	cytochrome c oxidase subunit III
+			transl_table	2
+			transl_except	(pos:13982..13983,aa:TERM)
+			note	TAA stop codon is completed by the addition of 3' A residues to the mRNA
+13984	14054	gene
+			gene	trnG
+			locus_tag	RVC07_mgt15
+13984	14054	tRNA
+			product	tRNA-Gly
+			anticodon	(pos:14016..14018,aa:Gly,seq:tcc)
+			note	anticodon:tcc
+14055	14406	gene
+			gene	ND3
+			locus_tag	RVC07_mgp06
+14055	14406	CDS
+			product	NADH dehydrogenase subunit 3
+			transl_table	2
+			transl_except	(pos:14406,aa:TERM)
+			note	TAA stop codon is completed by the addition of 3' A residues to the mRNA
+14407	14475	gene
+			gene	trnR
+			locus_tag	RVC07_mgt16
+14407	14475	tRNA
+			product	tRNA-Arg
+			anticodon	(pos:14437..14439,aa:Arg,seq:tcg)
+			note	anticodon:tcg
+14476	14772	gene
+			gene	ND4L
+			locus_tag	RVC07_mgp05
+14476	14772	CDS
+			product	NADH dehydrogenase subunit 4L
+			transl_table	2
+14766	16146	gene
+			gene	ND4
+			locus_tag	RVC07_mgp04
+14766	16146	CDS
+			product	NADH dehydrogenase subunit 4
+			transl_table	2
+			transl_except	(pos:16146,aa:TERM)
+			note	TAA stop codon is completed by the addition of 3' A residues to the mRNA
+16147	16215	gene
+			gene	trnH
+			locus_tag	RVC07_mgt17
+16147	16215	tRNA
+			product	tRNA-His
+			anticodon	(pos:16177..16179,aa:His,seq:gtg)
+			note	anticodon:gtg
+16216	16284	gene
+			gene	trnS
+			locus_tag	RVC07_mgt18
+16216	16284	tRNA
+			product	tRNA-Ser
+			anticodon	(pos:16243..16245,aa:Ser,seq:gct)
+			note	anticodon:gct
+16289	16361	gene
+			gene	trnL
+			locus_tag	RVC07_mgt19
+16289	16361	tRNA
+			product	tRNA-Leu
+			anticodon	(pos:16322..16324,aa:Leu,seq:tag)
+			note	anticodon:tag

@@ -1,24 +1,41 @@
 #' Initialize a test project for user-supplied annotations
 #'
-#' Sets up a test project for the user-annotation workflow, with five samples
-#' built from the two single-contig assemblies of [new_test_project_userAsmb()]:
-#' a linear Conger oceanicus mitogenome with an NCBI-style GFF3 (`UA_LINEAR`)
-#' and as BED (`UA_LINEAR_BED`), and a circular Xyrichtys novacula mitogenome
-#' with a MITOS-style GFF (`UA_CIRCULAR`), a deliberately messy GFF3
-#' (`UA_CIRCULAR_MESSY`), and a MitoPilot export feature table
-#' (`UA_CIRCULAR_TBL`). Between them the files cover partial ends, a feature
-#' spanning the origin, joined CDS parts, a pseudogene, and names that cannot be
-#' mapped. The assemblies and annotations ship with the package; the raw reads
-#' are the same fish data used by [new_test_project()].
+#' Sets up a six-sample test project for the user-annotation workflow. Each
+#' sample is one RefSeq teleost mitogenome from the GenBank records shipped with
+#' MitoPilot: the record's sequence is the assembly (circular), its features
+#' are the annotation, and small synthetic paired reads (about 20x) are sampled
+#' from it. The coordinates are real; some names and extra features are
+#' deliberately wrong so the gene-name review has work to do.
+#'
+#' \itemize{
+#'   \item `GB_NCBI` (Danio rerio): an NCBI-style GFF3 with the full
+#'     gene/mRNA/CDS/exon hierarchy. Every name is guessed.
+#'   \item `GB_TBL` (Oncorhynchus mykiss): an NCBI 5-column feature table with
+#'     anticodons. Every name is guessed.
+#'   \item `GB_BED` (Gadus morhua): BED, with feature types inferred from the
+#'     names and nad1 split into two blocks (a joined feature).
+#'   \item `GB_TYPOS` (Thunnus thynnus): a GFF3 with odd names. `mt-Co1`,
+#'     `MT-ND4L`, `cytb`, `COII`, `tRNA-Leu (CUN)`, `trnS2(tga)`, `12S rRNA`,
+#'     `l-rRNA`, and a product-only `cytochrome c oxidase subunit III` are
+#'     guessed. `NDH4K` (nad4), `ATP88` (atp8), `tRNA-Xxx` (trnC),
+#'     `hypothetical protein` (nad6), and `ORF123` (atp6) are not, so map them
+#'     by hand. `COX11`, `cytochrome oxidase subnit I`, and `rrnX` are stray
+#'     calls in the control region; leave them unmapped.
+#'   \item `GB_DROP` (Xyrichtys novacula): a feature table with a `D-loop`, a
+#'     control-region `misc_feature`, a `rep_origin`, and a `repeat_region`
+#'     (unmapped, so dropped), plus a `gap` and an `STS` (dropped on import), a
+#'     pseudogene (nad6), ribosomal slippage (atp8 in two parts), a 5' partial
+#'     nad1 with `codon_start` 2, a 3' partial rrnL, and nad5 spanning the
+#'     origin.
+#'   \item `GB_MITOS` (Beryx splendens): a MITOS2-style GFF with lowercase
+#'     names, numbered tRNAs (`trnL1(tag)`, `trnS2(tga)`), `OH` and `OL`
+#'     (unmapped), and cob spanning the origin as one row.
+#' }
 #'
 #' @param path path to the directory for the test project (default = current
 #'   working directory). Will be created if it does not already exist.
 #' @param no_raw_data (logical) Set the project up without raw reads (default =
 #'   FALSE). See [new_project_userAnnot()].
-#' @param full_size (logical) Use the full size raw reads (default = FALSE).
-#'   Setting to TRUE will download the reads from ENA, which will require
-#'   several GB and will take some time to complete. By default the smaller
-#'   pre-filtered read files packaged with MitoPilot are used.
 #' @param executor The executor to use for running the nextflow pipeline. A
 #'   built-in template ("local" (default), "awsbatch", "slurm", "sge", "pbs",
 #'   "lsf", "NMNH_Hydra", "NOAA_SEDNA") or a saved profile from
@@ -29,21 +46,16 @@
 #'   interactively in RStudio.
 #' @param force (logical) Force recreating of existing project database and
 #'   config files (default = FALSE).
-#' @param fetch_metadata (logical) Fetch each sample's NCBI metadata from its
-#'   donor run and follow links to GBIF and GEOME (default = TRUE). Set FALSE
-#'   when offline.
 #' @param ... Additional arguments passed to [new_project_userAnnot()]
 #'
 #' @export
 new_test_project_userAnnot <- function(
     path = ".",
     no_raw_data = FALSE,
-    full_size = FALSE,
     executor = "local",
     container = paste0("macguigand/mitopilot:", utils::packageVersion("MitoPilot")),
     Rproj = TRUE,
     force = FALSE,
-    fetch_metadata = TRUE,
     ...) {
 
   check_nextflow_version("new_test_project_userAnnot")
@@ -59,35 +71,17 @@ new_test_project_userAnnot <- function(
 
   dir.create(file.path(path, "assemblies"), showWarnings = FALSE)
   dir.create(file.path(path, "annotations"), showWarnings = FALSE)
+  file.copy(app_sys(file.path("test_data", "assemblies", mapping$Assembly)),
+            file.path(path, "assemblies"), overwrite = TRUE)
+  file.copy(app_sys(file.path("test_data", "annotations", mapping$Annotation)),
+            file.path(path, "annotations"), overwrite = TRUE)
 
-  # Assemblies and annotations ----
-  # Samples that reuse an assembly get their own copy under their ID.
-  purrr::pwalk(mapping, function(...) {
-    cur <- list(...)
-    file.copy(app_sys(file.path("test_data", "assemblies", cur$Assembly)),
-              file.path(path, "assemblies", paste0(cur$ID, ".fasta")), overwrite = TRUE)
-    file.copy(app_sys(file.path("test_data", "annotations", cur$Annotation)),
-              file.path(path, "annotations", cur$Annotation), overwrite = TRUE)
-  })
-  mapping$Assembly <- paste0(mapping$ID, ".fasta")
-
-  # Reads ----
   if (!no_raw_data) {
     dir.create(file.path(path, "data"), showWarnings = FALSE)
-    message("Fetching test data...")
-    purrr::pwalk(mapping, function(...) {
-      cur <- list(...)
-      message(glue::glue("{cur$ID} - {cur$Taxon}"))
-      purrr::walk(c("R1", "R2"), function(mate) {
-        src <- fetch_test_reads(cur$Donors, mate, file.path(path, "data"), full_size)
-        dest <- file.path(path, "data", glue::glue("{cur$ID}_{mate}.fastq.gz"))
-        file.copy(src, dest, overwrite = TRUE)
-      })
-    })
+    file.copy(app_sys(file.path("test_data", c(mapping$R1, mapping$R2))),
+              file.path(path, "data"), overwrite = TRUE)
   }
 
-  mapping$BioSample <- mapping$Donors
-  mapping$Donors <- NULL
   readr::write_csv(mapping, file.path(path, "mapping.csv"), quote = "none", na = "")
 
   new_project_userAnnot(
@@ -103,8 +97,6 @@ new_test_project_userAnnot <- function(
     executor = executor,
     Rproj = Rproj,
     force = force,
-    fetch_ncbi = fetch_metadata,
-    link_sources = TRUE,
     ...
   )
 }
