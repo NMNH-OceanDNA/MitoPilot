@@ -175,6 +175,14 @@ test_that("shipped user annotation fixtures parse", {
     g <- guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene
     expect_setequal(unique(dplyr::coalesce(x$raw_name[is.na(g)], "")), unmapped[[map$ID[i]]])
   }
+  ok <- c("mt-Co1" = "cox1", "MT-ND4L" = "nad4l", "cytb" = "cob", "COII" = "cox2",
+          "tRNA-Leu (CUN)" = "trnL", "trnS2(tga)" = "trnS", "12S rRNA" = "rrnS",
+          "l-rRNA" = "rrnL", "cytochrome c oxidase subunit III" = "cox3")
+  x <- p$GB_TYPOS[match(names(ok), p$GB_TYPOS$raw_name), ]
+  expect_equal(guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene, unname(ok))
+  x <- p$GB_MITOS[match(c("cox1", "nad4l", "trnL1(tag)", "trnS2(tga)"), p$GB_MITOS$raw_name), ]
+  expect_equal(guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene,
+               c("cox1", "nad4l", "trnL", "trnS"))
   d <- p$GB_DROP
   expect_equal(d$codon_start[d$raw_name %in% "ND1"], 2L)
   expect_equal(d$partial_start[d$raw_name %in% "ND1"], 1L)

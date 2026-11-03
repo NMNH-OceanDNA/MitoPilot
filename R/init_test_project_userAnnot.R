@@ -36,6 +36,8 @@
 #'   working directory). Will be created if it does not already exist.
 #' @param no_raw_data (logical) Set the project up without raw reads (default =
 #'   FALSE). See [new_project_userAnnot()].
+#' @param full_size (logical) Accepted for parity with [new_test_project_userAsmb()];
+#'   has no effect, the reads are small synthetic files shipped with MitoPilot.
 #' @param executor The executor to use for running the nextflow pipeline. A
 #'   built-in template ("local" (default), "awsbatch", "slurm", "sge", "pbs",
 #'   "lsf", "NMNH_Hydra", "NOAA_SEDNA") or a saved profile from
@@ -46,16 +48,21 @@
 #'   interactively in RStudio.
 #' @param force (logical) Force recreating of existing project database and
 #'   config files (default = FALSE).
+#' @param fetch_metadata (logical) Fetch NCBI metadata and follow links to GBIF
+#'   and GEOME (default = TRUE). The demo samples have no BioSample, so nothing is
+#'   fetched for them. Set FALSE when offline.
 #' @param ... Additional arguments passed to [new_project_userAnnot()]
 #'
 #' @export
 new_test_project_userAnnot <- function(
     path = ".",
     no_raw_data = FALSE,
+    full_size = FALSE,
     executor = "local",
     container = paste0("macguigand/mitopilot:", utils::packageVersion("MitoPilot")),
     Rproj = TRUE,
     force = FALSE,
+    fetch_metadata = TRUE,
     ...) {
 
   check_nextflow_version("new_test_project_userAnnot")
@@ -97,6 +104,8 @@ new_test_project_userAnnot <- function(
     executor = executor,
     Rproj = Rproj,
     force = force,
+    fetch_ncbi = fetch_metadata,
+    link_sources = TRUE,
     ...
   )
 }

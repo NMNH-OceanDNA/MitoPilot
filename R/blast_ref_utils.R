@@ -1098,8 +1098,13 @@ pcg_from_product <- function(product) {
     return("cob")
   }
 
-  # ATP synthase F0 subunit X / ATPase X
-  m <- regmatches(p, regexpr("(?:atp[^a-z0-9]*synthase|atpase)[^0-9]*([0-9]+)", p, perl = TRUE))
+  # ATP synthase F0 subunit X / ATPase X; "subunit a" is atp6
+  if (grepl("atp[^a-z0-9]*synthase(?:[^a-z0-9]*f[0o])?[^a-z0-9]*subunit[^a-z0-9]*a\\b", p,
+            perl = TRUE)) {
+    return("atp6")
+  }
+  m <- regmatches(p, regexpr("(?:atp[^a-z0-9]*synthase|atpase)(?:[^a-z0-9]*f[0o]\\b)?[^0-9]*([0-9]+)",
+                             p, perl = TRUE))
   if (length(m) > 0 && nchar(m) > 0) {
     sub_id <- regmatches(m, regexpr("[0-9]+$", m, perl = TRUE))
     return(paste0("atp", sub_id))
