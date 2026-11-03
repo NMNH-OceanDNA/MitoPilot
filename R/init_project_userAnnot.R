@@ -171,6 +171,10 @@ new_project_userAnnot <- function(
     message("Overwriting existing database")
     file.remove(db)
   }
+  if (isTRUE(force)) {
+    unlink(list.files(file.path(path, "user_annotations"), "_annotations\\.csv$",
+                      full.names = TRUE))
+  }
 
   imp <- new_db_userAnnot(
     db_path = db,

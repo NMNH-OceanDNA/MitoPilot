@@ -838,6 +838,11 @@ export_files <- function(
 
           # write CDS feature for each exon. GFF3 coordinates are always
           # ascending; the strand lives in column 7, so both strands share this.
+          off <- codon_offset(cur$codon_start) - 1L
+          o <- if (identical(cur$direction, "-")) rev(seq_len(nrow(exons))) else seq_len(nrow(exons))
+          done <- cumsum(mapply(circ_len, exons$pos1[o], exons$pos2[o], MoreArgs = list(L = asmb_len)))
+          phase <- integer(nrow(exons))
+          phase[o] <- c(off, (3L - (done[-length(done)] - off) %% 3L) %% 3L)
           for (i in seq_len(nrow(exons))) {
             f9 = paste0("ID=cds-",cur$gene,";Parent=gene-",cur$gene,";Name=",cur$gene,";gbkey=CDS;gene=",cur$gene,";product=",cur$product,";transl_table=",dat$genetic_code)
             if (length(note_out) > 0){
@@ -845,7 +850,7 @@ export_files <- function(
             }
             e_wraps <- isTRUE(dat$topology == "circular") &&
               isTRUE(exons[i, ]$pos1 > exons[i, ]$pos2)
-            paste(c(seq_name, "MitoPilot", "CDS", exons[i,]$pos1, gff_end(exons[i,]$pos2, e_wraps, asmb_len), ".", cur$direction, "0", f9), collapse = "\t") |>
+            paste(c(seq_name, "MitoPilot", "CDS", exons[i,]$pos1, gff_end(exons[i,]$pos2, e_wraps, asmb_len), ".", cur$direction, phase[i], f9), collapse = "\t") |>
               cat(file = gff_fn, sep = "\n", append = TRUE)
           }
 
@@ -1010,7 +1015,7 @@ export_files <- function(
             f9 = paste0(f9, ";Note=", note_out)
           }
           # a feature spanning the origin is written start..(asmb_len + end)
-          paste(c(seq_name, "MitoPilot", "CDS", cur$pos1, gff_end(cur$pos2, wraps, asmb_len), ".", cur$direction, "0", f9), collapse = "\t") |>
+          paste(c(seq_name, "MitoPilot", "CDS", cur$pos1, gff_end(cur$pos2, wraps, asmb_len), ".", cur$direction, codon_offset(cur$codon_start) - 1L, f9), collapse = "\t") |>
             cat(file = gff_fn, sep = "\n", append = TRUE)
 
           if(gene_export){

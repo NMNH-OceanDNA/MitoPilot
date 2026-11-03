@@ -102,6 +102,7 @@ test_that("init errors: multi-contig FASTA, seqid mismatch, wrap on linear, past
   expect_match(err, "one sequence")
   expect_no_match(err, "find_mitogenome")
   expect_false(dir.exists(fx$proj))
+  expect_length(gregexpr("holds 101 sequences", err)[[1]], 1L)
 
   fx <- ua_fixture(withr::local_tempdir())
   writeLines(c("##gff-version 3", "other_contig\tsrc\tCDS\t1\t90\t.\t+\t0\tName=COI"),
@@ -146,6 +147,29 @@ test_that("init errors: multi-contig FASTA, seqid mismatch, wrap on linear, past
   m$Annotation <- NULL
   utils::write.csv(m, fx$map, row.names = FALSE)
   expect_error(ua_init(fx), "'Annotation' column")
+})
+
+test_that("new_db_userAnnot rejects a multi-contig FASTA", {
+  td <- withr::local_tempdir()
+  fx <- ua_fixture(td, multi = TRUE)
+  db <- file.path(td, ".sqlite")
+  expect_error(suppressMessages(new_db_userAnnot(
+    db_path = db, mapping_fn = fx$map, assembly_path = fx$asm,
+    annotation_path = fx$ann, no_raw_data = TRUE)), "UA_MULTI_ONE.fasta.*one sequence")
+  expect_false(file.exists(db))
+})
+
+test_that("force re-init removes stale per-sample annotation CSVs", {
+  testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
+  fx <- ua_fixture(withr::local_tempdir())
+  ua_init(fx)
+  ua_dir <- file.path(fx$proj, "user_annotations")
+  stale <- file.path(ua_dir, "UA_LINEAR_annotations.csv")
+  writeLines("stale", stale)
+  ua_init(fx, force = TRUE)
+  expect_false(file.exists(stale))
+  expect_true(dir.exists(file.path(ua_dir, "raw")))
+  expect_length(list.files(file.path(ua_dir, "raw")), 2L)
 })
 
 test_that("reads are optional: no_raw_data = FALSE requires R1/R2", {

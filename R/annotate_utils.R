@@ -759,6 +759,15 @@ is_join_member <- function(notes) {
   !is.na(join_group_id(notes))
 }
 
+#' TRUE for the first row of each JOIN group and for every non-member row
+#'
+#' @param annotations annotations data frame with contig and notes
+#' @noRd
+join_copy_row <- function(annotations) {
+  grp <- join_group_id(annotations$notes)
+  is.na(grp) | !duplicated(paste(annotations$contig, grp))
+}
+
 #' Reading-frame offset of a CDS: 2 or 3, else 1 (NA/NULL/out of range)
 #'
 #' @param x `codon_start` value(s)

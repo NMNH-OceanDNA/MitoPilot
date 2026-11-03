@@ -1109,11 +1109,12 @@ annotate_server <- function(id) {
         )
         updateSelectizeInput(
           inputId = "start_gene",
-          choices = MITO_GENE_CHOICES,
-          selected = cur$start_gene %||% character(0),
+          choices = c("(none)" = "", MITO_GENE_CHOICES),
+          selected = dplyr::coalesce(cur$start_gene[1], ""),
           options = list(
             create = FALSE,
-            maxItems = 1
+            maxItems = 1,
+            allowEmptyOption = TRUE
           )
         )
       }
@@ -1241,7 +1242,7 @@ annotate_server <- function(id) {
               mitofinder_new_genes = as.integer(isTRUE(input$mitofinder_new_genes)),
               mitofinder_allow_introns = as.integer(isTRUE(input$mitofinder_allow_introns)),
               mitofinder_opts = input$mitofinder_opts %||% "",
-              start_gene = req(input$start_gene),
+              start_gene = if (length(input$start_gene) && nzchar(input$start_gene)) input$start_gene else NA_character_,
               coverage_trim = as.integer(isTRUE(input$coverage_trim)),
               feature_trim = as.integer(isTRUE(input$feature_trim)),
               ref_based_rc = as.integer(isTRUE(input$ref_based_rc)),

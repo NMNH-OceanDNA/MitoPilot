@@ -91,6 +91,7 @@ test_that("resolve, write, and confirm imported annotations", {
   expect_equal(sw$annotate_switch[sw$ID == "UA_CIRCULAR"], 0L)
   expect_false(any(is.na(DBI::dbReadTable(con, "gene_name_map")$time_stamp)))
 
+  expect_error(set_gene_name_map(con, "COX1", "CDS", "notagene"), "unknown gene 'notagene'")
   set_gene_name_map(con, "COX1", "CDS", "(drop)")
   gm <- DBI::dbReadTable(con, "gene_name_map")
   expect_true(is.na(gm$gene[gm$raw_name == "COX1"]))

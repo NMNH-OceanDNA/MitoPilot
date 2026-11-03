@@ -68,6 +68,17 @@ test_that("annotate() errors when an imported feature exceeds the contig", {
   )
 })
 
+test_that("annotate() errors when no imported feature is on the unit's contig", {
+  f <- ua_fixture()
+  csv <- utils::read.csv(f$csv)
+  csv$contig <- "other"
+  utils::write.csv(csv, f$csv, row.names = FALSE, na = "")
+  expect_error(
+    ua_run(f, start_gene = NA, coverage_trim = FALSE, user_annotations_fn = f$csv),
+    "no features for contig S.1.1 in .*S_user_annotations.csv"
+  )
+})
+
 test_that("start_gene = NA skips rotation without warning", {
   f <- ua_fixture("circular")
   expect_no_warning(

@@ -85,7 +85,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
 
 .ua_clean_note <- function(x) {
   x <- unique(x[!is.na(x) & nzchar(x)])
-  if (!length(x)) NA_character_ else gsub(";", ",", paste(x, collapse = ", "))
+  if (!length(x)) NA_character_ else gsub("[\t\r\n]", " ", gsub(";", ",", paste(x, collapse = ", ")))
 }
 
 .ua_feat <- function(type, raw_name, segs, direction = "+", raw_product = NA_character_,
@@ -468,6 +468,10 @@ parse_anticodon <- function(x) {
     ))
   lens <- stats::setNames(Biostrings::width(assembly), sub("\\s.*$", "", names(assembly)))
   ann <- ann[ann$contig %in% names(lens), ]
+  if (nrow(ann) == 0L) {
+    stop("user annotations: no features for contig ", paste(names(lens), collapse = ", "),
+         " in ", fn, call. = FALSE)
+  }
   for (ctg in unique(ann$contig)) {
     rows <- ann$contig == ctg
     n <- sum(pmax(ann$pos1[rows], ann$pos2[rows]) > lens[[ctg]], na.rm = TRUE)
@@ -590,6 +594,8 @@ confirm_user_annotations <- function(con, project_dir) {
 set_gene_name_map <- function(con, raw_name, feature_type, gene) {
   gene <- as.character(gene)
   gene[is.na(gene) | gene == "(drop)"] <- NA_character_
+  bad <- !is.na(gene) & !gene %in% MITO_GENE_CHOICES
+  if (any(bad)) stop("set_gene_name_map: unknown gene '", gene[bad][1], "'")
   DBI::dbExecute(con, "UPDATE gene_name_map SET gene = ?, manual = 1, confirmed = 0
                        WHERE raw_name = ? AND feature_type = ?",
                  params = list(gene, raw_name, dplyr::coalesce(feature_type, "")))

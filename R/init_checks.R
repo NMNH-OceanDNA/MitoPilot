@@ -385,6 +385,11 @@ check_user_annotations <- function(mapping, assembly_path, annotation_path, iss,
     }
     len <- tryCatch(Biostrings::fasta.seqlengths(.ua_path(assembly_path, mapping$Assembly[i])),
                     error = function(e) NULL)
+    if (length(len) > 1L) {
+      msg <- paste0("assemblies: ", mapping$Assembly[i], " (", lab, ") holds ", length(len),
+                    " sequences; a user-annotation project needs exactly one sequence per FASTA")
+      if (!msg %in% iss$errors) iss$err(msg)
+    }
     if (length(len) != 1L) next
     L <- unname(len)
     p <- tryCatch(parse_user_annotation(path, contig_length = L), error = function(e) {

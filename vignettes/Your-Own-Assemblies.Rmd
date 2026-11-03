@@ -395,7 +395,8 @@ rotation are off by default.
 
 **What is carried over.** Partial ends, reading frame (`codon_start`), and
 anticodons are kept. Pseudogenes are kept and get the note `import: pseudogene`;
-free-text notes from the file become `import: <note>` on the feature. Introns
+free-text notes from the file become `import: <note>`, stored on the feature
+and shown in the details window (export does not write them). Introns
 and ribosomal slippage become MitoPilot join groups, and the feature-table
 export writes the `ribosomal_slippage` and `exception` qualifiers back.
 `transl_except` is not stored: MitoPilot derives it from the shortened stop

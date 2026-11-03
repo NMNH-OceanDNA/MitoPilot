@@ -2,9 +2,9 @@
 #'
 #' 5' (3') partial when the feature's 5' (3') end sits on the edge of a linear
 #' contig, or for a PCG when the start codon (full 3-base stop codon) is not in
-#' the gene rule. Rows sharing a JOIN group are one feature: only the 5'-most
-#' member's start and the 3'-most member's stop are tested. Changed flags get
-#' a note.
+#' the gene rule; a PCG with `codon_start` 2 or 3 is always 5' partial. Rows
+#' sharing a JOIN group are one feature: only the 5'-most member's start and
+#' the 3'-most member's stop are tested. Changed flags get a note.
 #'
 #' @param annotations annotations data frame
 #' @param assembly DNAStringSet
@@ -44,6 +44,7 @@ assess_partial_ends <- function(annotations, assembly, contig_key, rules) {
 
   new_s <- (!circ & ifelse(plus, p1 == 1L, p2 == len)) | (pcg & bad_start)
   new_e <- (!circ & ifelse(plus, p2 == len, p1 == 1L)) | (pcg & bad_stop)
+  new_s <- new_s | (pcg & codon_offset(annotations$codon_start) > 1L)
   new_s <- as.integer(new_s)
   new_e <- as.integer(new_e)
 

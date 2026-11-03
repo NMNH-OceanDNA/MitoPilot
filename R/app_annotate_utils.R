@@ -299,12 +299,13 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             selectizeInput(
               ns("start_gene"),
               label = "Starting gene for circular assemblies:",
-              choices = MITO_GENE_CHOICES,
-              selected = current$start_gene %||% character(0),
+              choices = c("(none)" = "", MITO_GENE_CHOICES),
+              selected = dplyr::coalesce(current$start_gene[1], ""),
               width = "100%",
               options = list(
                 create = FALSE,
-                maxItems = 1
+                maxItems = 1,
+                allowEmptyOption = TRUE
               )
             ) |> shinyjs::disabled()
           )

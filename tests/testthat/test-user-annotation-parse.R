@@ -91,3 +91,11 @@ test_that(".tbl: exported JOIN gene span collapses with partials; minus wrap kee
   writeLines(c(">Feature x", "1\t50\trepeat_region", "60\t70\torigin_of_replication"), tmp)
   expect_equal(nrow(parse_user_annotation(tmp)), 2L)
 })
+test_that("notes lose tabs and line breaks", {
+  fn <- withr::local_tempfile(fileext = ".gff3")
+  writeLines(c("##gff-version 3",
+               "c1\tsrc\tCDS\t1\t90\t.\t+\t0\tID=x;Name=COI;Note=a%09b%0D%0Ac"), fn)
+  x <- parse_user_annotation(fn, contig_length = 100L)
+  expect_equal(x$note, "a b  c")
+  expect_false(grepl("[\t\r\n]", x$note))
+})

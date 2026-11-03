@@ -151,3 +151,16 @@ test_that("circular JOIN group: overlapping members keep the lower member 5'", {
   expect_equal(out$partial_start, c(1L, 0L))
   expect_equal(out$partial_stop, c(0L, 1L))
 })
+
+test_that("frame-offset PCG stays 5' partial even with a valid start codon", {
+  ann <- dplyr::bind_rows(
+    prow("cox1", "PCG", 200, 400, start_codon = "ATG", stop_codon = "TAA", partial_start = 1L),
+    prow("nad5", "PCG", 401, 600, start_codon = "ATG", stop_codon = "TAA"),
+    prow("nad6", "PCG", 601, 800, start_codon = "ATG", stop_codon = "TAA")
+  )
+  ann$codon_start <- c(2L, 3L, 1L)
+  out <- run_partial(ann)
+  expect_equal(out$partial_start, c(1L, 1L, 0L))
+  expect_false(any(grepl("cleared", out$notes)))
+  expect_equal(out$notes[2], "5' partial set by curation")
+})

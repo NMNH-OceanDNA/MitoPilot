@@ -128,7 +128,8 @@ cs_export <- function(annotations) {
     group = "g1", out_dir = out_dir, generateAAalignments = FALSE,
     gene_export = FALSE, review = FALSE, summary_csv = FALSE
   )))
-  readLines(file.path(out_dir, "s1", "export", "s1.tbl"))
+  structure(readLines(file.path(out_dir, "s1", "export", "s1.tbl")),
+            gff = readLines(file.path(out_dir, "s1", "export", "s1.gff")))
 }
 
 test_that("export writes codon_start 2 for an offset partial CDS", {
@@ -140,6 +141,19 @@ test_that("export writes codon_start 2 for an offset partial CDS", {
   expect_true(any(grepl("^\t\t\tcodon_start\t\\s*2$", tbl)))
   # a complete gene with a valid start gets no codon_start line
   expect_equal(sum(grepl("codon_start", tbl)), 1L)
+  cds <- strsplit(grep("\tCDS\t", attr(tbl, "gff"), value = TRUE), "\t")
+  phase <- setNames(vapply(cds, `[`, "", 8L), vapply(cds, `[`, "", 4L))
+  expect_equal(phase[["101"]], "1")
+  expect_equal(phase[["501"]], "0")
+})
+
+test_that("GFF phase follows codon_start across JOIN exons", {
+  a <- rbind(cs_row("nad5", 101, 201, codon_start = 2L, partial_start = 1L),
+             cs_row("nad5", 301, 400))
+  a$notes <- "JOIN: mode=exon group=1"
+  cds <- strsplit(grep("\tCDS\t", attr(cs_export(a), "gff"), value = TRUE), "\t")
+  # 101 bp exon read from base 2: 100 bases, 1 left over, so exon 2 starts at phase 2
+  expect_equal(vapply(cds, `[`, "", 8L), c("1", "2"))
 })
 
 test_that("shipped user annotation fixtures parse", {

@@ -3696,9 +3696,10 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       req(length(id) == 1)
       retained <- rv$annotations |>
         dplyr::filter(!stringr::str_detect(gene, "_DELETED_"))
-      pcg  <- sum(retained$type == "PCG",  na.rm = TRUE)
-      trna <- sum(retained$type == "tRNA", na.rm = TRUE)
-      rrna <- sum(retained$type == "rRNA", na.rm = TRUE)
+      cnt  <- count_feature_types(retained)
+      pcg  <- cnt[["PCG"]]
+      trna <- cnt[["tRNA"]]
+      rrna <- cnt[["rRNA"]]
       # missing/extra from this unit's curation count rules
       me <- tryCatch({
         co <- dplyr::tbl(con, "annotate") |>
@@ -3714,7 +3715,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       # ORF count is derived in the table; keep blank when ORF finding is off
       orf_blank <- "ORFCount" %in% names(rv$data) && !is.na(i) &&
         isTRUE(is.na(rv$data$ORFCount[i]))
-      orf <- if (orf_blank) NA_integer_ else as.integer(sum(retained$type == "ORF", na.rm = TRUE))
+      orf <- if (orf_blank) NA_integer_ else cnt[["ORF"]]
       # Short-circuit if nothing the count/missing/extra columns track changed
       # (e.g. position-only codon edits) to avoid needless writes/refreshes.
       same <- function(a, b) (is.na(a) && is.na(b)) || (!is.na(a) && !is.na(b) && a == b)
