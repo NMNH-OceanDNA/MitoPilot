@@ -66,6 +66,7 @@ Suggests:
     chromote,
     knitr,
     testthat (>= 3.0.0),
+    tibble,
     withr
 VignetteBuilder:
     knitr

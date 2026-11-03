@@ -350,3 +350,56 @@ on the next Assemble update using the reference and options on record rather
 than the layout you edited. The button then reads **Cancel queued pipeline
 join**, so a mis-click is easy to undo. If the sample cannot be queued, the
 button is greyed out and the reason is shown below it.
+
+## Importing your own annotation
+
+If you already have an annotation for each assembly, `new_project_userAnnot()`
+skips both the assembly and annotation steps. It takes the same kind of mapping
+CSV as `new_project_userAsmb()`, with an extra `Annotation` column:
+
+```
+ID, Taxon, Assembly, Topology, Annotation   (plus R1, R2 unless no_raw_data = TRUE)
+```
+
+Pass `assembly_path` and `annotation_path` for the folders holding the files.
+
+```{r, eval=FALSE}
+new_project_userAnnot(
+  path = "~/my_annotated/run_01",
+  mapping_fn = "~/my_annotated/mapping.csv",
+  assembly_path = "~/my_annotated/fasta",
+  annotation_path = "~/my_annotated/annotations",
+  no_raw_data = TRUE
+)
+```
+
+**Inputs.** Each FASTA must hold exactly one sequence, and the annotation's
+sequence ID must equal the first word of the FASTA header. Annotations can be
+GFF3 (`.gff`, `.gff3`), BED (`.bed`), or a GenBank 5-column feature table
+(`.tbl`). The `Topology` column says whether the contig is circular or linear.
+Copies of the original files are kept in `<project>/user_annotations/raw/`.
+
+**Gene name review.** MitoPilot guesses canonical gene names for every feature.
+When you launch the app, an "Imported gene names" window lists every raw name
+with its mapping. Fix any wrong guesses, then press Confirm. The "Gene names"
+button in the toolbar reopens the window, and pipeline runs (Update) are blocked
+until you confirm. Names that cannot be mapped, such as D-loop or ORFs, are
+dropped, and the window shows how many. If you edit the mapping after
+confirming, the gate closes again; confirming re-queues only the samples whose
+annotation actually changed.
+
+**What is turned off.** Finding the mitogenome, circularization, and scaffold
+joining are not available for this project type, because circularizing would
+shift the coordinates of your annotation. Coverage trimming and start-gene
+rotation are off by default.
+
+**What is carried over.** Partial ends, reading frame (`codon_start`),
+pseudogenes, ribosomal slippage and introns (as JOIN groups), notes, and
+anticodons are kept. Anything else in the file is stored as-is in the project
+database.
+
+**Round trip.** A `.tbl` exported from MitoPilot can be imported again with
+this function.
+
+To try it, `new_test_project_userAnnot()` creates a five-sample demo using
+GFF3, MITOS GFF, a messy hand-made GFF3, BED, and a MitoPilot `.tbl`.
