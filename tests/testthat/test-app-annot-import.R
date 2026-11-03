@@ -232,6 +232,28 @@ test_that("annot_import open sends a detail table; new projects have the name in
                fixed = TRUE)
 })
 
+test_that("gene-name review keeps the native picker markup and the window-fit modal class", {
+  testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
+  td <- ua_app_project2(withr::local_tempdir())
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(td, ".sqlite"))
+  withr::defer(DBI::dbDisconnect(con))
+  html <- as.character(htmltools::as.tags(annot_import_table(con, shiny::NS("x"))))
+  expect_match(html, "mpGN.select(ci, 'x-pick'", fixed = TRUE)
+  for (g in c("(drop)", MITO_IMPORT_GENE_CHOICES)) expect_match(html, sprintf("\\\"%s\\\"", g), fixed = TRUE)
+  js <- paste(readLines(app_sys("app/www/custom.js")), collapse = "\n")
+  expect_match(js, "<select class=\"form-control input-sm mp-gn-pick\"", fixed = TRUE)
+  expect_match(js, "data-raw=", fixed = TRUE)
+  expect_match(js, "create: false", fixed = TRUE)
+  modal <- NULL
+  ms <- ua_app_session(con, td)
+  ms$sendModal <- function(type, message) if (type == "show") modal <<- message$html
+  shiny::testServer(annot_import_server, args = list(id = "x"), session = ms, {
+    session$flushReact()
+  })
+  expect_match(modal, "modal-body mp-gn-modal", fixed = TRUE)
+  expect_match(modal, "mpGN.open('x-tbl')", fixed = TRUE)
+})
+
 test_that(".ua_note_name cuts long notes at a word boundary", {
   expect_equal(.ua_note_name("  short note "), "short note")
   long <- "putative control region with tandem repeats and a long tail"

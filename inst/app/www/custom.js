@@ -366,7 +366,7 @@ window.mpGN = {
   select: function(ci, input, opts) {
     var e = mpGN.esc, cur = ci.value === null || ci.value === undefined ? '(drop)' : String(ci.value);
     if (!opts.some(function(o) { return o[0] === cur; })) opts = opts.concat([[cur, cur]]);
-    return '<select class="form-control input-sm" aria-label="Gene for ' + e(ci.row.label) +
+    return '<select class="form-control input-sm mp-gn-pick" aria-label="Gene for ' + e(ci.row.label) +
       '" data-input="' + input + '" data-raw="' + e(ci.row.raw_name) + '" data-ft="' + e(ci.row.feature_type) +
       '" onclick="event.stopPropagation()" onchange="mpGN.pick(this)">' +
       opts.map(function(o) {
@@ -374,11 +374,13 @@ window.mpGN = {
       }).join('') + '</select>';
   },
   pick: function(el) {
+    if (!el.value) return;
     Shiny.setInputValue(el.dataset.input, { raw_name: el.dataset.raw, feature_type: el.dataset.ft, gene: el.value },
                         { priority: 'event' });
   },
   chip: function(tbl, v) { Reactable.setFilter(tbl, 'status', v || undefined); },
   mark: function(tbl) {
+    mpGN.unsz(false);
     var f = {};
     try { Reactable.getState(tbl).filters.forEach(function(x) { f[x.id] = x.value; }); } catch (e) { return; }
     document.querySelectorAll('.mp-gn-chip[data-tbl="' + tbl + '"]').forEach(function(el) {
@@ -388,6 +390,48 @@ window.mpGN = {
     });
     document.querySelectorAll('select.mp-gn-filter[data-tbl="' + tbl + '"]').forEach(function(el) {
       el.value = f[el.dataset.col] || '';
+    });
+  },
+  fit: function(tbl) {
+    var m = document.getElementById('shiny-modal'), t = m && m.querySelector('#' + tbl + ' .ReactTable');
+    if (!t) return;
+    var other = m.querySelector('.modal-content').offsetHeight - t.offsetHeight;
+    t.style.height = Math.max(320, window.innerHeight - other - 2 * m.querySelector('.modal-dialog').offsetTop - 10) + 'px';
+  },
+  open: function(tbl) {
+    var timer, onResize = function() { clearTimeout(timer); timer = setTimeout(function() { mpGN.fit(tbl); }, 100); };
+    window.addEventListener('resize', onResize);
+    $('#shiny-modal').one('shown.bs.modal', function() { mpGN.fit(tbl); })
+      .one('hidden.bs.modal', function() { window.removeEventListener('resize', onResize); mpGN.unsz(true); });
+  },
+  // selectize fires the native change, so the inline onchange still sends the pick
+  szs: [],
+  sz: function(el) {
+    if (el.selectize) return;
+    if (!$.fn.selectize) {
+      if (!mpGN.szWarned) console.log('mpGN: selectize not loaded, gene pickers stay native');
+      mpGN.szWarned = true;
+      return;
+    }
+    var s = $(el).selectize({
+      create: false, maxOptions: 200, dropdownParent: 'body', openOnFocus: true, closeAfterSelect: true,
+      score: function(q) {
+        var re = new RegExp('(^|[ (])' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        return function(it) { return re.test(it.text) ? 1 : 0; };
+      },
+      onChange: function(v) { if (v) this.lastGood = v; },
+      onBlur: function() { if (!this.getValue()) this.setValue(this.lastGood, true); }
+    })[0].selectize;
+    s.lastGood = el.value;
+    s.$wrapper.on('click', function(e) { e.stopPropagation(); });
+    mpGN.szs.push(s);
+    setTimeout(function() { s.focus(); }, 0);
+  },
+  unsz: function(all) {
+    mpGN.szs = mpGN.szs.filter(function(s) {
+      if (!all && document.contains(s.$input[0])) return true;
+      s.destroy();
+      return false;
     });
   },
   cache: {},
@@ -407,11 +451,20 @@ window.mpGN = {
       if (mpGN[tbl]) mpGN[tbl]();
       mpGN[tbl] = Reactable.onStateChange(tbl, function() { mpGN.mark(tbl); });
       mpGN.mark(tbl);
+      mpGN.fit(tbl);
     });
   }
 };
+$(document).on('mousedown focusin', '.mp-gn-tbl select[data-raw]', function(e) {
+  if (this.selectize || !$.fn.selectize) return mpGN.sz(this);
+  if (e.type === 'mousedown') {
+    e.preventDefault();
+    $(this).closest('.rt-td').one('click', function(ev) { ev.stopPropagation(); });
+  }
+  mpGN.sz(this);
+});
 $(document).ready(function() {
-  Shiny.addCustomMessageHandler('mp-gn-data', function(m) { Reactable.setData(m.tbl, m.data); });
+  Shiny.addCustomMessageHandler('mp-gn-data', function(m) { mpGN.unsz(true); Reactable.setData(m.tbl, m.data); });
   Shiny.addCustomMessageHandler('mp-gn-detail', function(m) {
     mpGN.cache[m.id] = m.html;
     var el = document.getElementById(m.id);

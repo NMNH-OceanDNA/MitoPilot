@@ -165,7 +165,7 @@ annot_import_server <- function(id) {
       bump()
       modalDialog(
         title = mp_modal_title("Imported gene names", sprintf("%d samples, %d features", n$s, n$f)),
-        size = "l",
+        size = "l", class = "mp-gn-modal",
         opts_help(
           "Pick the gene each imported name stands for, or (drop) to leave those features out. ",
           "Confirm writes the annotations and queues changed samples for annotation; ",
@@ -173,9 +173,10 @@ annot_import_server <- function(id) {
         ),
         uiOutput(ns("chips")),
         reactable::reactableOutput(ns("tbl")),
+        htmltools::attachDependencies(tags$span(), htmltools::findDependencies(selectizeInput(ns("sz"), NULL, NULL))),
         tags$script(HTML(sprintf(
-          "$('#shiny-modal').one('hidden.bs.modal', function() { Shiny.setInputValue('%s', Date.now(), {priority: 'event'}); });",
-          ns("closed")))),
+          "mpGN.open('%s'); $('#shiny-modal').one('hidden.bs.modal', function() { Shiny.setInputValue('%s', Date.now(), {priority: 'event'}); });",
+          ns("tbl"), ns("closed")))),
         footer = mp_footer(
           primary = actionButton(ns("confirm"), "Confirm"), dismiss = NULL,
           extra = actionButton(ns("reset"), "Reset guesses")
