@@ -24,15 +24,22 @@ test_that("add_pcg_codons handles minus strand and origin wrap", {
   )
 })
 
-test_that("add_pcg_codons honors codon_start", {
-  asm <- Biostrings::DNAStringSet(c("S.1.1" = paste0("ATG", "AAACCC", "TAA", "GGGG")))
+test_that("add_pcg_codons honors codon_start on 5'-partial CDS", {
+  mk <- function(seq, len) {
+    asm <- Biostrings::DNAStringSet(c("S.1.1" = seq))
+    ann <- tibble::tibble(contig = "S.1.1", type = "PCG", gene = "cox1",
+                          pos1 = 1L, pos2 = len, direction = "+", codon_start = 2L)
+    add_pcg_codons(ann, asm, genetic_code = "2")
+  }
+  full <- mk("GATGAAACCCTAAGG", 13L)
+  expect_equal(full$stop_codon, "TAA")
+  expect_equal(full$translation, "MKP")
+  expect_equal(full$start_codon, "GAT")
+  part <- mk("GATGAAACCCTGG", 11L)
+  expect_equal(part$stop_codon, "T")
+  expect_equal(part$translation, "MKP")
+  asm <- Biostrings::DNAStringSet(c("S.1.1" = "ATGAAACCCTAAGGGG"))
   ann <- tibble::tibble(contig = "S.1.1", type = "PCG", gene = "cox1",
-                        pos1 = 1L, pos2 = 12L, direction = "+", codon_start = c(2L))
-  out <- add_pcg_codons(ann, asm, genetic_code = "2")
-  exp <- suppressWarnings(as.character(Biostrings::translate(
-    Biostrings::DNAString("TGAAACCC"), genetic.code = Biostrings::getGeneticCode("2"))))
-  expect_equal(out$translation, exp)
-  expect_equal(out$start_codon, "ATG")
-  out1 <- add_pcg_codons(dplyr::mutate(ann, codon_start = NA_integer_), asm, "2")
-  expect_equal(out1$translation, "MKP")
+                        pos1 = 1L, pos2 = 12L, direction = "+", codon_start = NA_integer_)
+  expect_equal(add_pcg_codons(ann, asm, "2")$translation, "MKP")
 })

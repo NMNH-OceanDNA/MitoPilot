@@ -26,23 +26,23 @@ add_pcg_codons <- function(annotations, assembly, genetic_code) {
           unname(as.character(s))
         })
       } else NA_character_,
+      .cs = if (is.na(codon_start)) 1L else as.integer(codon_start),
       start_codon = if (!is.na(.cds)) substr(.cds, 1L, 3L) else NA_character_,
       stop_codon = if (!is.na(.cds)) {
-        n <- nchar(.cds)
+        n <- nchar(.cds) - (.cs - 1L)
         len <- if (n %% 3L == 0L) 3L else n %% 3L
-        substr(.cds, n - len + 1L, n)
+        substr(.cds, nchar(.cds) - len + 1L, nchar(.cds))
       } else NA_character_,
       translation = if (!is.na(.cds)) {
-        cs <- if (is.na(codon_start)) 1L else as.integer(codon_start)
         suppressWarnings(
-          Biostrings::DNAString(substr(.cds, cs, nchar(.cds) - nchar(stop_codon))) |>
+          Biostrings::DNAString(substr(.cds, .cs, nchar(.cds) - nchar(stop_codon))) |>
             Biostrings::translate(genetic.code = gc, if.fuzzy.codon = "solve") |>
             as.character()
         )
       } else NA_character_
     ) |>
     dplyr::ungroup() |>
-    dplyr::select(-.cds)
+    dplyr::select(-.cds, -.cs)
   if (added) out$codon_start <- NULL
   out
 }
