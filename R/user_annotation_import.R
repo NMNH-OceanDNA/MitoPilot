@@ -426,11 +426,12 @@ guess_gene <- function(raw_name, feature_type, raw_product = NA, raw_note = NA) 
   raw_note <- rep_len(as.character(raw_note), n)
   mt <- rep_len(.gff_type_to_mito(feature_type), n)
   hit <- function(p, x = list(raw_name, raw_product, raw_note)) {
-    Reduce(`|`, lapply(x, grepl, pattern = p, ignore.case = TRUE, perl = TRUE))
+    Reduce(`|`, lapply(lapply(x, trimws), grepl, pattern = p, ignore.case = TRUE, perl = TRUE))
   }
-  cr_re <- paste0("control region|d-loop|d loop|displacement loop|",
-                  "^(D[-_ ]?loop|CR|OH|control[ _]region|rep_origin)$")
+  cr_re <- paste0("^(putative |partial )?",
+                  "(control[ _]region|d[-_ ]?loop|displacement loop|CR|OH|rep_origin)$")
   cr <- mt %in% "ctrl"
+  dl <- tolower(rep_len(as.character(feature_type), n)) %in% c("d_loop", "d-loop")
   ol <- hit("L-strand|light[- ]strand|\\bOL\\b|origin of L")
   mt[cr] <- NA_character_
   one <- function(nm, pr, ty) {
@@ -451,8 +452,8 @@ guess_gene <- function(raw_name, feature_type, raw_product = NA, raw_note = NA) 
   gene <- as.character(gene)
   keep <- !is.na(gene) & gene %in% MITO_GENE_CHOICES
   gene[!keep | cr] <- NA_character_
-  ctrl <- !ol & (cr | hit(cr_re, list(raw_name)) |
-                   (is.na(gene) & hit(cr_re, list(raw_product, raw_note))))
+  ctrl <- dl | (!ol & (cr | hit(cr_re, list(raw_name)) |
+                         (is.na(gene) & hit(cr_re, list(raw_product, raw_note)))))
   gene[ctrl] <- "ctrl"
   type <- vapply(gene, function(g) if (is.na(g)) NA_character_ else if (g == "ctrl") "ctrl" else
     mito_gene_type(g), character(1), USE.NAMES = FALSE)

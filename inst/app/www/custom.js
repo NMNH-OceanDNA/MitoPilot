@@ -382,7 +382,9 @@ window.mpGN = {
     var f = {};
     try { Reactable.getState(tbl).filters.forEach(function(x) { f[x.id] = x.value; }); } catch (e) { return; }
     document.querySelectorAll('.mp-gn-chip[data-tbl="' + tbl + '"]').forEach(function(el) {
-      el.classList.toggle('active', el.dataset.v === (f.status || ''));
+      var on = el.dataset.v === (f.status || '');
+      el.classList.toggle('active', on);
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     document.querySelectorAll('select.mp-gn-filter[data-tbl="' + tbl + '"]').forEach(function(el) {
       el.value = f[el.dataset.col] || '';

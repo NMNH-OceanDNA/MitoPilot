@@ -8,9 +8,9 @@ annot_import_blocks_run <- function(session) {
 #' @noRd
 annot_import_notice <- function(con) {
   if (user_annot_confirmed(con)) return(NULL)
-  n <- DBI::dbGetQuery(con, "SELECT SUM(gene IS NULL) AS u, COUNT(*) AS t FROM gene_name_map")
+  n <- annot_import_counts(con)
   sprintf("Gene names not confirmed: %d unmapped of %d. Pipeline runs are blocked.",
-          as.integer(n$u %|NA|% 0L), as.integer(n$t))
+          n$unmapped, n$all)
 }
 
 #' Status chip counts for the gene-name review
@@ -146,7 +146,6 @@ annot_import_server <- function(id) {
     bump <- function() ver(isolate(ver()) + 1L)
     cver <- reactiveVal(0L)
     keys <- NULL
-    indexed <- FALSE
 
     output$tbl <- reactable::renderReactable({
       ver()
@@ -202,11 +201,6 @@ annot_import_server <- function(id) {
     observeEvent(input$open, {
       e <- input$open
       con <- session$userData$con
-      if (!indexed) {
-        DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_user_annotations_name
-                             ON user_annotations(raw_name, feature_type)")
-        indexed <<- TRUE
-      }
       s <- gene_name_map_samples(con, e$raw_name, e$feature_type)
       session$sendCustomMessage("mp-gn-detail", list(id = e$id, html = as.character(annot_import_detail(s))))
     })

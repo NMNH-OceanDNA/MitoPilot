@@ -59,6 +59,12 @@ test_that("guess_gene is vectorised", {
                     "control region"))
   expect_equal(r$gene, c("trnP", "nad5", "cox1", "ctrl", "ctrl"))
   expect_equal(guess_gene("YP_1", "CDS", "D-loop adjacent cytochrome b")$gene, "cob")
+  r <- guess_gene(c(NA, NA, NA, "D-loop"),
+                  c("repeat_region", "misc_feature", "D-loop", "misc_feature"), NA,
+                  c("tandem repeats in control region", "conserved sequence block in control region",
+                    "contains L-strand promoter", "contains L-strand promoter"))
+  expect_equal(r$gene, c(NA, NA, "ctrl", NA))
+  expect_equal(guess_gene("CSB in control region", "misc_feature")$gene, NA_character_)
 })
 
 test_that("parse_anticodon", {

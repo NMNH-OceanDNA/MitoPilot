@@ -71,6 +71,9 @@ test_that("annot_import_notice reports unmapped counts until confirmed", {
   withr::defer(DBI::dbDisconnect(con))
   expect_equal(annot_import_notice(con),
                "Gene names not confirmed: 1 unmapped of 2. Pipeline runs are blocked.")
+  set_gene_name_map(con, "ORF1", "CDS", "(drop)")
+  expect_equal(annot_import_notice(con),
+               "Gene names not confirmed: 0 unmapped of 2. Pipeline runs are blocked.")
   confirm_user_annotations(con, td)
   expect_null(annot_import_notice(con))
 })
@@ -170,9 +173,18 @@ test_that("annot_import pick works for BED names", {
   td <- ua_app_project2(withr::local_tempdir())
   con <- DBI::dbConnect(RSQLite::SQLite(), file.path(td, ".sqlite"))
   withr::defer(DBI::dbDisconnect(con))
-  shiny::testServer(annot_import_server, args = list(id = "x"), session = ua_app_session(con, td), {
-    expect_true("mystery" %in% jsonlite::fromJSON(output$tbl)$x$tag$attribs$data$raw_name)
+  sent <- NULL
+  ms <- ua_app_session(con, td)
+  ms$sendCustomMessage <- function(type, message) if (type == "mp-gn-data") sent <<- message
+  shiny::testServer(annot_import_server, args = list(id = "x"), session = ms, {
+    before <- jsonlite::fromJSON(output$tbl)$x$tag$attribs$data
+    expect_true("mystery" %in% before$raw_name)
     session$setInputs(pick = list(raw_name = "mystery", feature_type = "", gene = "trnF"))
+    expect_equal(sent$tbl, "x-tbl")
+    expect_equal(paste(sent$data$raw_name, sent$data$feature_type),
+                 paste(before$raw_name, before$feature_type))
+    expect_false(identical(as.character(sent$data$raw_name), annot_import_data(con)$raw_name))
+    expect_equal(as.character(sent$data$status[sent$data$raw_name == "mystery"]), "edited")
     gm <- DBI::dbGetQuery(con, "SELECT gene, manual FROM gene_name_map WHERE raw_name = 'mystery'")
     expect_equal(gm$gene, "trnF")
     expect_equal(gm$manual, 1L)
@@ -199,15 +211,14 @@ test_that("unnamed rows get a label and the table builds without detail queries"
   expect_equal(d$raw_name[d$label == "(unnamed BED feature)"], "")
 })
 
-test_that("annot_import open sends a detail table and adds the name index", {
+test_that("annot_import open sends a detail table; new projects have the name index", {
   testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
   td <- ua_app_project2(withr::local_tempdir())
   con <- DBI::dbConnect(RSQLite::SQLite(), file.path(td, ".sqlite"))
   withr::defer(DBI::dbDisconnect(con))
-  DBI::dbExecute(con, "DROP INDEX IF EXISTS idx_user_annotations_name")
-  idx <- function() DBI::dbGetQuery(con, "SELECT name FROM sqlite_master WHERE type = 'index'
-                                          AND name = 'idx_user_annotations_name'")$name
-  expect_length(idx(), 0)
+  expect_equal(DBI::dbGetQuery(con, "SELECT name FROM sqlite_master WHERE type = 'index'
+                                     AND name = 'idx_user_annotations_name'")$name,
+               "idx_user_annotations_name")
   sent <- NULL
   ms <- ua_app_session(con, td)
   ms$sendCustomMessage <- function(type, message) if (type == "mp-gn-detail") sent <<- message
@@ -216,7 +227,6 @@ test_that("annot_import open sends a detail table and adds the name index", {
     expect_equal(sent$id, "x-tbl-d-3")
     expect_match(sent$html, "<table", fixed = TRUE)
     expect_equal(lengths(regmatches(sent$html, gregexpr("UA_LINEAR", sent$html))), 2L)
-    expect_equal(idx(), "idx_user_annotations_name")
   })
   expect_match(as.character(annot_import_detail(gene_name_map_samples(con, "COX1", ""))), "UA_CIRCULAR",
                fixed = TRUE)

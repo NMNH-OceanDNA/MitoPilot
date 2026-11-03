@@ -383,7 +383,12 @@ Copies of the original files are kept in `<project>/user_annotations/raw/`.
 When you launch the app, an "Imported gene names" window lists every raw name
 with its mapping. Fix any wrong guesses, then press Confirm. The "Gene names"
 button in the toolbar reopens the window, and pipeline runs (Update) are blocked
-until you confirm. Control-region names (D-loop, control region, OH) import as
+until you confirm; while they are blocked, the app header shows a notice with a
+Review button that reopens the window. The table has status chips (All,
+Unmapped, Edited, Auto), a search box, and per-column filters, and each row
+expands to show the samples and features that carry that name. Rows you edit,
+including deliberate drops, count as Edited and leave the Unmapped view.
+Control-region names (D-loop, control region, OH) import as
 MitoPilot's control region feature (`ctrl`, exported as `D-loop`). Names that
 cannot be mapped, such as ORFs or the light-strand origin (OL), are dropped,
 and the window shows how many. If you edit the mapping after
