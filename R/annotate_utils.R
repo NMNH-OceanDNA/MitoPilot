@@ -751,6 +751,23 @@ join_group_id <- function(notes) {
   )
 }
 
+#' TRUE for rows carrying a JOIN marker
+#'
+#' @param notes character vector of notes
+#' @noRd
+is_join_member <- function(notes) {
+  !is.na(join_group_id(notes))
+}
+
+#' Spliced translation a JOIN group is BLASTed with in curation
+#'
+#' @inheritParams splice_join_cds
+#' @return character scalar
+#' @noRd
+group_refhits_translation <- function(members, seq, genetic_code) {
+  splice_join_cds(members, seq, genetic_code)$translation
+}
+
 #' Next unused join-group id for a set of annotations
 #'
 #' Join groups are tagged in the `notes` field with a `JOIN: mode=... group=N`

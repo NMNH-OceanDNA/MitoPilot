@@ -129,3 +129,25 @@ test_that("join_group_id parses JOIN markers", {
     c(3L, 12L, NA, NA)
   )
 })
+
+test_that("circular JOIN group: gap tie keeps the lower member 5'", {
+  out <- run_partial(dplyr::bind_rows(
+    prow("nad5", "PCG", 100, 300, contig = "C.1.1", start_codon = "CTG", stop_codon = "AAA",
+         notes = "JOIN: mode=exon group=1"),
+    prow("nad5", "PCG", 600, 800, contig = "C.1.1", start_codon = "CTG", stop_codon = "AAA",
+         notes = "JOIN: mode=exon group=1")
+  ))
+  expect_equal(out$partial_start, c(1L, 0L))
+  expect_equal(out$partial_stop, c(0L, 1L))
+})
+
+test_that("circular JOIN group: overlapping members keep the lower member 5'", {
+  out <- run_partial(dplyr::bind_rows(
+    prow("nad5", "PCG", 100, 300, contig = "C.1.1", start_codon = "CTG", stop_codon = "AAA",
+         notes = "JOIN: mode=frameshift group=1"),
+    prow("nad5", "PCG", 299, 500, contig = "C.1.1", start_codon = "CTG", stop_codon = "AAA",
+         notes = "JOIN: mode=frameshift group=1")
+  ))
+  expect_equal(out$partial_start, c(1L, 0L))
+  expect_equal(out$partial_stop, c(0L, 1L))
+})

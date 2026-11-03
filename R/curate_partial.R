@@ -51,12 +51,16 @@ assess_partial_ends <- function(annotations, assembly, contig_key, rules) {
   for (g in unique(stats::na.omit(grp))) {
     m <- which(grp == g)
     # order members along the plus strand; on a circular contig the feature
-    # starts after the largest gap between members
+    # starts after the largest gap between members (ties: no rotation)
     ord <- m[order(p1[m])]
-    if (circ[m[1]] && length(ord) > 1L) {
-      gaps <- (p1[c(ord[-1], ord[1])] - p2[ord]) %% len[m[1]]
-      first <- which.max(gaps) %% length(ord) + 1L
-      ord <- ord[c(first:length(ord), seq_len(first - 1L))]
+    k <- length(ord)
+    if (circ[m[1]] && k > 1L) {
+      inner <- pmax(p1[ord[-1]] - p2[ord[-k]], 0)
+      closing <- (p1[ord[1]] - p2[ord[k]]) %% len[m[1]]
+      if (max(inner) > closing) {
+        first <- which.max(inner) + 1L
+        ord <- ord[c(first:k, seq_len(first - 1L))]
+      }
     }
     five <- if (plus[m[1]]) ord[1] else ord[length(ord)]
     three <- if (plus[m[1]]) ord[length(ord)] else ord[1]
