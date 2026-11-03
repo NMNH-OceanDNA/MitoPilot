@@ -68,6 +68,8 @@ new_db_userAnnot <- function(
       PRIMARY KEY (raw_name, feature_type)
     );"
   )
+  DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_user_annotations_name
+                       ON user_annotations(raw_name, feature_type)")
   imp <- import_user_annotations(con, mapping, assembly_path, annotation_path, mapping_id)
   DBI::dbExecute(
     con,

@@ -181,6 +181,47 @@ test_that("annot_import pick works for BED names", {
   })
 })
 
+test_that("unnamed rows get a label and the table builds without detail queries", {
+  testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
+  td <- ua_app_project2(withr::local_tempdir())
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(td, ".sqlite"))
+  withr::defer(DBI::dbDisconnect(con))
+  DBI::dbExecute(con, "UPDATE user_annotations SET raw_name = '' WHERE raw_name = 'mystery'")
+  DBI::dbExecute(con, "UPDATE gene_name_map SET raw_name = '' WHERE raw_name = 'mystery'")
+  DBI::dbExecute(con, "INSERT INTO gene_name_map (raw_name, feature_type, n_samples, n_features)
+                       VALUES ('', 'D-loop', 1, 1)")
+  testthat::local_mocked_bindings(gene_name_map_samples = function(...) stop("eager detail query"))
+  html <- as.character(htmltools::as.tags(annot_import_table(con, shiny::NS("x"))))
+  expect_match(html, "(unnamed BED feature)", fixed = TRUE)
+  expect_match(html, "(unnamed D-loop)", fixed = TRUE)
+  expect_match(html, "mpGN.detail", fixed = TRUE)
+  d <- annot_import_data(con)
+  expect_equal(d$raw_name[d$label == "(unnamed BED feature)"], "")
+})
+
+test_that("annot_import open sends a detail table and adds the name index", {
+  testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
+  td <- ua_app_project2(withr::local_tempdir())
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(td, ".sqlite"))
+  withr::defer(DBI::dbDisconnect(con))
+  DBI::dbExecute(con, "DROP INDEX IF EXISTS idx_user_annotations_name")
+  idx <- function() DBI::dbGetQuery(con, "SELECT name FROM sqlite_master WHERE type = 'index'
+                                          AND name = 'idx_user_annotations_name'")$name
+  expect_length(idx(), 0)
+  sent <- NULL
+  ms <- ua_app_session(con, td)
+  ms$sendCustomMessage <- function(type, message) if (type == "mp-gn-detail") sent <<- message
+  shiny::testServer(annot_import_server, args = list(id = "x"), session = ms, {
+    session$setInputs(open = list(raw_name = "COX1", feature_type = "CDS", id = "x-tbl-d-3"))
+    expect_equal(sent$id, "x-tbl-d-3")
+    expect_match(sent$html, "<table", fixed = TRUE)
+    expect_equal(lengths(regmatches(sent$html, gregexpr("UA_LINEAR", sent$html))), 2L)
+    expect_equal(idx(), "idx_user_annotations_name")
+  })
+  expect_match(as.character(annot_import_detail(gene_name_map_samples(con, "COX1", ""))), "UA_CIRCULAR",
+               fixed = TRUE)
+})
+
 test_that(".ua_note_name cuts long notes at a word boundary", {
   expect_equal(.ua_note_name("  short note "), "short note")
   long <- "putative control region with tandem repeats and a long tail"

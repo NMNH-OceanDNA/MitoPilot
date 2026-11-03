@@ -37,16 +37,18 @@ annot_import_data <- function(con, keys = NULL) {
   }
   ext <- tolower(tools::file_ext(ua$source_file))
   ftype <- dplyr::coalesce(c(gff3 = "GFF3", gff = "GFF3", bed = "BED", tbl = "TBL")[ext], toupper(ext))
+  label <- ifelse(nzchar(gm$raw_name), gm$raw_name,
+                  sprintf("(unnamed %s)", ifelse(nzchar(gm$feature_type), gm$feature_type, "BED feature")))
   stem <- sub("\\.\\.\\.$", "", gm$raw_name)
   full <- vapply(split(ua$note, ku), function(v) v[!is.na(v)][1] %|NA|% "", "")
-  full <- ifelse(endsWith(gm$raw_name, "...") & startsWith(full, stem), full, gm$raw_name)
+  full <- ifelse(endsWith(gm$raw_name, "...") & startsWith(full, stem), full, label)
   status <- ifelse(gm$manual %in% 1L, "edited", ifelse(is.na(gm$gene), "unmapped", "auto"))
   cls <- vapply(gm$gene, function(g) if (is.na(g)) "none" else if (g == "ctrl") "ctrl" else mito_gene_type(g), "")
-  d <- data.frame(raw_name = gm$raw_name, title = full, ftype = unname(agg(ftype, "/")), class = unname(cls),
+  d <- data.frame(label = label, raw_name = gm$raw_name, title = full, ftype = unname(agg(ftype, "/")), class = unname(cls),
                   ids = unname(agg(ua$ID, ", ")), n_samples = gm$n_samples, n_features = gm$n_features,
                   gene = gm$gene, status = status, feature_type = gm$feature_type)
   o <- if (is.null(keys)) {
-    order(match(status, c("unmapped", "edited", "auto")), tolower(d$raw_name), d$feature_type)
+    order(match(status, c("unmapped", "edited", "auto")), tolower(d$label), d$feature_type)
   } else {
     match(keys, k)
   }
@@ -70,37 +72,18 @@ annot_import_table <- function(con, ns, d = annot_import_data(con)) {
     return String(r.values[id]).split('/').indexOf(v) >= 0; }); }")
   opts <- c("(drop)", MITO_IMPORT_GENE_CHOICES)
   opts <- jsonlite::toJSON(unname(Map(c, opts, ifelse(opts == "ctrl", "ctrl (control region)", opts))))
-  yes <- function(v) if (v %in% 1L) "yes" else ""
-  details <- function(i) {
-    s <- gene_name_map_samples(con, d$raw_name[i], d$feature_type[i])
-    div(class = "mp-gn-detail", reactable::reactable(
-      s, compact = TRUE, pagination = FALSE, striped = TRUE, height = if (nrow(s) > 6) 200,
-      columns = list(
-        ID = reactable::colDef(name = "Sample", minWidth = 100),
-        feature_type = reactable::colDef(name = "Type", width = 80),
-        n_features = reactable::colDef(name = "Features", width = 80),
-        pos1 = reactable::colDef(name = "Start", width = 60),
-        pos2 = reactable::colDef(name = "End", width = 60),
-        direction = reactable::colDef(name = "Strand", width = 65),
-        partial_start = reactable::colDef(name = "5' part.", width = 65, cell = yes),
-        partial_stop = reactable::colDef(name = "3' part.", width = 65, cell = yes),
-        codon_start = reactable::colDef(name = "Codon", width = 65),
-        segment_group = reactable::colDef(name = "Seg.", width = 50),
-        pseudo = reactable::colDef(name = "Pseudo", width = 70, cell = yes),
-        note = reactable::colDef(name = "Note", minWidth = 120, html = TRUE, cell = rt_longtext()),
-        source_file = reactable::colDef(name = "File", minWidth = 100)
-      )
-    ))
-  }
   first <- if (any(d$status == "unmapped")) "unmapped" else ""
   reactable::reactable(
     d, compact = TRUE, pagination = FALSE, height = 420, searchable = TRUE, striped = TRUE,
-    resizable = TRUE, onClick = "expand", class = "mp-gn-tbl", details = details,
+    resizable = TRUE, onClick = "expand", class = "mp-gn-tbl",
+    details = reactable::colDef(html = TRUE, details = js(sprintf(
+      "function(ri) { return mpGN.detail(ri, '%s', '%s'); }", tbl, ns("open")))),
     columns = list(
-      raw_name = reactable::colDef(
+      label = reactable::colDef(
         name = "Raw name", width = 220, filterable = TRUE, html = TRUE,
-        cell = js("function(ci) { return '<abbr class=\"mp-abbr\" title=\"' + mpGN.esc(ci.row.title) +
-          '\">' + mpGN.esc(ci.value) + '</abbr>'; }")),
+        cell = js("function(ci) { var v = mpGN.esc(ci.value); return ci.row.title === ci.value ? v :
+          '<abbr class=\"mp-abbr\" title=\"' + mpGN.esc(ci.row.title) + '\">' + v + '</abbr>'; }")),
+      raw_name = reactable::colDef(show = FALSE),
       title = reactable::colDef(show = FALSE),
       ftype = reactable::colDef(name = "File type", width = 90, filterable = TRUE, filterMethod = exact,
                                 filterInput = sel_filter("ftype", c("GFF3", "BED", "TBL"))),
@@ -115,12 +98,28 @@ annot_import_table <- function(con, ns, d = annot_import_data(con)) {
                                cell = js(sprintf("function(ci) { return mpGN.select(ci, '%s', %s); }",
                                                  ns("pick"), opts))),
       status = reactable::colDef(
-        name = "Status", width = 100, html = TRUE, filterable = TRUE, filterMethod = exact,
+        name = "Status", width = 115, html = TRUE, filterable = TRUE, filterMethod = exact,
         filterInput = sel_filter("status", c("unmapped", "edited", "auto")),
         cell = rt_pill(c(auto = "success", edited = "info", unmapped = "warning"))),
       feature_type = reactable::colDef(show = FALSE)
     )
   ) |> htmlwidgets::onRender(sprintf("function() { mpGN.init('%s', '%s'); }", tbl, first))
+}
+
+#' Detail panel for one imported name: every feature carrying it
+#' @noRd
+annot_import_detail <- function(s) {
+  yes <- function(v) ifelse(v %in% 1L, "yes", "")
+  cols <- list(Sample = s$ID, Type = s$feature_type, Features = s$n_features, Start = s$pos1,
+               End = s$pos2, Strand = s$direction, `5' partial` = yes(s$partial_start),
+               `3' partial` = yes(s$partial_stop), Codon = s$codon_start, Segment = s$segment_group,
+               Pseudogene = yes(s$pseudo), Note = s$note, File = s$source_file)
+  cols <- lapply(cols, function(x) dplyr::coalesce(as.character(x), ""))
+  tags$table(
+    class = "table table-condensed table-striped",
+    tags$thead(tags$tr(lapply(names(cols), tags$th))),
+    tags$tbody(lapply(seq_len(nrow(s)), function(i) tags$tr(lapply(cols, function(x) tags$td(x[i])))))
+  )
 }
 
 #' Status chips above the gene-name review table
@@ -147,6 +146,7 @@ annot_import_server <- function(id) {
     bump <- function() ver(isolate(ver()) + 1L)
     cver <- reactiveVal(0L)
     keys <- NULL
+    indexed <- FALSE
 
     output$tbl <- reactable::renderReactable({
       ver()
@@ -198,6 +198,17 @@ annot_import_server <- function(id) {
         tbl = ns("tbl"), data = lapply(annot_import_data(session$userData$con, keys), I)))
       cver(isolate(cver()) + 1L)
       trigger("annot_import_state")
+    })
+    observeEvent(input$open, {
+      e <- input$open
+      con <- session$userData$con
+      if (!indexed) {
+        DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_user_annotations_name
+                             ON user_annotations(raw_name, feature_type)")
+        indexed <<- TRUE
+      }
+      s <- gene_name_map_samples(con, e$raw_name, e$feature_type)
+      session$sendCustomMessage("mp-gn-detail", list(id = e$id, html = as.character(annot_import_detail(s))))
     })
     observeEvent(input$reset, {
       reset_gene_name_map(session$userData$con)

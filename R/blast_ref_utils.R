@@ -1043,7 +1043,8 @@ normalize_pcg <- function(n, product = NA_character_) {
     # share one reference DB + ruleset rule.
     "dpo"="dpo", "polb"="dpo", "dnapolymerase"="dpo", "dnapolymeraseb"="dpo",
     "dnapolymerasetypeb"="dpo", "dnab"="dpo", "dnahelicase"="dpo",
-    "replicationhelicasesubunit"="dpo"
+    "replicationhelicasesubunit"="dpo",
+    "msh1"="msh1", "muts"="msh1", "mutshomolog"="msh1", "mismatchrepairprotein"="msh1"
   )
 
   key <- tolower(trimws(n))
@@ -1108,6 +1109,10 @@ pcg_from_product <- function(product) {
   if (length(m) > 0 && nchar(m) > 0) {
     sub_id <- regmatches(m, regexpr("[0-9]+$", m, perl = TRUE))
     return(paste0("atp", sub_id))
+  }
+
+  if (grepl("\\bmuts\\b|mismatch[^a-z0-9]*(?:dna[^a-z0-9]*)?repair", p, perl = TRUE)) {
+    return("msh1")
   }
 
   NA_character_

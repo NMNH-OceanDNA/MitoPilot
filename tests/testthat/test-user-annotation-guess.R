@@ -37,6 +37,11 @@ test_that("guess_gene maps names", {
   chk("x1", "origin_of_replication", NA, "ctrl", "ctrl")
   chk("OL", "rep_origin", NA, NA_character_, NA_character_)
   chk("tandem repeat", "misc_feature", NA, NA_character_, NA_character_)
+  chk("MutS", "CDS", NA, "msh1", "PCG")
+  chk("mutS", "gene", NA, "msh1", "PCG")
+  chk("MutS gene", "CDS", NA, "msh1", "PCG")
+  chk("MutS homolog", "CDS", NA, "msh1", "PCG")
+  chk("YP_x", "CDS", "MutS mismatch DNA repair protein", "msh1", "PCG")
   chk("ORF1", "CDS", NA, NA_character_, NA_character_)
 })
 

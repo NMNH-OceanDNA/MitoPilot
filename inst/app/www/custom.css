@@ -1046,9 +1046,9 @@ a.mp-link:focus-visible {
 .mp-gn-chip.active { background: var(--mp-primary-soft); border-color: var(--mp-primary); font-weight: 600;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12); }
 .mp-gn-tbl select.form-control { height: 26px; padding: 2px 6px; }
-.mp-gn-detail { padding: 6px 8px 8px 32px; background: var(--mp-surface); }
-/* nested detail headers are sticky too; keep the outer header on top */
-.mp-gn-tbl > .rt-table > .rt-thead { z-index: 3; }
+.mp-gn-detail { padding: 6px 8px 8px 32px; background: var(--mp-surface); max-height: 200px; overflow: auto; }
+.mp-gn-detail .table { margin: 0; font-size: 0.92em; }
+.mp-gn-detail th { position: sticky; top: 0; background: var(--mp-surface); white-space: nowrap; }
 
 /* negative margins keep the logo from growing the line, which shifts the box */
 .nmnh-logo {

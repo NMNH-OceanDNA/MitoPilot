@@ -366,7 +366,7 @@ window.mpGN = {
   select: function(ci, input, opts) {
     var e = mpGN.esc, cur = ci.value === null || ci.value === undefined ? '(drop)' : String(ci.value);
     if (!opts.some(function(o) { return o[0] === cur; })) opts = opts.concat([[cur, cur]]);
-    return '<select class="form-control input-sm" aria-label="Gene for ' + e(ci.row.raw_name) +
+    return '<select class="form-control input-sm" aria-label="Gene for ' + e(ci.row.label) +
       '" data-input="' + input + '" data-raw="' + e(ci.row.raw_name) + '" data-ft="' + e(ci.row.feature_type) +
       '" onclick="event.stopPropagation()" onchange="mpGN.pick(this)">' +
       opts.map(function(o) {
@@ -388,14 +388,31 @@ window.mpGN = {
       el.value = f[el.dataset.col] || '';
     });
   },
+  cache: {},
+  detail: function(ri, tbl, input) {
+    var id = tbl + '-d-' + ri.index;
+    if (mpGN.cache[id]) return '<div class="mp-gn-detail" id="' + id + '">' + mpGN.cache[id] + '</div>';
+    var r = ri.values || ri.row;
+    setTimeout(function() {
+      Shiny.setInputValue(input, { raw_name: r.raw_name, feature_type: r.feature_type, id: id }, { priority: 'event' });
+    }, 0);
+    return '<div class="mp-gn-detail" id="' + id + '"><span class="text-muted">Loading...</span></div>';
+  },
   init: function(tbl, v) {
+    Object.keys(mpGN.cache).forEach(function(k) { if (k.indexOf(tbl + '-d-') === 0) delete mpGN.cache[k]; });
     mpMV.whenReady(tbl, function() {
       if (v) Reactable.setFilter(tbl, 'status', v);
-      Reactable.onStateChange(tbl, function() { mpGN.mark(tbl); });
+      if (mpGN[tbl]) mpGN[tbl]();
+      mpGN[tbl] = Reactable.onStateChange(tbl, function() { mpGN.mark(tbl); });
       mpGN.mark(tbl);
     });
   }
 };
 $(document).ready(function() {
   Shiny.addCustomMessageHandler('mp-gn-data', function(m) { Reactable.setData(m.tbl, m.data); });
+  Shiny.addCustomMessageHandler('mp-gn-detail', function(m) {
+    mpGN.cache[m.id] = m.html;
+    var el = document.getElementById(m.id);
+    if (el) el.innerHTML = m.html;
+  });
 });
