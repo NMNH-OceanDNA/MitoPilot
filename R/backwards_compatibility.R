@@ -2280,6 +2280,17 @@ is_user_asmb <- function(con) {
   ))
 }
 
+#' Is this a user-annotation project (imported annotation files)?
+#'
+#' @param con An open connection to a project database.
+#' @noRd
+is_user_annot <- function(con) {
+  isTRUE(tryCatch(
+    "gene_name_map" %in% DBI::dbListTables(con),
+    error = function(e) FALSE
+  ))
+}
+
 #' Landmarks of the current project schema that an older database will lack.
 #'
 #' Returns a character vector of plain-language gaps, empty when the database is

@@ -135,6 +135,7 @@ reference:
   - MitoPilot
   - new_project
   - new_project_userAsmb
+  - new_project_userAnnot
   - new_test_project
   - new_test_project_userAsmb
 
@@ -144,6 +145,7 @@ reference:
   contents:
   - new_db
   - new_db_userAsmb
+  - new_db_userAnnot
   - add_samples
   - update_sample_metadata
   - fetch_geome
