@@ -31,7 +31,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   kv <- trimws(strsplit(s, ";", fixed = TRUE)[[1]])
   kv <- kv[nzchar(kv)]
   val <- ifelse(grepl("=", kv, fixed = TRUE), sub("^[^=]*=", "", kv), "")
-  dec <- function(x) vapply(x, utils::URLdecode, character(1), USE.NAMES = FALSE)
+  dec <- function(x) vapply(gsub("%(?![0-9A-Fa-f]{2})", "%25", x, perl = TRUE),
+                            utils::URLdecode, character(1), USE.NAMES = FALSE)
   stats::setNames(dec(val), dec(sub("=.*$", "", kv)))
 }
 
@@ -96,7 +97,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
 }
 
 .ua_empty <- function() {
-  tibble::tibble(
+  dplyr::tibble(
     seqid = character(), feature_type = character(), raw_name = character(),
     raw_product = character(), pos1 = integer(), pos2 = integer(),
     direction = character(), anticodon_raw = character(),
@@ -156,7 +157,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
       m <- stringr::str_match(f$raw_name, "\\(([acgtuACGTU]{3})\\)$|-([ACGTU]{3})$")
       ac <- dplyr::coalesce(m[, 2], m[, 3])
     }
-    tibble::tibble(
+    dplyr::tibble(
       seqid = seqid, feature_type = as.character(f$type), raw_name = f$raw_name,
       raw_product = f$raw_product, pos1 = as.integer(s$pos1), pos2 = as.integer(s$pos2),
       direction = f$direction, anticodon_raw = ac,
@@ -254,7 +255,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
     .ua_feat(
       type = if (lt[i] == "pseudogene") "CDS" else cols[i, 3],
       raw_name = nm,
-      segs = data.frame(pos1 = start[ix], pos2 = end[ix], phase = cols[ix, 8]),
+      segs = data.frame(pos1 = start[ix], phase = cols[ix, 8], pos2 = if (is.null(contig_length))
+        end[ix] else ifelse(end[ix] > contig_length, end[ix] - contig_length, end[ix])),
       direction = if (minus) "-" else "+",
       raw_product = get1("product"),
       anticodon_raw = get1("anticodon"),
@@ -304,7 +306,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   .ua_finish(feats, seqid, NULL, .ua_count(character(0)), NA)
 }
 
-.ua_tbl_keep <- c("gene", "CDS", "tRNA", "rRNA", "D-loop", "misc_feature", "rep_origin")
+.ua_tbl_keep <- c("gene", "CDS", "tRNA", "rRNA", "D-loop", "misc_feature", "rep_origin",
+                  "origin_of_replication", "repeat_region")
 
 .ua_tbl_consumed <- c("gene", "product", "note", "anticodon", "codon_start", "pseudo",
                       "pseudogene", "exception", "ribosomal_slippage")
@@ -334,15 +337,19 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   }
 
   num <- function(x) as.integer(gsub("[<>]", "", x))
-  spans <- vapply(ft, function(f) paste(vapply(f$iv, function(v) {
-    paste(sort(num(v)), collapse = "-")
-  }, character(1)), collapse = ","), character(1))
+  ends <- vapply(ft, function(f) paste(num(f$iv[[1]][1]), num(f$iv[[length(f$iv)]][2])),
+                 character(1))
+  mark <- function(g, x) if (grepl("^[<>]", g) && !grepl("^[<>]", x)) paste0(substr(g, 1, 1), x) else x
   keys <- vapply(ft, `[[`, character(1), "key")
   drop <- !keys %in% .ua_tbl_keep
   for (i in which(keys == "gene" & seq_along(ft) < length(ft))) {
     j <- i + 1L
-    if (keys[j] %in% c("CDS", "tRNA", "rRNA") && spans[i] == spans[j]) {
+    if (keys[j] %in% c("CDS", "tRNA", "rRNA") && ends[i] == ends[j]) {
       drop[i] <- TRUE
+      gi <- ft[[i]]$iv
+      nj <- length(ft[[j]]$iv)
+      ft[[j]]$iv[[1]][1] <- mark(gi[[1]][1], ft[[j]]$iv[[1]][1])
+      ft[[j]]$iv[[nj]][2] <- mark(gi[[length(gi)]][2], ft[[j]]$iv[[nj]][2])
       if (!.ua_has(ft[[j]]$q, "gene") && .ua_has(ft[[i]]$q, "gene")) {
         ft[[j]]$q <- c(ft[[j]]$q, gene = .ua_get(ft[[i]]$q, "gene"))
       }
@@ -353,7 +360,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   feats <- lapply(ft[!drop], function(f) {
     q <- f$q
     iv <- f$iv
-    a <- num(iv[[1]])
+    d <- Filter(function(v) v[1] != v[2], lapply(iv, num))
     notes <- unname(q[names(q) == "note"])
     ac_note <- grepl("^anticodon:", notes)
     p5_note <- grepl("5' end not determined", notes, ignore.case = TRUE)
@@ -368,7 +375,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
         pos2 = vapply(iv, function(v) max(num(v)), integer(1)),
         phase = NA
       ),
-      direction = if (a[1] > a[2]) "-" else "+",
+      direction = if (length(d) && d[[1]][1] > d[[1]][2]) "-" else "+",
       raw_product = .ua_get(q, "product"),
       anticodon_raw = dplyr::coalesce(.ua_get(q, "anticodon"), notes[ac_note][1]),
       p5 = grepl("^[<>]", iv[[1]][1]) || any(p5_note),

@@ -16,3 +16,5 @@ chrM	geneious	CDS	9300	9599	.	+	0	ID=cds-orf1;Name=ORF1
 chrM	geneious	gene	9700	10655	.	+	.	ID=gene-nd1;Name=ND1
 chrM	geneious	CDS	9700	10655	.	+	0	ID=cds-nd1;Name=ND1
 chrM	geneious	misc_feature	15500	16399	.	+	.	ID=dloop;Name=D-loop
+chrM	geneious	tRNA	16450	16520	.	+	.	ID=trn-wrap;Name=trnP
+chrM	geneious	repeat_region	10700	10800	.	+	.	ID=rep1;Name=repeat;Note=50% identity

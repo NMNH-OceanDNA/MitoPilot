@@ -19,9 +19,8 @@
 3000	4544	CDS
 			product	 cytochrome c oxidase subunit 1
 			transl_table	 2
-4600	4800	gene
+4600	>4950	gene
 			gene	nad3
-4800	4950
 4600	4800	CDS
 4800	4950
 			product	 NADH dehydrogenase subunit 3
@@ -52,4 +51,11 @@
 16400	16500	CDS
 1	700
 			product	 cytochrome b
+			transl_table	 2
+1	1	gene
+			gene	nad5
+16500	16480
+1	1	CDS
+16500	16480
+			product	 NADH dehydrogenase subunit 5
 			transl_table	 2

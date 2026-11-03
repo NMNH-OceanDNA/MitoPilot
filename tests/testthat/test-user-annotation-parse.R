@@ -71,3 +71,23 @@ test_that("multiple seqids is an error", {
   writeLines(c("chrA\t.\tCDS\t1\t9\t.\t+\t.\tName=x", "chrB\t.\tCDS\t1\t9\t.\t+\t.\tName=y"), tmp)
   expect_error(parse_user_annotation(tmp), "seqid")
 })
+test_that("GFF3: literal % decodes, end past contig length wraps, extra kept types", {
+  x <- parse_user_annotation(test_path("fixtures/user_annot/messy.gff3"), contig_length = 16500)
+  expect_equal(x$note[x$feature_id %in% "rep1"], "50% identity")
+  expect_equal(c(x$pos1[x$raw_name == "trnP"], x$pos2[x$raw_name == "trnP"]), c(16450L, 20L))
+})
+test_that(".tbl: exported JOIN gene span collapses with partials; minus wrap keeps strand", {
+  x <- parse_user_annotation(test_path("fixtures/user_annot/mitopilot_export.tbl"), contig_length = 16500)
+  nad3 <- x[x$raw_name %in% "nad3", ]
+  expect_equal(nrow(nad3), 2L)
+  expect_equal(nad3$feature_type, c("CDS", "CDS"))
+  expect_equal(nad3$partial_stop, c(0L, 1L))
+  expect_equal(nad3$partial_start, c(0L, 0L))
+  nad5 <- x[x$raw_name %in% "nad5", ]
+  expect_equal(nrow(nad5), 1L)
+  expect_equal(nad5$direction, "-")
+  expect_equal(c(nad5$pos1, nad5$pos2), c(16480L, 1L))
+  tmp <- withr::local_tempfile(fileext = ".tbl")
+  writeLines(c(">Feature x", "1\t50\trepeat_region", "60\t70\torigin_of_replication"), tmp)
+  expect_equal(nrow(parse_user_annotation(tmp)), 2L)
+})
