@@ -128,6 +128,7 @@ app_server_userAsmb <- function(input, output, session) {
   session$userData$no_raw_data <- readLines(file.path(dirname(db), ".config")) |>
     stringr::str_detect("rawDir\\s*=\\s*['\"]NA['\"]") |>
     any()
+  session$userData$user_annot <- is_user_annot(session$userData$con)
   # Genetic code ----
   # Per-sample genetic codes live in samples.genetic_code (auto-selected from
   # each sample's curation ruleset) and drive translation. This project-level
@@ -146,7 +147,10 @@ app_server_userAsmb <- function(input, output, session) {
   # Orientation line: app, version, project (full path on hover), workflow, Help.
   output$app_header <- renderUI(mp_app_header(
     session$userData$dir,
-    badge = if (isTRUE(session$userData$no_raw_data)) "User assemblies, no reads" else "User assemblies"
+    badge = paste0(
+      if (isTRUE(session$userData$user_annot)) "User assemblies + annotations" else "User assemblies",
+      if (isTRUE(session$userData$no_raw_data)) ", no reads"
+    )
   ))
 
 
@@ -220,4 +224,11 @@ app_server_userAsmb <- function(input, output, session) {
   export_server("export")
   workdir_browser_server("workdir_browser")
   run_reports_server("run_reports")
+  if (isTRUE(session$userData$user_annot)) {
+    annot_import_server("annot_import")
+    shinyjs::show("gene_names")
+    shinyjs::show("gene_names_annot")
+    observeEvent(input$gene_names, trigger("annot_import"))
+    observeEvent(input$gene_names_annot, trigger("annot_import"))
+  }
 }
