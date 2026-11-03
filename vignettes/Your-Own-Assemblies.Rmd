@@ -393,10 +393,15 @@ joining are not available for this project type, because circularizing would
 shift the coordinates of your annotation. Coverage trimming and start-gene
 rotation are off by default.
 
-**What is carried over.** Partial ends, reading frame (`codon_start`),
-pseudogenes, ribosomal slippage and introns (as JOIN groups), notes, and
-anticodons are kept. Anything else in the file is stored as-is in the project
-database.
+**What is carried over.** Partial ends, reading frame (`codon_start`), and
+anticodons are kept. Pseudogenes are kept and get the note `import: pseudogene`;
+free-text notes from the file become `import: <note>` on the feature. Introns
+and ribosomal slippage become MitoPilot join groups, and the feature-table
+export writes the `ribosomal_slippage` and `exception` qualifiers back.
+`transl_except` is not stored: MitoPilot derives it from the shortened stop
+codon the coordinates give, and export regenerates it. Every other attribute or
+qualifier is kept verbatim per feature in the project database table
+`user_annotations` (column `attrs`).
 
 **Round trip.** A `.tbl` exported from MitoPilot can be imported again with
 this function.
