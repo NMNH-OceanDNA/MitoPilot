@@ -1,0 +1,55 @@
+>Feature UA_CIRCULAR.1.1
+1	69	gene
+			gene	trnF
+1	69	tRNA
+			product	 tRNA-Phe
+			note	 anticodon:gaa
+70	1023	gene
+			gene	rrn12
+70	1023	rRNA
+			product	 12S ribosomal RNA
+<2000	2955	gene
+			gene	nad1
+<2000	2955	CDS
+			product	 NADH dehydrogenase subunit 1
+			transl_table	 2
+			codon_start	 2
+3000	4544	gene
+			gene	cox1
+3000	4544	CDS
+			product	 cytochrome c oxidase subunit 1
+			transl_table	 2
+4600	4800	gene
+			gene	nad3
+4800	4950
+4600	4800	CDS
+4800	4950
+			product	 NADH dehydrogenase subunit 3
+			transl_table	 2
+			ribosomal_slippage
+			exception	ribosomal slippage
+			note	-1 frameshift
+5000	6041	CDS
+			gene	nad2
+			product	 NADH dehydrogenase subunit 2
+			pseudo
+			note	frameshifted
+6100	>7000	gene
+			gene	rrn16
+6100	>7000	rRNA
+			product	 16S ribosomal RNA
+			note	3' end not determined
+7100	7200	gap
+			estimated_length	101
+14673	14149	gene
+			gene	nad6
+14673	14149	CDS
+			product	 NADH dehydrogenase subunit 6
+			transl_table	 2
+16400	16500	gene
+			gene	cob
+1	700
+16400	16500	CDS
+1	700
+			product	 cytochrome b
+			transl_table	 2

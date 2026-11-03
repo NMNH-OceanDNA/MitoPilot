@@ -1,0 +1,13 @@
+>Feature gb|NC_000001.1|
+1	69	tRNA
+			product	tRNA-Phe
+			anticodon	(pos:34..36,aa:Phe,seq:gaa)
+1100	2644	CDS
+			gene	COX1
+			product	cytochrome c oxidase subunit I
+			protein_id	gb|YP_000001.1|
+14673	>14149	CDS
+			gene	ND6
+			product	NADH dehydrogenase subunit 6
+15900	16500	misc_feature
+			note	control region
