@@ -164,7 +164,7 @@ test_that("shipped user annotation fixtures parse", {
     GB_NCBI = character(0), GB_TBL = character(0), GB_BED = character(0),
     GB_TYPOS = c("COX11", "NDH4K", "ATP88", "cytochrome oxidase subnit I", "tRNA-Xxx",
                  "rrnX", "hypothetical protein", "ORF123"),
-    GB_DROP = c("putative light strand origin of replicat", "tandem repeat"),
+    GB_DROP = c("putative light strand origin of...", "tandem repeat"),
     GB_MITOS = "OL")
   p <- list()
   for (i in seq_len(nrow(map))) {
