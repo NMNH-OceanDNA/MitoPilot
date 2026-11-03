@@ -737,6 +737,20 @@ guess_orf_gene <- function(refHits_json, threshold = ORF_ASSIGN_SIM_THRESHOLD) {
   )
 }
 
+#' JOIN group id from a `JOIN: mode=... group=N` notes marker
+#'
+#' @param notes character vector of notes
+#' @return integer vector, NA where there is no marker
+#' @noRd
+join_group_id <- function(notes) {
+  as.integer(
+    stringr::str_match(
+      dplyr::coalesce(as.character(notes), ""),
+      "^JOIN: mode=\\w+ group=(\\d+)"
+    )[, 2]
+  )
+}
+
 #' Next unused join-group id for a set of annotations
 #'
 #' Join groups are tagged in the `notes` field with a `JOIN: mode=... group=N`
@@ -748,12 +762,7 @@ guess_orf_gene <- function(refHits_json, threshold = ORF_ASSIGN_SIM_THRESHOLD) {
 #' @return integer group id, 1 when no join markers are present.
 #' @noRd
 next_join_group <- function(notes) {
-  grps <- as.integer(
-    stringr::str_match(
-      dplyr::coalesce(as.character(notes), ""),
-      "^JOIN: mode=\\w+ group=(\\d+)"
-    )[, 2]
-  )
+  grps <- join_group_id(notes)
   if (all(is.na(grps))) 1L else max(grps, na.rm = TRUE) + 1L
 }
 

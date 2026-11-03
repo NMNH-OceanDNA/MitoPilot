@@ -904,6 +904,8 @@ curate_mito_core <- function(
     }
   }
 
+  annotations <- assess_partial_ends(annotations, assembly, contig_key, rules)
+
   # End trimming ----
   # Remove un-annotated regions at the beginning or end of linear contigs
   if (isTRUE(feature_trim)) {
