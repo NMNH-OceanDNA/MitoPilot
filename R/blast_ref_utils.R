@@ -705,9 +705,15 @@ prepend_blast_hit_to_refhits <- function(annotations, blast_ref_file) {
     tryCatch(expr, error = function(e) NA_real_)
   }
 
+  # JOIN members score against the group's spliced protein
+  focal <- annotations$translation
+  if ("join_translation" %in% names(annotations)) {
+    focal <- dplyr::coalesce(as.character(annotations$join_translation), focal)
+  }
+
   # Update each PCG row's refHits
   annotations$refHits <- purrr::pmap_chr(
-    list(annotations$type, annotations$gene, annotations$translation, annotations$refHits),
+    list(annotations$type, annotations$gene, focal, annotations$refHits),
     function(type, gene, translation, refHits_json) {
       if (type != "PCG") return(refHits_json)
 

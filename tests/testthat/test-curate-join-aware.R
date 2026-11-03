@@ -78,3 +78,27 @@ test_that("curate BLASTs a JOIN group once and leaves its members in place", {
   expect_equal(pcg$refHits[1], pcg$refHits[2])
   expect_equal(pcg$join_translation, rep(seen, 2L))
 })
+
+test_that("remote reference prepend gives every JOIN member the same refHits", {
+  d <- withr::local_tempdir()
+  seq <- paste0("ATG", strrep("AAC", 132), "TAA")
+  f <- file.path(d, "ref.json")
+  jsonlite::write_json(list(
+    accession = "X1", organism = "o", sequence = seq, genetic_code = 4,
+    pcg = data.frame(gene = "nad1", pos1 = 1, pos2 = nchar(seq), direction = "+")
+  ), f, auto_unbox = TRUE)
+  shared <- json_string(data.frame(
+    acc = "A1", Taxon = "t", eval = 0, target = "x", pctid = 90,
+    similarity = 90, gap_leading = 0L, gap_trailing = 0L
+  ))
+  ann <- data.frame(
+    type = "PCG", gene = "nad1", translation = c("MNN", "NNN"),
+    join_translation = paste0("M", strrep("N", 132)), refHits = shared,
+    stringsAsFactors = FALSE
+  )
+  out <- suppressMessages(prepend_blast_hit_to_refhits(ann, f))
+  expect_identical(out$refHits[1], out$refHits[2])
+  top <- json_parse(out$refHits[1], TRUE)
+  expect_equal(top$acc[1], "X1")
+  expect_equal(top$gap_leading[1], 0)
+})

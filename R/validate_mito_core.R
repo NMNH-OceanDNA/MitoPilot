@@ -135,7 +135,7 @@ validate_mito_core <- function(
     gene_annotations <- annotations |>
       dplyr::filter(gene == {{ gene }})
 
-    n_copies <- sum(annotations$gene == gene & copy_row)
+    n_copies <- sum(annotations$gene %in% gene & copy_row)
 
     ## Missing ----
     if (n_copies < min(gene_rules$count %||% 1)) {

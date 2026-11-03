@@ -80,3 +80,13 @@ test_that("codon checks read the outer members and the spliced translation", {
   expect_false(grepl("non-standard stop codon", w[1]))
   expect_equal(sum(grepl("internal stop codon", w)), 1L)
 })
+
+test_that("a row with no gene name does not break the count check", {
+  ann <- rbind(
+    jvrow(100, 400, "JOIN: mode=exon group=1"),
+    jvrow(600, 900, "JOIN: mode=exon group=1")
+  )
+  ann <- rbind(ann, transform(jvrow(1000, 1100), gene = NA_character_, type = "tRNA"))
+  res <- run_jvalidate(ann)
+  expect_true(is.na(res$summary$extra) || !grepl("cox1", res$summary$extra))
+})
