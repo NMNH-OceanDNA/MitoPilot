@@ -17,7 +17,7 @@ drop_overlapping_tool_rows <- function(tool, user, contig_lens) {
     \(g, ctg, p1, p2) {
       on_ctg <- user$contig == ctg
       hit <- on_ctg & circ_overlap(p1, p2, user$pos1, user$pos2)
-      if (any(hit & ukey == g)) {
+      if (any(hit & ukey == g, na.rm = TRUE)) {
         return(TRUE)
       }
       hits <- user[hit, , drop = FALSE]

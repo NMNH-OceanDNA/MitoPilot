@@ -359,8 +359,9 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
               value = run_tools_on
             ) |> shinyjs::disabled(),
             opts_help("Run MitoPilot's annotation tools and add any features they find that ",
-                      "your annotation does not have. Your features are never changed; a tool ",
-                      "feature is dropped where it overlaps one of yours.")
+                      "your annotation does not have. The tools never replace or trim your features; a tool ",
+                      "feature is dropped where it overlaps one of yours. Curation still checks ",
+                      "every feature, yours included.")
           )
         },
         # Annotation tools section, boxed off from the surrounding options.

@@ -35,3 +35,17 @@ test_that("empty inputs are safe", {
   expect_equal(nrow(drop_overlapping_tool_rows(tool, user, c(c = 5000L))), 1L)
   expect_equal(nrow(drop_overlapping_tool_rows(user, tool, c(c = 5000L))), 0L)
 })
+
+test_that("NA gene on the tool side falls through to the overlap rule", {
+  user <- data.frame(contig = "c", gene = "nad1", pos1 = 100L, pos2 = 1000L)
+  tool <- data.frame(contig = "c", gene = c(NA, NA), pos1 = c(996L, 900L), pos2 = c(1065L, 1500L))
+  out <- drop_overlapping_tool_rows(tool, user, c(c = 5000L))
+  expect_equal(nrow(out), 1L)
+  expect_equal(out$pos1, 996L)
+})
+
+test_that("tool ctrl next to a user ctrl without overlap is kept", {
+  user <- data.frame(contig = "c", gene = "ctrl", pos1 = 2000L, pos2 = 2900L)
+  tool <- data.frame(contig = "c", gene = "OH", pos1 = 2901L, pos2 = 3300L)
+  expect_equal(nrow(drop_overlapping_tool_rows(tool, user, c(c = 5000L))), 1L)
+})

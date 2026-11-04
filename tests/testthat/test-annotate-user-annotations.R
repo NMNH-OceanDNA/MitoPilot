@@ -120,7 +120,7 @@ test_that("run_tools merges tool rows under user rows and never alters them", {
 
 test_that("run_tools FALSE leaves the user path untouched", {
   f <- ua_fixture()
-  local_mocked_bindings(check_mitos_ref_db = function(...) invisible(TRUE))
+  local_mocked_bindings(check_mitos_ref_db = function(...) stop("must not run"))
   local_mocked_bindings(annotate_mitos2 = function(...) stop("must not run"))
   ua_run(f, start_gene = NA, coverage_trim = FALSE, user_annotations_fn = f$csv,
          use_mitos = TRUE, run_tools = FALSE)

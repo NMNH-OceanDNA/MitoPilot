@@ -105,7 +105,7 @@ img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
 
 This page is for projects where you already have both a mitogenome assembly
 and an annotation for every sample. Create them with `new_project_userAnnot()`.
-MitoPilot runs neither an assembler nor an annotation tool: it imports your
+By default MitoPilot runs neither an assembler nor an annotation tool: it imports your
 features, asks you to confirm the gene names, then curates, validates, and
 exports them like any other project.
 
@@ -204,9 +204,10 @@ not have is added to the sample.
 
 ![](figures/user-annot/annotate-opts-run-tools.png)
 
-Your features are never changed. A tool feature is dropped when it overlaps one
+The tools never replace or trim your features. A tool feature is dropped when it overlaps one
 of yours with the same gene name, or when more than a tenth of its length
-overlaps your features.
+overlaps your features. Curation still checks every feature, yours included, as it
+does in any project.
 
 The added features are marked in the Tool column of the details window, where
 your own carry `user`. The Annotate table has a **Found by MitoPilot** column
