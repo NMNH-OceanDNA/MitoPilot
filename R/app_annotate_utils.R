@@ -27,13 +27,17 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
 
   # Per-unit annotations rollup (warnings + ORF count) keyed on the unit.
   annotations <- dplyr::tbl(db, "annotations") |>
-    dplyr::select(ID, path, scaffold, type, warnings) |>
+    dplyr::select(ID, path, scaffold, type, warnings, tool, gene, pos1) |>
     dplyr::collect() |>
+    dplyr::arrange(pos1) |>
     dplyr::group_by(ID, path, scaffold) |>
     dplyr::summarise(
       warnings_details = warnings[!is.na(warnings) & warnings != ""] |>
         paste(collapse = "; "),
       ORFCount = sum(type == "ORF"),
+      toolCount = sum(!is.na(tool) & tool != "user" & type != "ORF"),
+      toolGenes = paste(gene[!is.na(tool) & tool != "user" & type != "ORF"],
+                        collapse = "; "),
       .groups = "drop"
     )
 
@@ -97,6 +101,8 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
       tRNACount,
       rRNACount,
       ORFCount,
+      toolCount,
+      toolGenes,
       missing,
       extra,
       warnings,
@@ -118,6 +124,14 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
         NA_integer_,
         as.integer(ORFCount)
       )
+    ) |>
+    dplyr::mutate(
+      toolCount = if (isTRUE(session$userData$user_annot)) {
+        dplyr::coalesce(as.integer(toolCount), 0L)
+      } else 0L,
+      toolGenes = if (isTRUE(session$userData$user_annot)) {
+        dplyr::coalesce(toolGenes, "")
+      } else ""
     ) |>
     dplyr::select(-use_orffinder) |>
     dplyr::arrange(ID, path, scaffold) |>
@@ -164,7 +178,7 @@ fetch_annotate_data <- function(session = getDefaultReactiveDomain()) {
         "length", "topology", "scaffolds", "blast_accession", "blast_ref_status",
         "blast_accession_auto", "blast_species", "blast_lineage", "blast_pident",
         "blast_qcovs", "structure", "PCGCount", "tRNACount", "rRNACount",
-        "ORFCount", "missing", "extra", "warnings", "reviewed", "problematic",
+        "ORFCount", "toolCount", "toolGenes", "missing", "extra", "warnings", "reviewed", "problematic",
         "partial", "time_stamp", "export_group", "export_time_stamp",
         "annotate_notes", "warnings_details", "poor_blast_ref", "output", "view"
       )),

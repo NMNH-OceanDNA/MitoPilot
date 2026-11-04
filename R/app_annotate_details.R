@@ -449,6 +449,10 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       out <- mp_n(nrow(live), "feature")
       if (length(parts) > 0) out <- paste0(out, " - ", paste(parts, collapse = ", "))
       if (any(deleted)) out <- paste0(out, ", ", sum(deleted), " deleted")
+      n_tool <- sum(!is.na(live$tool) & live$tool != "user" & live$type != "ORF")
+      if (isTRUE(session$userData$user_annot) && n_tool > 0) {
+        out <- paste0(out, ", ", n_tool, " found by MitoPilot")
+      }
       out
     })
 
