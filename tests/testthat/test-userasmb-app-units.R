@@ -245,7 +245,8 @@ wf2_db <- function(assemble_lock) {
          use_aragorn = 0L, use_mitofinder = 0L, mitofinder_db = "",
          mitofinder_new_genes = 0L, mitofinder_allow_introns = 0L,
          mitofinder_opts = "", coverage_trim = 0L, retain_low_conf_trna = 0L,
-         use_mitos = 1L, use_trnaScan = 1L, rescue_no_trna = 0L)
+         use_mitos = 1L, use_trnaScan = 1L, rescue_no_trna = 0L,
+         run_tools = 1L)
   ), stringsAsFactors = FALSE)
   DBI::dbWriteTable(con, "annotate_opts", opts)
   DBI::dbWriteTable(con, "samples", data.frame(

@@ -14,7 +14,7 @@ params.sqlRead =    'SELECT DISTINCT a.ID, a.path, a.scaffold, b.assemble_opts, 
                         'd.cpus, d.memory, d.ref_db, d.ref_dir, d.mitos_opts, d.use_mitos_best, d.trnaScan_opts, d.start_gene, d.arwen_opts, d.use_arwen, d.aragorn_opts, d.use_aragorn, ' +
                         'd.use_mitofinder, d.mitofinder_db, d.mitofinder_new_genes, d.mitofinder_allow_introns, d.mitofinder_opts, ' +
                         "(SELECT GROUP_CONCAT(a2.scaffold, ',') FROM assemblies a2 WHERE a2.ID = a.ID AND a2.path = a.path AND a2.scaffold != a.scaffold) AS ignore_scaffolds, " +
-                        'd.coverage_trim, d.retain_low_conf_trna, d.use_mitos, d.use_trnaScan, f.genetic_code, d.rescue_no_trna ' +
+                        'd.coverage_trim, d.retain_low_conf_trna, d.use_mitos, d.use_trnaScan, f.genetic_code, d.rescue_no_trna, d.run_tools ' +
                     'FROM assemblies a ' +
                     'JOIN assemble b ON a.ID = b.ID ' +
                     'JOIN annotate an ON an.ID = a.ID AND an.path = a.path AND an.scaffold = a.scaffold ' +
@@ -93,7 +93,8 @@ workflow ANNOTATE {
                     use_mitos: it[24] != null ? it[24] as Integer : 1,      // use_mitos toggle (default on)
                     use_trnaScan: it[25] != null ? it[25] as Integer : 1,   // use_trnaScan toggle (default on)
                     genetic_code: it[26],                                   // per-sample genetic code (from samples table)
-                    rescue_no_trna: it[27] != null ? it[27] as Integer : 1  // second MITOS2 pass without tRNA prediction (default on)
+                    rescue_no_trna: it[27] != null ? it[27] as Integer : 1,  // second MITOS2 pass without tRNA prediction (default on)
+                    run_tools: it[28] != null ? it[28] as Integer : 1       // run MITOS2/tRNAscan alongside imported features (default on)
                 ],
                 file(it[7] + "/" + it[6]),                              // MITOS ref dir + clade (tarball)
                 it[6].replaceFirst(/\.tar\.gz$/, ''),               // ref_db without ".tar.gz"

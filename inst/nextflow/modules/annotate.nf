@@ -94,6 +94,7 @@ process annotate {
         mitofinder_opts = '!{opts.mitofinder_opts}', \
         start_gene = !{opts.start_gene ? "'" + opts.start_gene + "'" : "NA"}, \
         user_annotations_fn = !{user_annot ? "'" + user_annot + "'" : "NULL"}, \
+        run_tools = !{opts.run_tools == 1 ? "TRUE" : "FALSE"}, \
         ignore_scaffolds = '!{opts.ignore_scaffolds}', \
         coverage_trim = !{opts.coverage_trim == 1 ? "TRUE" : "FALSE"}, \
         retain_low_conf_trna = !{opts.retain_low_conf_trna == 1 ? "TRUE" : "FALSE"}, \
