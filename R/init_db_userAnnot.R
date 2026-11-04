@@ -73,8 +73,7 @@ new_db_userAnnot <- function(
   imp <- import_user_annotations(con, mapping, assembly_path, annotation_path, mapping_id)
   DBI::dbExecute(
     con,
-    "UPDATE annotate_opts SET use_mitos = 0, use_trnaScan = 0, use_arwen = 0,
-       use_aragorn = 0, use_mitofinder = 0, coverage_trim = 0, start_gene = NULL
+    "UPDATE annotate_opts SET run_tools = 0, coverage_trim = 0, start_gene = NULL
      WHERE annotate_opts = 'default'"
   )
   invisible(imp)
