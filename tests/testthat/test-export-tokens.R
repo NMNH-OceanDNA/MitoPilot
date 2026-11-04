@@ -49,6 +49,19 @@ test_that("groups with nothing ticked or no extra columns say how to add some", 
   expect_equal(g$GEOME$tokens$token, character(0))
 })
 
+test_that("empty source ID columns stay out of Your mapfile columns", {
+  d <- tok_data()[, c("ID", "seqid", "Taxon")]
+  d$GEOME_BCID <- NA_character_
+  d$GBIF_ID <- ""
+  d$BioSample <- NA_character_
+  g <- export_token_groups(d, c("ID", "Taxon", "GEOME_BCID", "GBIF_ID", "BioSample"), character())
+  expect_equal(nrow(g$`Your mapfile columns`$tokens), 0L)
+  expect_match(g$`Your mapfile columns`$hint, "no extra columns", fixed = TRUE)
+  d$BioSample[1] <- "SAMN1"
+  g <- export_token_groups(d, c("ID", "Taxon", "GEOME_BCID", "GBIF_ID", "BioSample"), character())
+  expect_equal(g$`Your mapfile columns`$tokens$token, "BioSample")
+})
+
 test_that("export_token_groups copes with no rows", {
   g <- export_token_groups(tok_data()[0, ], tok_cols, "geome:combo:lat_lon")
   expect_equal(g$GEOME$tokens$example, c("", ""))
