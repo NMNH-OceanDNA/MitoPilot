@@ -35,7 +35,8 @@ annotate(
   retain_low_conf_trna = FALSE,
   ignore_scaffolds = NULL,
   out_dir = NULL,
-  user_annotations_fn = NULL
+  user_annotations_fn = NULL,
+  run_tools = TRUE
 )
 }
 \arguments{
@@ -109,8 +110,13 @@ column in the assemblies table and reflect the per-scaffold `ignore` flag.}
 
 \item{out_dir}{Output directory.}
 
-\item{user_annotations_fn}{Path to an imported annotation CSV. When set, all
-annotation tools are skipped and this table is used instead (default: NULL).}
+\item{user_annotations_fn}{Path to an imported annotation CSV. When set, its
+features are kept as-is and tools run only if `run_tools` is TRUE
+(default: NULL).}
+
+\item{run_tools}{logical; in user-annotation mode, also run the enabled tools
+and add their features where they do not overlap imported ones (default
+TRUE; ignored when user_annotations_fn is NULL).}
 }
 \description{
 Uses Mitos2 and tRNAscan-SE to annotate a mitogenome assembly.

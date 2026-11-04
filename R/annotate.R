@@ -42,8 +42,12 @@
 #'   from the assembly before annotation. These correspond to the `scaffold`
 #'   column in the assemblies table and reflect the per-scaffold `ignore` flag.
 #' @param out_dir Output directory.
-#' @param user_annotations_fn Path to an imported annotation CSV. When set, all
-#'   annotation tools are skipped and this table is used instead (default: NULL).
+#' @param user_annotations_fn Path to an imported annotation CSV. When set, its
+#'   features are kept as-is and tools run only if `run_tools` is TRUE
+#'   (default: NULL).
+#' @param run_tools logical; in user-annotation mode, also run the enabled tools
+#'   and add their features where they do not overlap imported ones (default
+#'   TRUE; ignored when user_annotations_fn is NULL).
 #'
 #' @export
 #'
@@ -78,16 +82,23 @@ annotate <- function(
   retain_low_conf_trna = FALSE,
   ignore_scaffolds = NULL,
   out_dir = NULL,
-  user_annotations_fn = NULL
+  user_annotations_fn = NULL,
+  run_tools = TRUE
 ) {
-  if (is.null(user_annotations_fn) &&
-      !any(vapply(list(use_mitos, use_trnaScan, use_arwen, use_aragorn, use_mitofinder),
-                  isTRUE, logical(1)))) {
+  any_tool <- any(vapply(list(use_mitos, use_trnaScan, use_arwen, use_aragorn, use_mitofinder),
+                         isTRUE, logical(1)))
+  tools_on <- is.null(user_annotations_fn) || isTRUE(run_tools)
+  if (is.null(user_annotations_fn) && !any_tool) {
     stop("annotate(): no annotation source is active (all use_* are FALSE and no user_annotations_fn)",
          call. = FALSE)
   }
+  if (!is.null(user_annotations_fn) && isTRUE(run_tools) && !any_tool) {
+    warning("annotate(): run_tools is on but no annotation tool is enabled; using imported annotations only",
+            call. = FALSE)
+    tools_on <- FALSE
+  }
   # Fail before the tRNA tools run, not after MITOS2 aborts on a bad ref DB.
-  if (isTRUE(use_mitos) && is.null(user_annotations_fn)) {
+  if (isTRUE(use_mitos) && tools_on) {
     check_mitos_ref_db(ref_db)
   }
 
@@ -141,7 +152,7 @@ annotate <- function(
     stringr::str_extract(names(assembly), "\\S+")
   )
 
-  if (is.null(user_annotations_fn)) {
+  if (tools_on) {
     # tRNA annotation ----
     if (isTRUE(use_trnaScan)) {
       trnaScan_out <- annotate_trnaScan(
@@ -392,6 +403,11 @@ annotate <- function(
     }
   } else {
     annotations <- .read_user_annotations(user_annotations_fn, assembly, genetic_code)
+  }
+  if (!is.null(user_annotations_fn) && tools_on) {
+    user_rows <- .read_user_annotations(user_annotations_fn, assembly, genetic_code)
+    annotations <- drop_overlapping_tool_rows(annotations, user_rows, contig_lens)
+    annotations <- dplyr::bind_rows(user_rows, annotations) |> dplyr::arrange(contig, pos1)
   }
 
 

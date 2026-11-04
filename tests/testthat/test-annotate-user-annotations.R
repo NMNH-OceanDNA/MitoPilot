@@ -33,12 +33,13 @@ ua_fixture <- function(topology = "linear", pos2_cox1 = 400L) {
 }
 
 ua_run <- function(f, ...) {
-  annotate(
+  defaults <- list(
     assembly_fn = f$fa, coverage_fn = f$cov, cpus = 1, genetic_code = "2",
     ref_db = "x", ref_dir = ".", use_mitos = FALSE, use_trnaScan = FALSE,
     use_arwen = FALSE, use_aragorn = FALSE, use_mitofinder = FALSE,
-    out_dir = f$out, ...
+    out_dir = f$out, run_tools = FALSE
   )
+  do.call("annotate", utils::modifyList(defaults, list(...)))
 }
 
 test_that("annotate() with user_annotations_fn skips tools and emits codons", {
@@ -94,4 +95,45 @@ test_that("coverage_trim is ignored for imported annotations", {
     ua_run(f, start_gene = NA, coverage_trim = TRUE, user_annotations_fn = f$csv),
     "coverage_trim ignored"
   )
+})
+
+mitos_rows <- function(...) data.frame(..., product = "x", direction = "+", tRNA_ID = NA_character_,
+                                       anticodon = NA_character_, stringsAsFactors = FALSE)
+
+test_that("run_tools merges tool rows under user rows and never alters them", {
+  f <- ua_fixture()
+  local_mocked_bindings(check_mitos_ref_db = function(...) invisible(TRUE))
+  local_mocked_bindings(annotate_mitos2 = function(...) dplyr::bind_rows(
+    mitos_rows(contig = "S.1.1", type = "PCG", gene = "cox1", pos1 = 90L, pos2 = 400L, length = 311L),   # overlaps user cox1: dropped
+    mitos_rows(contig = "S.1.1", type = "tRNA", gene = "trnV", pos1 = 401L, pos2 = 470L, length = 70L)  # gap: kept
+  ))
+  ua_run(f, start_gene = NA, coverage_trim = FALSE, user_annotations_fn = f$csv,
+         use_mitos = TRUE, run_tools = TRUE)
+  out <- read.csv(list.files(f$out, "annotations.*csv$", full.names = TRUE)[1])
+  expect_setequal(out$gene, c("trnF", "cox1", "trnV"))
+  expect_equal(out$tool[out$gene == "trnV"], "MITOS2")
+  expect_equal(out$pos1[out$gene == "cox1"], 101L)
+  expect_equal(out$pos2[out$gene == "cox1"], 400L)
+  expect_equal(out$tool[out$gene == "cox1"], "user")
+  expect_equal(out$pos1, sort(out$pos1))
+})
+
+test_that("run_tools FALSE leaves the user path untouched", {
+  f <- ua_fixture()
+  local_mocked_bindings(check_mitos_ref_db = function(...) invisible(TRUE))
+  local_mocked_bindings(annotate_mitos2 = function(...) stop("must not run"))
+  ua_run(f, start_gene = NA, coverage_trim = FALSE, user_annotations_fn = f$csv,
+         use_mitos = TRUE, run_tools = FALSE)
+  out <- read.csv(list.files(f$out, "annotations.*csv$", full.names = TRUE)[1])
+  expect_setequal(out$gene, c("trnF", "cox1"))
+})
+
+test_that("run_tools with no tool enabled warns and keeps user rows", {
+  f <- ua_fixture()
+  expect_warning(
+    ua_run(f, start_gene = NA, coverage_trim = FALSE, user_annotations_fn = f$csv, run_tools = TRUE),
+    "no annotation tool"
+  )
+  out <- read.csv(list.files(f$out, "annotations.*csv$", full.names = TRUE)[1])
+  expect_equal(nrow(out), 2L)
 })
