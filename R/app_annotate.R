@@ -515,17 +515,24 @@ annotate_server <- function(id) {
             show = TRUE, class = .grp("export_group"), headerClass = .grp("export_group"),
             name = .nm("export_group"), header = .hd("export_group"),
             minWidth = 120,
-            cell = function(value) if (is.na(value) || !nzchar(value)) "" else value
+            # JS cell so it re-renders on updateReactable()
+            cell = htmlwidgets::JS("
+              function(cellInfo) {
+                var v = cellInfo.value;
+                return (v == null || v === '' || v === 'NA') ? '' : v;
+              }
+            ")
           ),
           export_time_stamp = colDef(
             show = TRUE, class = .grp("export_time_stamp"), headerClass = .grp("export_time_stamp"),
             name = .nm("export_time_stamp"), header = .hd("export_time_stamp"),
             filterable = FALSE,
             html = TRUE,
-            width = 170,
+            minWidth = 150,
+            resizable = TRUE,
             align = "center",
             # JS cell so it re-renders on updateReactable(); shows the exported
-            # pill + export date + the group the sample was exported under.
+            # pill + export date.
             cell = htmlwidgets::JS("
               function(cellInfo) {
                 var v = cellInfo.value;
@@ -533,11 +540,7 @@ annotate_server <- function(id) {
                 var opts = { year: 'numeric', month: 'numeric', day: 'numeric' };
                 var date = new Date(1000*v).toLocaleDateString(undefined, opts);
                 if (date === 'Invalid Date') return '';
-                var row = cellInfo.row || {};
-                var g = row.export_group;
-                var grp = (g == null || g === '' || g === 'NA') ? '' : ' (' + g + ')';
-                return `<span class='mp-pill mp-pill-success'>exported</span> ` +
-                  date + grp;
+                return `<span class='mp-pill mp-pill-success'>exported</span> ` + date;
               }
             ")
           ),
