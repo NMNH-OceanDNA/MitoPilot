@@ -69,7 +69,15 @@ export_token_groups <- function(data, sample_cols, ticked_keys) {
   geome <- meta("geome", "GEOME_BCID")
   gbif <- meta("gbif", "GBIF_ID")
   ncbi <- meta("ncbi", "BioSample")
-  csv_tokens <- plain(setdiff(csv, c(geome$id, gbif$id, ncbi$id)))
+  # source ID columns always exist in samples; list them as mapfile columns
+  # only when some sample actually has a value
+  blank <- function(col) {
+    v <- trimws(as.character(data[[col]]))
+    !col %in% names(data) || !any(!is.na(v) & nzchar(v))
+  }
+  id_cols <- vapply(META_SOURCES, function(s) s$col, "")
+  csv <- setdiff(csv, c(geome$id, gbif$id, ncbi$id, id_cols[vapply(id_cols, blank, logical(1))]))
+  csv_tokens <- plain(csv)
   list(
     Basics = list(open = TRUE, tokens = plain(EXPORT_TOKEN_BASICS), hint = NULL),
     `Your mapfile columns` = list(
