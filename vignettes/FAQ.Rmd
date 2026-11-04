@@ -16,6 +16,13 @@ Please see the
 
 Yes! See [Using Your Own Assemblies](Your-Own-Assemblies.html).
 
+## Can I bring my own annotations too?
+
+Yes. If every sample has an assembly and an annotation (GFF3, BED, or GenBank
+feature table), MitoPilot skips assembly and annotation and goes straight to
+gene-name review, curation, and export. See
+[Using Your Own Annotations](Your-Own-Annotations.html).
+
 ## Can MitoPilot find the mitogenome in my whole-genome assembly?
 
 Yes. Create the project with `new_project_userAsmb(find_mitogenome = TRUE)` and

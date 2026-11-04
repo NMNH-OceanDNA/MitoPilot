@@ -50,6 +50,8 @@ navbar:
         href: articles/Your-Own-Project.html
       - text: "Using your own assemblies"
         href: articles/Your-Own-Assemblies.html
+      - text: "Using your own annotations"
+        href: articles/Your-Own-Annotations.html
       - text: "Choosing an assembly method"
         href: articles/Assembly-Methods.html
       - text: "Difficult assemblies"
@@ -102,6 +104,7 @@ articles:
   contents:
   - 'Your-Own-Project'
   - 'Your-Own-Assemblies'
+  - 'Your-Own-Annotations'
   - 'Assembly-Methods'
   - 'Difficult-Assemblies'
   - 'Ruleset-Browser'

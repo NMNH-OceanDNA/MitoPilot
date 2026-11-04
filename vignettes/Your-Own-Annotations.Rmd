@@ -1,0 +1,226 @@
+---
+title: "Using Your Own Annotations"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Using Your Own Annotations}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<style>
+.alert {
+  border-left: 5px solid;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px;
+}
+.alert-tip { border-color: #28A745; background-color: #E9F7EF; }
+.alert-note { border-color: #007BFF; background-color: #EBF5FF; }
+.alert-warning { border-color: #FFC107; background-color: #FFF9E6; }
+.alert-danger { border-color: #DC3545; background-color: #F8D7DA; }
+/* Smithsonian palette: blue #009CDE, yellow #FFCD00, black #101820 */
+.alert-hydra {
+  border-color: #101820;
+  background-color: #E7F6FC;
+  color: #101820;
+}
+.alert-hydra .hydra-tag {
+  display: inline-block;
+  background-color: #FFCD00;
+  color: #101820;
+  font-size: 0.75em;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  padding: 1px 7px;
+  border-radius: 10px;
+  margin-right: 6px;
+  vertical-align: 2px;
+}
+strong { font-weight: bold; }
+img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
+.figure { margin: 1.2em 0; }
+.figure .caption, p.caption {
+  font-size: 0.82em;
+  line-height: 1.35;
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 0.4em;
+}
+.part-break {
+  border: none;
+  border-top: 3px solid #c9d1d6;
+  margin: 2.2em 0 1.6em;
+}
+.step-nav {
+  margin: 0 0 2.5em;
+  padding-bottom: 1.2em;
+  border-bottom: 1px solid #dde3e6;
+}
+.step-nav.no-rule {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+/* pandoc wraps the row contents in a <p>, so that is the flex container. */
+.step-nav p {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.step-nav .step-label {
+  font-weight: 600;
+  color: #6b7b85;
+  margin-right: 4px;
+}
+.step-nav a,
+.step-nav .current {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none !important;
+  border: 1px solid #c8dde5;
+}
+.step-nav a {
+  background-color: #e4f0f4;
+  color: #1f6f8b !important;
+}
+.step-nav a:hover,
+.step-nav a:focus {
+  background-color: #d3e7ee;
+  color: #17566b !important;
+  text-decoration: none !important;
+}
+.step-nav .current {
+  background-color: #1f6f8b;
+  color: #ffffff;
+  border-color: #1f6f8b;
+}
+</style>
+
+This page is for projects where you already have both a mitogenome assembly
+and an annotation for every sample. Create them with `new_project_userAnnot()`.
+MitoPilot runs neither an assembler nor an annotation tool: it imports your
+features, asks you to confirm the gene names, then curates, validates, and
+exports them like any other project.
+
+Read [Starting Your Own Project](Your-Own-Project.html) and
+[Using Your Own Assemblies](Your-Own-Assemblies.html) first. This page covers
+only what differs.
+
+<div class="alert alert-tip">
+<strong>Tip.</strong> `new_test_project_userAnnot()` builds a ready-to-run
+six-sample project from RefSeq fish mitogenomes, with annotations in every
+supported format and some gene names deliberately left for you to fix. Try it
+before running your own data.
+</div>
+
+## Setting up the project
+
+The mapping file takes the user-assembly columns plus one more:
+
+| Column | Contents |
+|---|---|
+| `Assembly` | File name of the assembly FASTA for the sample. Exactly one sequence per file |
+| `Annotation` | File name of the annotation for the sample: GFF3 (`.gff`, `.gff3`), BED (`.bed`), or a GenBank 5-column feature table (`.tbl`) |
+| `Topology` | Optional. `circular` or `linear`; blank means linear. A feature that spans the origin needs `circular` |
+
+The sequence ID inside each annotation must equal the first word of the FASTA
+header. Copies of your original files are kept in
+`<project>/user_annotations/raw/`.
+
+```r
+new_project_userAnnot(
+  path = "~/my_annotated/run_01",
+  mapping_fn = "~/my_annotated/mapping.csv",
+  assembly_path = "~/my_annotated/fasta",
+  annotation_path = "~/my_annotated/annotations",
+  no_raw_data = TRUE
+)
+```
+
+Reads are optional. With `data_path` and `R1`/`R2` columns, the Assemble module
+maps them for coverage; with `no_raw_data = TRUE` it skips that.
+
+Mitogenome search, circularization, and scaffold joining are not available for
+this project type, since any of them would shift the coordinates of your
+annotation. Coverage trimming and start-gene rotation are off by default for
+the same reason.
+
+## Reviewing gene names
+
+MitoPilot guesses a canonical gene name for every feature when the project is
+created. The first time you open the app, the **Imported gene names** window
+lists every raw name from your files with its guess.
+
+![](figures/user-annot/gene-names.png)
+
+Fix any wrong guesses with the picker in the gene column, or pick `(drop)` to
+leave those features out, then press **Confirm**. Expand a row to see which
+samples and features carry that name. Rows you edit count as Edited and leave
+the Unmapped view.
+
+Pipeline runs are blocked until you confirm; the app header shows a notice
+with a **Review** button until then, and the **Gene names** toolbar button
+reopens the window at any time. Editing the mapping after confirming closes the
+gate again. Confirming a second time re-queues only the samples whose
+annotation actually changed.
+
+Names MitoPilot cannot place, such as ORFs or the light-strand origin (OL), are
+dropped and the window says how many. Control-region names (D-loop, control
+region, OH) import as MitoPilot's control region feature, `ctrl`, which exports
+as `D-loop`.
+
+## Running the pipeline
+
+Once the names are confirmed the run is the same as for your own assemblies:
+**Update** in the Assemble module, lock the samples, then **Update** in
+Annotate. The Annotate step runs no annotation tool; it curates and validates
+the imported features, so every warning in the Annotate table is about your
+annotation.
+
+![](figures/user-annot/annotate-table.png)
+
+Open a sample's details to see what came through. Notes that start with
+`import:` were carried over from your file.
+
+![](figures/user-annot/annotate-details.png)
+
+Then continue with [Export](Test-Project-Export.html) as usual.
+
+## What is carried over
+
+- Partial ends, reading frame (`codon_start`), and anticodons.
+- Pseudogenes, with the note `import: pseudogene`.
+- Free-text notes, as `import: <note>`. They are shown in the details window
+  but not written on export.
+- Introns and ribosomal slippage, as MitoPilot join groups. The feature-table
+  export writes the `ribosomal_slippage` and `exception` qualifiers back.
+- Every other attribute or qualifier, verbatim, in the project database table
+  `user_annotations` (column `attrs`).
+
+`transl_except` is not stored. MitoPilot derives it from the shortened stop
+codon the coordinates give, and export regenerates it.
+
+A `.tbl` exported from MitoPilot can be imported again with this project type.
+
+## The demo project
+
+`new_test_project_userAnnot()` creates six samples, each a RefSeq fish
+mitogenome with small simulated reads:
+
+| Sample | Annotation |
+|---|---|
+| `GB_NCBI` | NCBI GFF3 with the full gene/mRNA/CDS/exon hierarchy |
+| `GB_TBL` | NCBI feature table with anticodons |
+| `GB_BED` | BED, with one gene split into two blocks |
+| `GB_TYPOS` | GFF3 with odd and misspelled gene names; several are left for you to map |
+| `GB_DROP` | Feature table with features that are dropped or flagged on import: gaps, a pseudogene, ribosomal slippage, partial ends, a gene spanning the origin, and two control-region features |
+| `GB_MITOS` | MITOS2-style GFF with lowercase names and numbered tRNAs |
+
+See `?new_test_project_userAnnot` for the names you need to map by hand.
