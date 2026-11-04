@@ -1,7 +1,3 @@
-#' annotate_details Server Functions
-#'
-#' @noRd
-
 #' Give a label-less Shiny input an accessible name
 #'
 #' A `label = NULL` input renders a bare `<input>` that screen readers and voice
