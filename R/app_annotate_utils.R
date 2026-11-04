@@ -35,9 +35,8 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
       warnings_details = warnings[!is.na(warnings) & warnings != ""] |>
         paste(collapse = "; "),
       ORFCount = sum(type == "ORF"),
-      toolCount = sum(!is.na(tool) & tool != "user" & type != "ORF"),
-      toolGenes = paste(gene[!is.na(tool) & tool != "user" & type != "ORF"],
-                        collapse = "; "),
+      toolCount = sum(.is_tool_row(tool, type)),
+      toolGenes = paste(gene[.is_tool_row(tool, type)], collapse = "; "),
       .groups = "drop"
     )
 
@@ -144,6 +143,29 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
     ) |>
     dplyr::relocate(blast_ref_status, .after = blast_accession) |>
     dplyr::mutate(ID_verified = dplyr::coalesce(ID_verified, "no"))
+}
+
+# Features added by MitoPilot's tools in a user-annotation project (not ORFs).
+.is_tool_row <- function(tool, type) {
+  !is.na(tool) & tool != "user" & !(type %in% "ORF")
+}
+
+#' Count and pos1-ordered gene list of tool-added features in one unit
+#' @noRd
+tool_feature_summary <- function(ann, user_annot) {
+  if (!isTRUE(user_annot) || is.null(ann$tool) || nrow(ann) == 0) {
+    return(list(n = 0L, genes = ""))
+  }
+  ann <- ann[order(ann$pos1), , drop = FALSE]
+  k <- .is_tool_row(ann$tool, ann$type)
+  list(n = sum(k), genes = paste(ann$gene[k], collapse = "; "))
+}
+
+#' Columns left out of the Annotate table's CSV download
+#' @noRd
+annotate_csv_drop <- function(user_annot) {
+  c("output", "view", "poor_blast_ref", "warnings_details", "blast_accession_auto",
+    "toolGenes", if (!isTRUE(user_annot)) "toolCount")
 }
 
 #' Populate the Annotate table - one row per (ID, path, scaffold) unit

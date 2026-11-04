@@ -56,3 +56,21 @@ test_that("toolCount is in the Counts group after ORFCount", {
   expect_equal(which(g == "toolCount"), which(g == "ORFCount") + 1L)
   expect_equal(MP_COL_NAMES[["toolCount"]], "Found by MitoPilot")
 })
+
+test_that("tool_feature_summary orders by pos1 and tolerates NA type", {
+  ann <- data.frame(
+    tool = c("user", "MITOS2", "tRNAscan-SE", "ORFfinder", "MITOS2"),
+    gene = c("cox1", "trnS", "trnA", "ORF1", "x"),
+    type = c("PCG", "tRNA", "tRNA", "ORF", NA),
+    pos1 = c(1L, 900L, 100L, 50L, 500L)
+  )
+  expect_equal(tool_feature_summary(ann, TRUE), list(n = 3L, genes = "trnA; x; trnS"))
+  expect_equal(tool_feature_summary(ann, FALSE), list(n = 0L, genes = ""))
+  expect_equal(tool_feature_summary(ann[0, ], TRUE), list(n = 0L, genes = ""))
+})
+
+test_that("Annotate CSV drops toolGenes always and toolCount outside user-annotation projects", {
+  expect_true(all(c("toolGenes", "toolCount") %in% annotate_csv_drop(FALSE)))
+  expect_true("toolGenes" %in% annotate_csv_drop(TRUE))
+  expect_false("toolCount" %in% annotate_csv_drop(TRUE))
+})

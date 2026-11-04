@@ -1721,7 +1721,7 @@ annotate_server <- function(id) {
     annotations_details_server(ns("annotations"), rv, table_id = ns("table"))
 
     # CSV Export ----
-    .export_cols_drop <- c("output", "view", "poor_blast_ref", "warnings_details", "blast_accession_auto")
+    .export_cols_drop <- annotate_csv_drop(session$userData$user_annot)
 
     observe({
       shinyjs::toggleState("export_selected", condition = length(selected()) > 0)

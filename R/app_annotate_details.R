@@ -449,10 +449,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       out <- mp_n(nrow(live), "feature")
       if (length(parts) > 0) out <- paste0(out, " - ", paste(parts, collapse = ", "))
       if (any(deleted)) out <- paste0(out, ", ", sum(deleted), " deleted")
-      n_tool <- sum(!is.na(live$tool) & live$tool != "user" & live$type != "ORF")
-      if (isTRUE(session$userData$user_annot) && n_tool > 0) {
-        out <- paste0(out, ", ", n_tool, " found by MitoPilot")
-      }
+      n_tool <- tool_feature_summary(live, session$userData$user_annot)$n
+      if (n_tool > 0) out <- paste0(out, ", ", n_tool, " found by MitoPilot")
       out
     })
 
@@ -3717,6 +3715,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       orf_blank <- "ORFCount" %in% names(rv$data) && !is.na(i) &&
         isTRUE(is.na(rv$data$ORFCount[i]))
       orf <- if (orf_blank) NA_integer_ else cnt[["ORF"]]
+      tf <- tool_feature_summary(retained, session$userData$user_annot)
       # Short-circuit if nothing the count/missing/extra columns track changed
       # (e.g. position-only codon edits) to avoid needless writes/refreshes.
       same <- function(a, b) (is.na(a) && is.na(b)) || (!is.na(a) && !is.na(b) && a == b)
@@ -3725,6 +3724,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
           identical(as.integer(rv$data$tRNACount[i]), as.integer(trna)) &&
           identical(as.integer(rv$data$rRNACount[i]), as.integer(rrna)) &&
           same(rv$data$ORFCount[i], orf) &&
+          identical(as.integer(rv$data$toolCount[i]), as.integer(tf$n)) &&
+          identical(rv$data$toolGenes[i], tf$genes) &&
           same(rv$data$missing[i], me$missing %||% NA_character_) &&
           same(rv$data$extra[i], me$extra %||% NA_character_)) {
         return(invisible(NULL))
@@ -3747,7 +3748,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         dplyr::rows_update(
           data.frame(ID = id, path = p, scaffold = s,
                      PCGCount = pcg, tRNACount = trna, rRNACount = rrna,
-                     ORFCount = orf, missing = upd$missing, extra = upd$extra,
+                     ORFCount = orf, toolCount = as.integer(tf$n), toolGenes = tf$genes,
+                     missing = upd$missing, extra = upd$extra,
                      stringsAsFactors = FALSE),
           by = c("ID", "path", "scaffold")
         )
