@@ -1059,6 +1059,10 @@ annotate_server <- function(id) {
           value = isTRUE(as.logical(cur$rescue_no_trna %||% 1L))
         )
         shinyWidgets::updatePrettyCheckbox(
+          inputId = "run_tools",
+          value = isTRUE(as.logical(cur$run_tools %||% 1L))
+        )
+        shinyWidgets::updatePrettyCheckbox(
           inputId = "use_arwen",
           value = isTRUE(as.logical(cur$use_arwen))
         )
@@ -1129,6 +1133,7 @@ annotate_server <- function(id) {
       shinyjs::toggleState("mitos_opts", condition = input$edit_annotate_opts)
       shinyjs::toggleState("use_mitos_best", condition = input$edit_annotate_opts)
       shinyjs::toggleState("rescue_no_trna", condition = input$edit_annotate_opts)
+      shinyjs::toggleState("run_tools", condition = input$edit_annotate_opts)
       # shinyjs::toggleState("mitos_ref_dir", condition = input$edit_annotate_opts) # TODO: custom / alt ref db for mitos
       shinyjs::toggleState("mitos_ref_db", condition = input$edit_annotate_opts)
       shinyjs::toggleState("use_trnaScan", condition = input$edit_annotate_opts)
@@ -1218,10 +1223,22 @@ annotate_server <- function(id) {
     observeEvent(input$use_aragorn, {
       shinyjs::toggle("aragorn_box", condition = isTRUE(input$use_aragorn))
     })
+    observeEvent(input$run_tools, {
+      shinyjs::toggle("tools_box", condition = isTRUE(input$run_tools))
+    })
     ## Save Changes ----
     observeEvent(input$update_annotate_opts, {
       ## Add to params table if new or editing ----
       if (input$edit_annotate_opts) {
+        user_annot <- isTRUE(session$userData$user_annot)
+        if (user_annot && isTRUE(input$run_tools) &&
+            !any(vapply(c("use_mitos", "use_trnaScan", "use_arwen", "use_aragorn", "use_mitofinder"),
+                        function(x) isTRUE(input[[x]]), logical(1)))) {
+          mp_alert("No annotation tool selected",
+                   "Turn on at least one tool, or switch off Run annotation tools.",
+                   type = "warning")
+          return()
+        }
         dplyr::tbl(session$userData$con, "annotate_opts") |>
           dplyr::rows_upsert(
             data.frame(
@@ -1249,7 +1266,8 @@ annotate_server <- function(id) {
               coverage_trim = as.integer(isTRUE(input$coverage_trim)),
               feature_trim = as.integer(isTRUE(input$feature_trim)),
               ref_based_rc = as.integer(isTRUE(input$ref_based_rc)),
-              retain_low_conf_trna = as.integer(isTRUE(input$retain_low_conf_trna))
+              retain_low_conf_trna = as.integer(isTRUE(input$retain_low_conf_trna)),
+              run_tools = if (user_annot) as.integer(isTRUE(input$run_tools)) else 1L
             ),
             in_place = TRUE,
             copy = TRUE,

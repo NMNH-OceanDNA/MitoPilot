@@ -230,6 +230,7 @@ get_top_hits_local <- function(
 #' @noRd
 annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
   ns <- session$ns
+  user_annot <- isTRUE(session$userData$user_annot)
 
   current <- list()
   # An annotate row can carry NA option sets (a unit rebuilt with nothing to
@@ -241,6 +242,7 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
   sel_curate[is.na(sel_curate)] <- "default"
   if (length(unique(sel_annotate)) == 1) {
     current <- rv$annotate_opts[rv$annotate_opts$annotate_opts == sel_annotate[1], ]
+    run_tools_on <- isTRUE(as.logical(current$run_tools %||% 0L))
     cur_params <- rv$curate_opts$params[rv$curate_opts$curate_opts == sel_curate[1]] |>
       jsonlite::fromJSON()
 
@@ -312,8 +314,23 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
         ),
         opts_help("Circular mitogenomes are rotated to begin at this gene, giving a ",
                   "consistent start position across samples (e.g. tRNA-Phe in vertebrates)."),
+        if (user_annot) {
+          div(
+            id = ns("run_tools_box"),
+            mp_checkbox(
+              ns("run_tools"),
+              label = "Run annotation tools",
+              value = run_tools_on
+            ) |> shinyjs::disabled(),
+            opts_help("Run MitoPilot's annotation tools and add any features they find that ",
+                      "your annotation does not have. Your features are never changed; a tool ",
+                      "feature is dropped where it overlaps one of yours.")
+          )
+        },
         # Annotation tools section, boxed off from the surrounding options.
         div(
+          id = ns("tools_box"),
+          class = if (user_annot && !run_tools_on) "shinyjs-hide",
           style = paste(
             "border: 1px solid #ddd; border-radius: 6px;",
             "padding: 12px 14px 4px; margin: 8px 0 14px;"
