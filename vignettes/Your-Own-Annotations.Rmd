@@ -180,7 +180,7 @@ as `D-loop`.
 
 Once the names are confirmed the run is the same as for your own assemblies:
 **Update** in the Assemble module, lock the samples, then **Update** in
-Annotate. The Annotate step runs no annotation tool; it curates and validates
+Annotate. By default the Annotate step runs no annotation tool; it curates and validates
 the imported features, so every warning in the Annotate table is about your
 annotation.
 
@@ -192,6 +192,27 @@ Open a sample's details to see what came through. Notes that start with
 ![](figures/user-annot/annotate-details.png)
 
 Then continue with [Export](Test-Project-Export.html) as usual.
+
+## Filling gaps with MitoPilot's tools
+
+If your annotation is missing features, for example tRNAs that were never
+annotated, MitoPilot can look for them. In the Annotate options window, tick
+**Run annotation tools**, just above the Tools box. It is off by default. When
+it is on, the tools chosen in the Tools box (MITOS2 and tRNAscan-SE unless you
+change them) run on each assembly, and whatever they find that your file does
+not have is added to the sample.
+
+![](figures/user-annot/annotate-opts-run-tools.png)
+
+Your features are never changed. A tool feature is dropped when it overlaps one
+of yours with the same gene name, or when more than a tenth of its length
+overlaps your features.
+
+The added features are marked in the Tool column of the details window, where
+your own carry `user`. The Annotate table has a **Found by MitoPilot** column
+with the number added per sample; hover over the number to see the genes.
+
+![](figures/user-annot/annotate-table-found.png)
 
 ## What is carried over
 
