@@ -195,25 +195,34 @@ Then continue with [Export](Test-Project-Export.html) as usual.
 
 ## Filling gaps with MitoPilot's tools
 
-If your annotation is missing features, for example tRNAs that were never
-annotated, MitoPilot can look for them. In the Annotate options window, tick
-**Run annotation tools**, just above the Tools box. It is off by default. When
-it is on, the tools chosen in the Tools box (MITOS2 and tRNAscan-SE unless you
-change them) run on each assembly, and whatever they find that your file does
-not have is added to the sample.
+By default MitoPilot annotates nothing itself: your file is the annotation.
+If it is incomplete, for example tRNAs that were never annotated or names you
+chose to drop during review, MitoPilot's own tools can fill the gaps. In the
+Annotate options window, tick **Run annotation tools**, just above the Tools
+box. When it is on, the tools chosen in the Tools box (MITOS2 and tRNAscan-SE
+unless you change them) run on each assembly, and whatever they find that your
+file does not have is added to the sample.
 
 ![](figures/user-annot/annotate-opts-run-tools.png)
 
-The tools never replace or trim your features. A tool feature is dropped when it overlaps one
-of yours with the same gene name, or when more than a tenth of its length
-overlaps your features. Curation still checks every feature, yours included, as it
-does in any project.
+Your features always win. A tool feature is dropped when it overlaps one of
+yours with the same gene name, or when more than a tenth of its length overlaps
+your features; the rest are added alongside yours. Expect a control region to
+appear on samples whose file had none, since MITOS2 reports one. Curation then
+checks every feature, yours included, as it does in any project.
 
-The added features are marked in the Tool column of the details window, where
-your own carry `user`. The Annotate table has a **Found by MitoPilot** column
-with the number added per sample; hover over the number to see the genes.
+The Annotate table has a **Found by MitoPilot** column with the number added
+per sample; hover over the number to see the genes. In the details window the
+added features carry the tool's name in the Tool column, where your own carry
+`user`.
 
 ![](figures/user-annot/annotate-table-found.png)
+
+The demo sample `GB_GAPS` is built for this: its file is missing cox2, nad3,
+trnD, trnK, and rrnS. Turn the switch on, run Annotate, and the five come back
+from MITOS2 and tRNAscan-SE, plus the control region.
+
+![](figures/user-annot/annotate-details-found.png)
 
 ## What is carried over
 
