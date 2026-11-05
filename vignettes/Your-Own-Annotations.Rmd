@@ -115,7 +115,7 @@ only what differs.
 
 <div class="alert alert-tip">
 <strong>Tip.</strong> `new_test_project_userAnnot()` builds a ready-to-run
-six-sample project from RefSeq fish mitogenomes, with annotations in every
+seven-sample project from RefSeq fish mitogenomes, with annotations in every
 supported format and some gene names deliberately left for you to fix. Try it
 before running your own data.
 </div>
@@ -233,7 +233,7 @@ A `.tbl` exported from MitoPilot can be imported again with this project type.
 
 ## The demo project
 
-`new_test_project_userAnnot()` creates six samples, each a RefSeq fish
+`new_test_project_userAnnot()` creates seven samples, each a RefSeq fish
 mitogenome with small simulated reads:
 
 | Sample | Annotation |
@@ -244,5 +244,6 @@ mitogenome with small simulated reads:
 | `GB_TYPOS` | GFF3 with odd and misspelled gene names; several are left for you to map |
 | `GB_DROP` | Feature table with features that are dropped or flagged on import: gaps, a pseudogene, ribosomal slippage, partial ends, a gene spanning the origin, and two control-region features |
 | `GB_MITOS` | MITOS2-style GFF with lowercase names and numbered tRNAs |
+| `GB_GAPS` | GFF3 missing five genes (cox2, nad3, trnD, trnK, rrnS); turn on **Run annotation tools** to see MitoPilot fill them in |
 
 See `?new_test_project_userAnnot` for the names you need to map by hand.

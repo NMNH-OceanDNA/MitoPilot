@@ -47,7 +47,7 @@ fetched for them. Set FALSE when offline.}
 \item{...}{Additional arguments passed to [new_project_userAnnot()]}
 }
 \description{
-Sets up a six-sample test project for the user-annotation workflow. Each
+Sets up a seven-sample test project for the user-annotation workflow. Each
 sample is one RefSeq teleost mitogenome from the GenBank records shipped with
 MitoPilot: the record's sequence is the assembly (circular), its features
 are the annotation, and small synthetic paired reads (about 20x) are sampled
@@ -81,5 +81,8 @@ deliberately wrong so the gene-name review has work to do.
   \item `GB_MITOS` (Beryx splendens): a MITOS2-style GFF with lowercase
     names, numbered tRNAs (`trnL1(tag)`, `trnS2(tga)`), `OH` (guessed as
     `ctrl`), `OL` (unmapped), and cob spanning the origin as one row.
+  \item `GB_GAPS` (Sebastes schlegelii): a plain GFF3 with correct names but
+    five genes left out (cox2, nad3, trnD, trnK, rrnS). Turn on "Run
+    annotation tools" in the Annotate Opts window and MitoPilot fills them in.
 }
 }

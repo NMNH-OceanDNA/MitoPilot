@@ -5,3 +5,4 @@ GB_BED,Gadus morhua,GB_BED_R1.fastq.gz,GB_BED_R2.fastq.gz,GB_BED.fasta,circular,
 GB_TYPOS,Thunnus thynnus,GB_TYPOS_R1.fastq.gz,GB_TYPOS_R2.fastq.gz,GB_TYPOS.fasta,circular,GB_TYPOS.gff3
 GB_DROP,Xyrichtys novacula,GB_DROP_R1.fastq.gz,GB_DROP_R2.fastq.gz,GB_DROP.fasta,circular,GB_DROP.tbl
 GB_MITOS,Beryx splendens,GB_MITOS_R1.fastq.gz,GB_MITOS_R2.fastq.gz,GB_MITOS.fasta,circular,GB_MITOS.gff
+GB_GAPS,Sebastes schlegelii,GB_GAPS_R1.fastq.gz,GB_GAPS_R2.fastq.gz,GB_GAPS.fasta,circular,GB_GAPS.gff3

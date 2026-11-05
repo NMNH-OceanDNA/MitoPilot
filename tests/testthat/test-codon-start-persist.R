@@ -165,7 +165,7 @@ test_that("shipped user annotation fixtures parse", {
     GB_TYPOS = c("COX11", "NDH4K", "ATP88", "NADH dehydrogenase subnit 3", "tRNA-Xxx",
                  "rrnX", "hypothetical protein", "ORF123"),
     GB_DROP = c("putative light strand origin of...", "tandem repeat"),
-    GB_MITOS = "OL")
+    GB_MITOS = "OL", GB_GAPS = character(0))
   p <- list()
   for (i in seq_len(nrow(map))) {
     len <- unname(Biostrings::fasta.seqlengths(file.path(td, "assemblies", map$Assembly[i])))
@@ -177,6 +177,9 @@ test_that("shipped user annotation fixtures parse", {
   ok <- c("mt-Nd2" = "nad2", "MT-ND5" = "nad5", "cytb" = "cob", "COII" = "cox2",
           "COIII" = "cox3", "tRNA-Leu (CUN)" = "trnL", "trnS2(tga)" = "trnS",
           "l-rRNA" = "rrnL")
+  expect_equal(nrow(p$GB_GAPS), 32L)
+  expect_false(any(c("cox2", "nad3", "trnD", "trnK", "rrnS") %in%
+                     guess_gene(p$GB_GAPS$raw_name, p$GB_GAPS$feature_type, NA, NA)$gene))
   # every GB_TYPOS feature is a real gene: none in the control region
   expect_equal(nrow(p$GB_TYPOS), 37L)
   expect_false(any(p$GB_TYPOS$pos1 <= 600 | p$GB_TYPOS$pos2 <= 600))
