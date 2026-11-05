@@ -167,8 +167,25 @@ user_annot_summary <- function(con, import = NULL) {
   }
   gm <- DBI::dbGetQuery(con, "SELECT raw_name, feature_type, n_samples, n_features, guess
                               FROM gene_name_map ORDER BY guess IS NULL, guess, raw_name")
+  gm$class <- ifelse(is.na(gm$guess), "none",
+                     ifelse(gm$guess == "ctrl", "ctrl", vapply(gm$guess, mito_gene_type, "")))
   gm$guess[is.na(gm$guess)] <- "(unmapped)"
-  message(paste(c(lines, "", "Gene names found:",
-                  utils::capture.output(print(gm, row.names = FALSE))), collapse = "\n"))
+  message(paste(c(lines, "", "Gene names found:", format_type_table(gm)), collapse = "\n"))
   invisible(gm)
+}
+
+# print()-style table with the class column in the feature-type colours
+format_type_table <- function(gm) {
+  cols <- lapply(names(gm), function(n) format(c(n, as.character(gm[[n]])), justify = "right"))
+  names(cols) <- names(gm)
+  if (crayon::has_color()) {
+    paint <- function(v, cls) {
+      col <- MITO_TYPE_COLORS[cls]
+      ok <- !is.na(col)
+      v[ok] <- mapply(function(x, h) crayon::make_style(h)(x), v[ok], col[ok])
+      v
+    }
+    cols$class[-1] <- paint(cols$class[-1], gm$class)
+  }
+  do.call(paste, c(unname(cols), sep = " "))
 }

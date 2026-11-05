@@ -480,13 +480,9 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
               # JS (not R) cell renderer so the badge re-renders client-side on
               # updateReactable() after an edit; an R cell function is only run
               # at full render, leaving stale badges when rows are re-sorted.
-              cell = htmlwidgets::JS("
+              cell = htmlwidgets::JS(paste0("
                 function(cellInfo) {
-                  var colors = {ctrl:'#FAA34A', PCG:'#60BD68', rRNA:'#5DA5DA', tRNA:'#F17CB0', ORF:'#4D4D4D'};
-                  var v = cellInfo.value || '';
-                  var c = colors[v] || '#888888';
-                  var badge = '<span style=\"background:' + c + '30;color:#111111;border:1px solid ' + c +
-                    ';border-radius:3px;padding:1px 4px;font-size:11px;white-space:nowrap;\">' + v + '</span>';
+                  ", MITO_TYPE_BADGE_JS, "
                   // Non-standard MitoFinder gene: PCG from MitoFinder with no
                   // canonical product. Flag so the user knows it can be renamed.
                   var row = cellInfo.row || {};
@@ -497,7 +493,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
                   }
                   return badge;
                 }
-              ")
+              "))
             ),
             gene = colDef(show = T,
                           name = "Gene",

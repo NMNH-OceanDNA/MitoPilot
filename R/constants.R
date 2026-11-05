@@ -13,6 +13,17 @@ MITO_PCG_GENES <- c(
 #' @noRd
 MITO_RRNA_GENES <- c("rrnL", "rrnS")
 
+# Feature-type colours; mirrors --mp-type-* in custom.css
+MITO_TYPE_COLORS <- c(ctrl = "#FAA34A", PCG = "#60BD68", rRNA = "#5DA5DA", tRNA = "#F17CB0", ORF = "#4D4D4D")
+
+# JS: badge for a feature-type cell value
+MITO_TYPE_BADGE_JS <- sprintf("var colors = %s;
+                  var v = cellInfo.value || '';
+                  var c = colors[v] || '#888888';
+                  var badge = '<span style=\"background:' + c + '30;color:#111111;border:1px solid ' + c +
+                    ';border-radius:3px;padding:1px 4px;font-size:11px;white-space:nowrap;\">' + v + '</span>';",
+                  jsonlite::toJSON(as.list(MITO_TYPE_COLORS), auto_unbox = TRUE))
+
 #' Standard mitochondrial tRNA genes
 #'
 #' `trnX` is an "undetermined tRNA" placeholder used by some invertebrate

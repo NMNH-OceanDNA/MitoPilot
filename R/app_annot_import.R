@@ -87,8 +87,9 @@ annot_import_table <- function(con, ns, d = annot_import_data(con)) {
       title = reactable::colDef(show = FALSE),
       ftype = reactable::colDef(name = "File type", width = 90, filterable = TRUE, filterMethod = exact,
                                 filterInput = sel_filter("ftype", c("GFF3", "BED", "TBL"))),
-      class = reactable::colDef(name = "Class", width = 80, filterable = TRUE, filterMethod = exact,
-                                filterInput = sel_filter("class", c("PCG", "tRNA", "rRNA", "ctrl", "none"))),
+      class = reactable::colDef(name = "Class", width = 80, html = TRUE, filterable = TRUE, filterMethod = exact,
+                                filterInput = sel_filter("class", c("PCG", "tRNA", "rRNA", "ctrl", "none")),
+                                cell = js(paste0("function(cellInfo) { ", MITO_TYPE_BADGE_JS, " return badge; }"))),
       ids = reactable::colDef(show = FALSE),
       n_samples = reactable::colDef(
         name = "Samples", width = 80, align = "center", html = TRUE,
