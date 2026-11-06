@@ -184,3 +184,21 @@ flag_original <- function(rows, curated, L) {
   rows$status <- status
   rows
 }
+
+#' Original track rows as the viewer payload list, or NULL when there are none
+#' @noRd
+original_payload <- function(original) {
+  if (!is.data.frame(original) || nrow(original) == 0) return(NULL)
+  lapply(seq_len(nrow(original)), function(i) {
+    f <- list(
+      name = as.character(original$name[i]),
+      gene = if (is.na(original$gene[i])) NULL else as.character(original$gene[i]),
+      type = as.character(original$type[i]),
+      pos1 = as.integer(original$pos1[i]), pos2 = as.integer(original$pos2[i]),
+      dir = as.character(original$dir[i]), status = as.character(original$status[i]),
+      orig1 = as.integer(original$orig1[i]), orig2 = as.integer(original$orig2[i]),
+      odir = as.character(original$odir[i])
+    )
+    f[!vapply(f, is.null, logical(1))]
+  })
+}

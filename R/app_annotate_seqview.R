@@ -7,7 +7,8 @@
 #' stored (1-based, inclusive, pos1 > pos2 for an origin-crossing feature).
 #' @noRd
 seqview_payload <- function(annotations, seq, topology, unit,
-                            selected = NULL, version = 0L, coverage = NULL) {
+                            selected = NULL, version = 0L, coverage = NULL,
+                            original = NULL) {
   seq <- toupper(as.character(seq)[1])
   a <- annotations
   yes <- function(x) {
@@ -42,6 +43,7 @@ seqview_payload <- function(annotations, seq, topology, unit,
     unit = unit, len = nchar(seq), topology = topology, seq = seq,
     version = as.integer(version), selected = sel, features = feats
   )
+  out$original <- original_payload(original)
   # Per-base read depth and error rate, indexed by position; NA -> null. An
   # all-NA column (assembly supplied without reads) is left out so the track
   # is not drawn at all.

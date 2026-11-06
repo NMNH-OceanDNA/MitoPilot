@@ -6,7 +6,7 @@
 #' maps them to alignment columns. NULL when there is no usable alignment.
 #' @noRd
 synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
-                            ref_label, selected = NULL, version = 0L) {
+                            ref_label, selected = NULL, version = 0L, original = NULL) {
   if (is.null(aln) || nrow(aln) == 0) return(NULL)
   s <- toupper(as.character(aln$aligned_sample[1]))
   r <- toupper(as.character(aln$aligned_ref[1]))
@@ -29,7 +29,7 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
   sel <- if (length(selected) == 1L && !is.na(selected) && selected %in% rows) {
     as.integer(selected)
   }
-  list(
+  out <- list(
     sampleLabel = sample_label, refAcc = ref_acc, refLabel = ref_label,
     refRc = isTRUE(aln$ref_rc[1]), s = s, r = r,
     refLength = as.integer(aln$ref_length[1]),
@@ -37,6 +37,8 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
     sampleFeatures = sample_feats, refFeatures = ref_feats,
     selected = sel, version = as.integer(version)
   )
+  out$original <- original_payload(original)
+  out
 }
 
 #' Synteny viewer controls + canvas block (tools/synteny_viewer_spec.md, section 5)
