@@ -43,7 +43,7 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
 
 #' Synteny viewer controls + canvas block (tools/synteny_viewer_spec.md, section 5)
 #' @noRd
-synteny_viewer_ui <- function(ns) {
+synteny_viewer_ui <- function(ns, user_annot = FALSE) {
   btn <- function(action, label, icon = NULL, title = NULL) {
     tags$button(
       type = "button", class = "btn btn-default", `data-mpsyn` = action,
@@ -56,8 +56,10 @@ synteny_viewer_ui <- function(ns) {
       btn("fit", "Fit gene"),
       btn("whole", "Whole alignment"),
       btn("zoom_in", NULL, icon("magnifying-glass-plus"), "Zoom in"),
-      btn("zoom_out", NULL, icon("magnifying-glass-minus"), "Zoom out")
+      btn("zoom_out", NULL, icon("magnifying-glass-minus"), "Zoom out"),
+      if (user_annot) mp_checkbox(ns("show_orig"), label = "Original", value = TRUE)
     ),
+    if (user_annot) uiOutput(ns("synteny_orig_note")),
     div(class = "mp-coverage-caption",
         paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a sample gene to select its row.",
               "Bases appear when zoomed in.")),

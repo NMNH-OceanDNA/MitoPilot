@@ -151,3 +151,42 @@ test_that("flag_original: wrapped original pairs with its wrapped curated row", 
   curated$pos2 <- 103L
   expect_equal(flag_original(rows, curated, 2000L)$status, "moved")
 })
+
+test_that("viewer UIs render the Original checkbox only for user-annotation projects", {
+  sv <- as.character(seqview_ui("x", user_annot = TRUE))
+  expect_match(sv, "x-show_orig"); expect_match(sv, "x-orig_note")
+  expect_no_match(as.character(seqview_ui("x")), "show_orig")
+  sy <- as.character(synteny_viewer_ui(shiny::NS("y"), user_annot = TRUE))
+  expect_match(sy, "y-show_orig"); expect_match(sy, "y-synteny_orig_note")
+  expect_no_match(as.character(synteny_viewer_ui(shiny::NS("y"))), "show_orig")
+})
+
+test_that("map_feature: rotation then trim places features on both sides of the cut", {
+  # Linearize rotated by 700 then Trim cut 200 bp off the end; probe at 1 gives +1300
+  f <- list(offset = 1300L, rc = FALSE)
+  expect_equal(map_feature(100L, 200L, "+", f, 2000L, 1800L)[c("pos1", "pos2", "clipped")],
+               list(pos1 = 1400L, pos2 = 1500L, clipped = FALSE))
+  expect_equal(map_feature(900L, 1000L, "+", f, 2000L, 1800L)[c("pos1", "pos2", "clipped")],
+               list(pos1 = 200L, pos2 = 300L, clipped = FALSE))
+  expect_null(map_feature(550L, 650L, "+", f, 2000L, 1800L))          # inside the trimmed 200 bp
+  expect_equal(map_feature(450L, 560L, "+", f, 2000L, 1800L)[c("pos1", "pos2", "clipped")],
+               list(pos1 = 1750L, pos2 = 1800L, clipped = TRUE))
+})
+
+test_that("original_features: backup is the pre-Linearize sequence; Linearize + Trim keeps every feature", {
+  cur <- substr(rot(S, 700), 1, 1800)
+  con <- track_db(S, cur, backup = S,
+                  ua = ua_rows(c("A", "B", "C"), c(100, 900, 550), c(200, 1000, 650)),
+                  gm = gm_rows(c("A", "B", "C"), c("cox1", "nad1", "nad2")))
+  withr::defer(DBI::dbDisconnect(con))
+  r <- original_features(con, "S1", 1L, 1L)$rows
+  expect_equal(r$name, c("A", "B"))
+  expect_equal(r$pos1, c(1400L, 200L)); expect_equal(r$pos2, c(1500L, 300L))
+})
+
+test_that("map_feature: an origin-spanning original becomes one contiguous feature after Linearize + Trim", {
+  # GB_MITOS cob 15912..523 on a 16529 bp contig; Linearize before trnF (1530) then Trim to 15825
+  f <- list(offset = 15000L, rc = FALSE)
+  expect_equal(map_feature(15912L, 523L, "+", f, 16529L, 15825L),
+               list(pos1 = 14383L, pos2 = 15523L, dir = "+", clipped = FALSE))
+})

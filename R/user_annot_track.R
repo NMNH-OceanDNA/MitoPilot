@@ -58,17 +58,20 @@ map_feature <- function(pos1, pos2, dir, frame, L_from, L_to) {
     return(list(pos1 = as.integer(q[1]), pos2 = as.integer(q[2]),
                 dir = if (frame$rc) flip(dir) else dir, clipped = FALSE))
   }
-  pieces <- if (pos1 > pos2) list(c(pos1, L_from), c(1L, pos2)) else list(c(pos1, pos2))
+  # A trim may follow a rotation (Linearize then Trim), and the probe gives one
+  # offset for both, so the feature (unwrapped past the old origin when it
+  # spans it) is tried shifted by -L, 0, +L and every copy that lands inside
+  # the sequence is kept; the largest wins below.
+  span <- if (pos1 > pos2) c(pos1, pos2 + L_from) else c(pos1, pos2)
   kept <- list()
-  for (pc in pieces) {
-    q <- pc + frame$offset
+  for (k in c(-2L, -1L, 0L, 1L)) {
+    q <- span + frame$offset + k * L_from
     if (frame$rc) q <- mirror(q[1], q[2])
     a <- max(1L, q[1])
     b <- min(L_to, q[2])
     if (a > b) next
     kept[[length(kept) + 1L]] <- list(
-      pos1 = as.integer(a), pos2 = as.integer(b),
-      clipped = a != q[1] || b != q[2] || length(pieces) > 1L
+      pos1 = as.integer(a), pos2 = as.integer(b), clipped = a != q[1] || b != q[2]
     )
   }
   if (!length(kept)) return(NULL)
@@ -201,4 +204,11 @@ original_payload <- function(original) {
     )
     f[!vapply(f, is.null, logical(1))]
   })
+}
+
+#' One-line caption under a viewer's controls when the track cannot be shown
+#' @noRd
+orig_note_ui <- function(o) {
+  if (is.null(o) || isTRUE(o$ok)) return(NULL)
+  div(class = "mp-coverage-caption", o$reason)
 }

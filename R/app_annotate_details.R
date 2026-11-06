@@ -1109,7 +1109,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         },
         if (has_ref) caption,
         if (has_aln) {
-          synteny_viewer_ui(ns)
+          synteny_viewer_ui(ns, isTRUE(session$userData$user_annot))
         } else if (has_ref) {
           div(class = "mp-coverage-caption", "No alignment is available for this reference.")
         }
@@ -1970,7 +1970,20 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     # Built here, not in the call: a lazily forced argument would capture the
     # child module's session and look up the table in the wrong namespace.
     seqview_sel <- reactive(reactable::getReactableState("table", "selected"))
-    sv <- seqview_server("seqview", rv, asmb_edit_tick, seqview_sel)
+    # Original (imported) annotation track, user-annotation projects only.
+    orig_track <- reactive({
+      if (!isTRUE(session$userData$user_annot)) return(NULL)
+      asmb_edit_tick()
+      gargoyle::watch("annotations_modal")
+      u <- rv$updating
+      req(rv$annotations, !is.null(u), length(u$ID) == 1)
+      tryCatch({
+        o <- original_features(session$userData$con, u$ID, u$path, u$scaffold)
+        if (isTRUE(o$ok)) o$rows <- flag_original(o$rows, rv$annotations, o$length)
+        o
+      }, error = function(e) list(ok = FALSE, reason = ORIG_NOTE_NO_PLACE))
+    })
+    sv <- seqview_server("seqview", rv, asmb_edit_tick, seqview_sel, orig_track)
     observeEvent(sv$pick(), {
       reactable::updateReactable("table", selected = as.integer(sv$pick()$row))
     })
@@ -1994,10 +2007,13 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       req(!is.null(acc), !is.na(acc), nzchar(acc))
       cand <- rv$blast_ref_candidates
       lbl <- if (!is.null(cand)) cand$species[match(acc, cand$accession)] else NA
+      o <- orig_track()
+      output$synteny_orig_note <- renderUI(orig_note_ui(o))
       p <- synteny_payload(
         rv$annotations, rv$blast_ref, rv$blast_ref_aln, ctx$ID, acc,
         if (is.na(lbl) || !nzchar(lbl)) acc else lbl,
-        selected = sv$sel(), version = syn_version()
+        selected = sv$sel(), version = syn_version(),
+        original = if (isTRUE(o$ok)) o$rows
       )
       req(p)
       p$id <- ns("synteny_canvas"); p$input <- ns("synteny_pick")
@@ -4372,7 +4388,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
        });",
       ns("annotation_table_details"), ns("annotation_btns_wrapper")
     ))),
-    seqview_ui(ns("seqview")),
+    seqview_ui(ns("seqview"), user_annot = isTRUE(session$userData$user_annot)),
     tags$details(
       id = ns("blast_synteny_details"),
       tags$summary("BLAST Reference Synteny"),

@@ -156,9 +156,12 @@ Module: new file `R/user_annot_track.R`, pure functions, no Shiny.
 5. If `mid` is not `cur`: `f2 = find_frame(mid, cur)` (Linearize rotation
    and/or Trim shift). Linearize-then-Trim is covered because `mid` is the
    pre-Linearize snapshot and `cur` is the result of both; the probe gives
-   one offset that is applied as rotation when lengths match and as a
-   linear shift when they do not. Features that wrapped the old origin and
-   now fall across the cut are clipped.
+   one offset that is applied as rotation when lengths match. When they do
+   not, the offset holds rotation and trim combined, so each feature piece
+   is tried shifted by that offset and by a full length either side, and
+   the copy that lands inside the sequence is kept (at most one can, for a
+   feature that does not straddle the Linearize cut). A feature cut by the
+   trim, or straddling the Linearize cut, keeps its larger piece, clipped.
 6. Apply `f1` then `f2` to every row of `user_annotations` for ID.
 7. Any NULL frame -> return a sentinel (`list(ok = FALSE, reason = ...)`).
 
