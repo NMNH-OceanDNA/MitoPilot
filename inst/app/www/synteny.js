@@ -97,6 +97,7 @@
     this.section = this.canvas.closest('details');
     this.L = 0; this.version = null; this.selected = null; this.viewStart = 1; this.ppc = 1;
     this.sFeats = []; this.rFeats = []; this.sLanes = 0; this.rLanes = 0; this.hits = [];
+    this.oFeats = []; this.oLanes = 0; this.showOrig = true;
     this.bindControls();
     var self = this;
     if (window.ResizeObserver) new ResizeObserver(function () { self.draw(); }).observe(this.wrap);
@@ -131,7 +132,11 @@
       var m = G.refFeature(f, ctx);
       return { gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: m.dir, track: 'ref', c1: m.c1, c2: m.c2 };
     });
+    this.oFeats = (p.original || []).map(function (f) {
+      return Object.assign({}, f, { track: 'orig', c1: G.sampleCol(f.pos1, self.sNongap), c2: G.sampleCol(f.pos2, self.sNongap) });
+    });
     this.sLanes = packLanes(this.sFeats, this.L); this.rLanes = packLanes(this.rFeats, this.L);
+    this.oLanes = packLanes(this.oFeats, this.L);
     this.selected = (p.selected === undefined || p.selected === null) ? null : p.selected;
     if (!same) this.initialView();
     this.draw();
@@ -181,8 +186,10 @@
 
   // ---- layout ----
   Viewer.prototype.ntOn = function () { return this.ppc >= BAR; };
+  Viewer.prototype.origOn = function () { return this.showOrig && this.oFeats.length > 0; };
   Viewer.prototype.ys = function () {
     var y = {}, cur = RULER_H + PAD, nt = this.ntOn();
+    y.oLanes = cur; if (this.origOn()) cur += this.oLanes * LANE_H + PAD;
     y.sLanes = cur; cur += this.sLanes * LANE_H + PAD;
     y.sNt = nt ? cur : null; if (nt) cur += NT_H;
     cur += GAP; y.ident = cur; cur += IDENT_H + GAP;
@@ -205,6 +212,7 @@
     this.hits = [];
     c.save(); c.beginPath(); c.rect(GUTTER, 0, W - GUTTER, H); c.clip();
     this.drawSampleRuler(c);
+    if (this.origOn()) this.drawLanes(c, W, this.oFeats, y.oLanes);
     this.drawLanes(c, W, this.sFeats, y.sLanes);
     if (y.sNt !== null) this.drawNt(c, y.sNt, this.s);
     this.drawIdentity(c, W, y.ident);
@@ -213,6 +221,7 @@
     this.drawRefRuler(c, y.rRuler);
     c.restore();
     c.fillStyle = cssVar('--mp-text-muted', '#6a6a6a'); c.textAlign = 'right'; c.textBaseline = 'middle';
+    if (this.origOn()) c.fillText('user', GUTTER - 6, y.oLanes + (LANE_H - 6) / 2, GUTTER - 10);
     if (this.sLanes) c.fillText('sample', GUTTER - 6, y.sLanes + (LANE_H - 6) / 2, GUTTER - 10);
     c.fillText('identity', GUTTER - 6, y.ident + IDENT_H / 2, GUTTER - 10);
     if (this.rLanes) c.fillText('ref', GUTTER - 6, y.rLanes + (LANE_H - 6) / 2, GUTTER - 10);
@@ -248,9 +257,10 @@
   };
   Viewer.prototype.drawLanes = function (c, W, feats, y0) {
     var self = this, vs = this.viewStart, ve = vs + this.viewLen();
+    var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = cssVar('--mp-warning', '#8a5a00');
     c.textAlign = 'center'; c.textBaseline = 'middle';
     feats.forEach(function (f) {
-      var col = ui().typeColor(f.type), y = y0 + f.lane * LANE_H, h = LANE_H - 6;
+      var col = ui().typeColor(f.type), y = y0 + f.lane * LANE_H, h = LANE_H - 6, orig = f.track === 'orig';
       G.pieces(f.c1, f.c2, self.L).forEach(function (pc) {
         if (pc[1] + 1 < vs || pc[0] > ve) return;
         var x0 = Math.max(GUTTER, self.x(pc[0])), x1 = Math.min(W, self.x(pc[1] + 1));
@@ -261,11 +271,14 @@
         c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
         for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
         c.closePath();
-        c.fillStyle = col + '55'; c.fill();
-        var sel = f.track === 'sample' && f.row === self.selected;
-        c.lineWidth = sel ? 2 : 1; c.strokeStyle = sel ? cssVar('--mp-primary', '#337ab7') : col; c.stroke();
-        if (x1 - x0 > c.measureText(f.gene).width + 8) {
-          c.fillStyle = cssVar('--mp-text', '#333'); c.fillText(f.gene, (x0 + x1) / 2, y + h / 2);
+        c.fillStyle = col + (orig ? '33' : '55'); c.fill();
+        var sel = f.track === 'sample' && f.row === self.selected, edited = orig && f.status !== 'unchanged';
+        c.lineWidth = sel || edited ? 2 : 1;
+        c.strokeStyle = orig ? (edited ? warn : muted) : (sel ? cssVar('--mp-primary', '#337ab7') : col);
+        c.stroke();
+        var label = orig ? f.name : f.gene;
+        if (x1 - x0 > c.measureText(label).width + 8) {
+          c.fillStyle = orig ? muted : cssVar('--mp-text', '#333'); c.fillText(label, (x0 + x1) / 2, y + h / 2);
         }
         self.hits.push({ x0: x0, x1: x1, y0: y, y1: y + h, f: f });
       });
@@ -321,6 +334,12 @@
   Viewer.prototype.tipText = function (col, h) {
     if (h) {
       var f = h.f;
+      if (f.track === 'orig') {
+        var st = (ui().STATUS_TEXT || {})[f.status] || f.status;
+        return 'Original ' + f.name + ' -> ' + (f.gene || 'unmapped') + ' ' + f.dir + ' ' +
+          f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString() + ' | ' + st +
+          (f.orig1 !== f.pos1 || f.orig2 !== f.pos2 ? ' (file: ' + f.orig1.toLocaleString() + '-' + f.orig2.toLocaleString() + ')' : '');
+      }
       return (f.track === 'sample' ? 'Sample ' : 'Reference ') + f.gene + ' (' + f.type + ') ' + f.dir +
         ' ' + f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString();
     }
@@ -335,6 +354,7 @@
   Viewer.prototype.click = function (px, py) {
     var h = this.hitTest(px, py);
     if (h && h.f.track === 'ref') { this.fitFeature(h.f); return; }
+    if (h && h.f.track === 'orig') return;
     this.selected = h ? h.f.row : null;
     if (h && this.input && window.Shiny) {
       window.Shiny.setInputValue(this.input, { row: h.f.row, nonce: Date.now() }, { priority: 'event' });
@@ -380,6 +400,8 @@
         else if (a === 'whole') self.whole(); else if (a === 'fit' && self.selected !== null) self.fit(self.selected);
       });
     });
+    var box = document.getElementById(this.id.replace(/synteny_canvas$|canvas$/, 'show_orig'));
+    if (box) { this.showOrig = box.checked; box.addEventListener('change', function () { self.showOrig = box.checked; self.draw(); }); }
   };
 
   function get(id) {
@@ -418,7 +440,7 @@
   window.mpsyn.state = function (id) {
     var v = viewers[id]; if (!v) return null;
     return { L: v.L, version: v.version, viewStart: v.viewStart, ppc: v.ppc, selected: v.selected,
-             height: v.height(), sampleLanes: v.sLanes, refLanes: v.rLanes,
+             height: v.height(), sampleLanes: v.sLanes, refLanes: v.rLanes, origLanes: v.origOn() ? v.oLanes : 0,
              live: v.canvas === document.getElementById(id) };
   };
   window.mpsyn.zoom = function (id, f) { var v = get(id); if (v) v.zoom(f); };
@@ -428,4 +450,5 @@
   window.mpsyn.click = function (id, px, py) { var v = get(id); if (v) v.click(px, py); };
   window.mpsyn.hitTest = function (id, px, py) { var v = get(id); return v ? v.hitTest(px, py) : null; };
   window.mpsyn.tip = function (id, col) { var v = get(id); return v ? v.tipText(col, null) : ''; };
+  window.mpsyn.tipAt = function (id, px, py) { var v = get(id); return v ? v.tipText(v.colAt(px), v.hitTest(px, py)) : ''; };
 })();
