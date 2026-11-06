@@ -1,5 +1,6 @@
 # MitoPilot (development version)
 
+- **Toolbar buttons.** Update, State, and Lock in the Annotate toolbar now respond to the first click after the same button was used in Assemble (the two toolbars share button ids, and the browser dropped a click whose count matched the one already sent).
 - **User annotations: original track.** In the Annotate details window, the Sequence and BLAST Reference Synteny viewers show your imported annotation as a muted track above the curated one, with your own gene names. Features whose coordinates or strand curation changed, that curation dropped, or whose name was unmapped get an amber outline; hover for the reason and the file coordinates. The track follows Linearize and Trim edits (a feature cut by a trim is clipped and marked). Toggle it with the "Original" checkbox. New projects store each original contig in a `user_contigs` table; projects created on this branch before the change show a note instead of the track.
 - **Browser support.** Opening the app in Safari now shows a warning on every launch that Safari has known display and interaction issues and suggests Chrome or Firefox.
 - **Annotate.** The Export Group column now updates after groups are assigned without reloading the app; the Exported column shows only the status and date, and can be resized.

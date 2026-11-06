@@ -483,3 +483,15 @@ $(document).ready(function() {
     '<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Continue anyway</button></div>' +
     '</div></div></div>').appendTo('body').modal().on('hidden.bs.modal', function() { $(this).remove(); });
 });
+
+// The step toolbars repeat button ids (run_modal, state, lock). Shiny counts
+// clicks per element and drops a value equal to the last one sent, so keep
+// same-id counters in step before Shiny's own click handler increments.
+document.addEventListener('click', function(e) {
+  var el = $(e.target).closest('.action-button[id]')[0];
+  if (!el) return;
+  var twins = $('[id="' + el.id + '"].action-button');
+  if (twins.length < 2) return;
+  var m = Math.max.apply(null, twins.map(function() { return $(this).data('val') || 0; }).get());
+  twins.data('val', m);
+}, true);
