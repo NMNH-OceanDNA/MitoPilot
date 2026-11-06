@@ -351,8 +351,8 @@ than the layout you edited. The button then reads **Cancel queued pipeline
 join**, so a mis-click is easy to undo. If the sample cannot be queued, the
 button is greyed out and the reason is shown below it.
 
-## Importing your own annotation
+## Importing your own annotations
 
-If you already have an annotation for each assembly as well, use
+If you also have annotations for each assembly, use
 `new_project_userAnnot()` instead. See
 [Using Your Own Annotations](Your-Own-Annotations.html).

@@ -14,13 +14,13 @@ Please see the
 
 ## Can I annotate my own mitogenome assemblies with MitoPilot?
 
-Yes! See [Using Your Own Assemblies](Your-Own-Assemblies.html).
+Yes! Each sample needs a FASTA with it's own assembled contig(s). 
+See [Using Your Own Assemblies](Your-Own-Assemblies.html).
 
 ## Can I bring my own annotations too?
 
-Yes. If every sample has an assembly and an annotation (GFF3, BED, or GenBank
-feature table), MitoPilot skips assembly and, by default, annotation and goes straight to
-gene-name review, curation, and export. See
+Yes! MitoPilot can import annotations in GFF3, BED, or GenBank
+feature table formats. See
 [Using Your Own Annotations](Your-Own-Annotations.html).
 
 ## Can MitoPilot find the mitogenome in my whole-genome assembly?
