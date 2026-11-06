@@ -240,6 +240,15 @@ curation will also be recorded in the Notes column.
 
 ![](figures/user-annot/annotate-details.png)
 
+The Sequence and BLAST Reference Synteny viewers in that window draw your
+original annotation as a muted track above the curated one, labelled with the
+gene names from your file. A feature outlined in amber is one MitoPilot changed:
+its coordinates or strand moved, curation dropped it, or its name was never
+mapped. Hover an arrow for the reason and the coordinates as they appear in
+your file. A name change alone (`COI` becoming `cox1`) is not marked. The track
+follows the Linearize and Trim buttons; a feature a trim cuts through is drawn
+clipped and marked as such. Untick "Original" in either viewer to hide it.
+
 When done reviewing, you may continue with [Export](Test-Project-Export.html) as usual.
 
 ## Filling gaps with MitoPilot's tools
