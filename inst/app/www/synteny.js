@@ -222,7 +222,7 @@
     c.restore();
     c.fillStyle = cssVar('--mp-text-muted', '#6a6a6a'); c.textAlign = 'right'; c.textBaseline = 'middle';
     if (this.origOn()) c.fillText('user', GUTTER - 6, y.oLanes + (LANE_H - 6) / 2, GUTTER - 10);
-    if (this.sLanes) c.fillText('sample', GUTTER - 6, y.sLanes + (LANE_H - 6) / 2, GUTTER - 10);
+    if (this.sLanes) c.fillText(this.origOn() ? 'curated' : 'sample', GUTTER - 6, y.sLanes + (LANE_H - 6) / 2, GUTTER - 10);
     c.fillText('identity', GUTTER - 6, y.ident + IDENT_H / 2, GUTTER - 10);
     if (this.rLanes) c.fillText('ref', GUTTER - 6, y.rLanes + (LANE_H - 6) / 2, GUTTER - 10);
   };
@@ -271,7 +271,7 @@
         c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
         for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
         c.closePath();
-        c.fillStyle = col + (orig ? '33' : '55'); c.fill();
+        c.fillStyle = col + (orig ? '22' : '55'); c.fill();
         var sel = f.track === 'sample' && f.row === self.selected, edited = orig && f.status !== 'unchanged';
         c.lineWidth = sel || edited ? 2 : 1;
         c.strokeStyle = orig ? (edited ? warn : muted) : (sel ? cssVar('--mp-primary', '#337ab7') : col);
@@ -336,9 +336,9 @@
       var f = h.f;
       if (f.track === 'orig') {
         var st = (ui().STATUS_TEXT || {})[f.status] || f.status;
-        return 'Original ' + f.name + ' -> ' + (f.gene || 'unmapped') + ' ' + f.dir + ' ' +
+        return 'Original "' + f.name + '" -> "' + (f.gene || 'unmapped') + '" ' + f.dir + ' ' +
           f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString() + ' | ' + st +
-          (f.orig1 !== f.pos1 || f.orig2 !== f.pos2 ? ' (file: ' + f.orig1.toLocaleString() + '-' + f.orig2.toLocaleString() + ')' : '');
+          (f.orig1 !== f.pos1 || f.orig2 !== f.pos2 ? ' (originally ' + f.orig1.toLocaleString() + '-' + f.orig2.toLocaleString() + ')' : '');
       }
       return (f.track === 'sample' ? 'Sample ' : 'Reference ') + f.gene + ' (' + f.type + ') ' + f.dir +
         ' ' + f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString();

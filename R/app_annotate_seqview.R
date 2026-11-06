@@ -92,7 +92,7 @@ seqview_ui <- function(id, user_annot = FALSE) {
     if (user_annot) uiOutput(ns("orig_note")),
     div(class = "mp-coverage-caption",
         paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a gene to select its row.",
-              "Letters appear when zoomed in. Copy sequence copies the bases in view. Error rate bars turn orange above 5%.")),
+              "Zoom in to see nucleotide sequence and translations. Copy sequence copies the bases in view. Error rate bars turn orange above 5%.")),
     uiOutput(ns("empty")),
     div(
       class = "mp-seqview",

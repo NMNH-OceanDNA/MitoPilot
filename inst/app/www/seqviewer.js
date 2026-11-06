@@ -449,7 +449,7 @@
         c.moveTo(pts[0][0], pts[0][1]);
         for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
         c.closePath();
-        c.fillStyle = col + '33'; c.fill();
+        c.fillStyle = col + '22'; c.fill();
         c.setLineDash([]); c.lineWidth = edited ? 2 : 1; c.strokeStyle = edited ? warn : muted; c.stroke();
         c.lineWidth = 1;
         if (x1 - x0 > c.measureText(f.name).width + 8) { c.fillStyle = muted; c.fillText(f.name, (x0 + x1) / 2, y + h / 2); }
@@ -643,9 +643,9 @@
       if (self.err && self.err[b.pos - 1] !== null) t += ', error ' + (self.err[b.pos - 1] * 100).toFixed(1) + '%';
       if (h && h.orig) {
         var o = h.f;
-        t += ' | Original ' + o.name + ' -> ' + (o.gene || 'unmapped') + ' ' + o.dir + ' ' + o.pos1.toLocaleString() + '-' + o.pos2.toLocaleString() +
+        t += ' | Original "' + o.name + '" -> "' + (o.gene || 'unmapped') + '" ' + o.dir + ' ' + o.pos1.toLocaleString() + '-' + o.pos2.toLocaleString() +
           ' | ' + (STATUS_TEXT[o.status] || o.status);
-        if (o.orig1 !== o.pos1 || o.orig2 !== o.pos2) t += ' (file: ' + o.orig1.toLocaleString() + '-' + o.orig2.toLocaleString() + ')';
+        if (o.orig1 !== o.pos1 || o.orig2 !== o.pos2) t += ' (originally ' + o.orig1.toLocaleString() + '-' + o.orig2.toLocaleString() + ')';
       } else if (h && h.f) t += ' | ' + h.f.gene + (h.codon !== undefined ? ' codon ' + (h.codon + 1) + ' ' + h.letter : ' (' + h.f.type + ')');
       if (h && !h.orig && h.f && typeof h.f.notes === 'string' && h.f.notes) t += ' | ' + h.f.notes;
       if (h && h.read) {
