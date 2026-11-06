@@ -1,5 +1,6 @@
 # MitoPilot (development version)
 
+- **Browser support.** Opening the app in Safari now shows a warning on every launch that Safari has known display and interaction issues and suggests Chrome or Firefox.
 - **Annotate.** The Export Group column now updates after groups are assigned without reloading the app; the Exported column shows only the status and date, and can be resized.
 - **Export Data.** The "Available metadata" panel no longer lists GEOME_BCID, GBIF_ID, or BioSample under "Your mapfile columns" when no sample has a value for them.
 - **Annotate details.** The rRNA nucleotide edit controls match the codon controls (labelled +/- buttons per end, a bases-per-click box for each end), the alignment stays scrolled to the 3' end after a 3' edit instead of jumping back to the start, and a boundary can no longer be extended past the contig or around a circular unit onto itself.

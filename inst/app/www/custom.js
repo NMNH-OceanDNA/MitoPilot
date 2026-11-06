@@ -356,3 +356,15 @@ $(document).on('shiny:value', function(e) {
 
 // A "?" inside a <summary> opens its popover without folding the section
 $(document).on('click', 'summary .mp-help-icon', function(e) { e.preventDefault(); });
+
+// Safari has known issues; warn on every page load, then let the user carry on
+$(document).ready(function() {
+  var ua = navigator.userAgent;
+  if (!/Safari/.test(ua) || /Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/.test(ua)) return;
+  $('<div class="modal fade" tabindex="-1" role="dialog"><div class="modal-dialog"><div class="modal-content">' +
+    '<div class="modal-header"><h4 class="modal-title">Safari is not fully supported</h4></div>' +
+    '<div class="modal-body">MitoPilot has known display and interaction issues in Safari. ' +
+    'For the best experience, open the app in Chrome or Firefox.</div>' +
+    '<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Continue anyway</button></div>' +
+    '</div></div></div>').appendTo('body').modal().on('hidden.bs.modal', function() { $(this).remove(); });
+});
