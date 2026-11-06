@@ -190,3 +190,10 @@ test_that("map_feature: an origin-spanning original becomes one contiguous featu
   expect_equal(map_feature(15912L, 523L, "+", f, 16529L, 15825L),
                list(pos1 = 14383L, pos2 = 15523L, dir = "+", clipped = FALSE))
 })
+
+test_that("find_frame: an ambiguous probe falls through to the next probe", {
+  # first 120 bp are a tandem repeat, so the probe at position 1 hits twice
+  rep2 <- paste0(substr(S, 1, 60), substr(S, 1, 60), substr(S, 121, 2000))
+  expect_equal(find_frame(rep2, rep2), list(offset = 0L, rc = FALSE))
+  expect_equal(find_frame(rep2, rot(rep2, 500)), list(offset = -500L, rc = FALSE))
+})

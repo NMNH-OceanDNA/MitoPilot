@@ -30,7 +30,7 @@ find_frame <- function(from, to, k = 60L) {
     })
     n <- lengths(hits)
     if (sum(n) == 0L) next
-    if (sum(n) != 1L) return(NULL)
+    if (sum(n) != 1L) next
     rc <- n[2] == 1L
     off <- as.integer(hits[[if (rc) 2L else 1L]][1]) - p
     if (same) {
