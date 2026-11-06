@@ -329,6 +329,11 @@
     if (this.errOn()) { this.drawTrack(c, W, y, ERR_H, this.err, Math.max(this.errMax, ERR_FLAG * 2), 'error', true); y += ERR_H + GAP; }
     if (this.origOn()) this.drawOrigLanes(c);
     this.drawJoins(c); this.drawLanes(c);
+    if (this.origOn()) {
+      c.fillStyle = cssVar('--mp-text-muted', '#6a6a6a'); c.textAlign = 'right'; c.textBaseline = 'middle';
+      c.fillText('user', GUTTER - 6, this.origY(0) + (LANE_H - 6) / 2, GUTTER - 10);
+      if (this.nLanes) c.fillText('curated', GUTTER - 6, this.laneY(0) + (LANE_H - 6) / 2, GUTTER - 10);
+    }
     y = this.topH() + this.origH() + this.nLanes * LANE_H + PAD;
     if (this.ntOn()) { this.drawNt(c, y, this.seq, this.seqLabel, null); y += NT_H; }
     if (this.consOn()) { this.drawNt(c, y, this.seq2, this.seq2Label, this.seq); y += NT_H; }
@@ -435,7 +440,7 @@
   // grey outline, amber outline when curation changed the feature. Hits carry
   // orig so click ignores them.
   Viewer.prototype.drawOrigLanes = function (c) {
-    var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = cssVar('--mp-warning', '#8a5a00');
+    var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = '#e69f00', warnSoft = cssVar('--mp-warning-soft', '#fde8d0');
     c.textAlign = 'center'; c.textBaseline = 'middle';
     this.orig.forEach(function (f) {
       var col = typeColor(f.type), y = this.origY(f.lane), h = LANE_H - 6, edited = f.status !== 'unchanged';
@@ -449,8 +454,8 @@
         c.moveTo(pts[0][0], pts[0][1]);
         for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
         c.closePath();
-        c.fillStyle = col + '22'; c.fill();
-        c.setLineDash([]); c.lineWidth = edited ? 2 : 1; c.strokeStyle = edited ? warn : muted; c.stroke();
+        c.fillStyle = edited ? warnSoft : col + '22'; c.fill();
+        c.setLineDash([]); c.lineWidth = edited ? 3 : 1; c.strokeStyle = edited ? warn : muted; c.stroke();
         c.lineWidth = 1;
         if (x1 - x0 > c.measureText(f.name).width + 8) { c.fillStyle = muted; c.fillText(f.name, (x0 + x1) / 2, y + h / 2); }
         this.hits.push({ x0: x0, x1: x1, y0: y, y1: y + h, f: f, orig: true });

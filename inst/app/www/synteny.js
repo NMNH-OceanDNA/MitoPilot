@@ -257,7 +257,7 @@
   };
   Viewer.prototype.drawLanes = function (c, W, feats, y0) {
     var self = this, vs = this.viewStart, ve = vs + this.viewLen();
-    var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = cssVar('--mp-warning', '#8a5a00');
+    var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = '#e69f00', warnSoft = cssVar('--mp-warning-soft', '#fde8d0');
     c.textAlign = 'center'; c.textBaseline = 'middle';
     feats.forEach(function (f) {
       var col = ui().typeColor(f.type), y = y0 + f.lane * LANE_H, h = LANE_H - 6, orig = f.track === 'orig';
@@ -271,9 +271,9 @@
         c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
         for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
         c.closePath();
-        c.fillStyle = col + (orig ? '22' : '55'); c.fill();
         var sel = f.track === 'sample' && f.row === self.selected, edited = orig && f.status !== 'unchanged';
-        c.lineWidth = sel || edited ? 2 : 1;
+        c.fillStyle = edited ? warnSoft : col + (orig ? '22' : '55'); c.fill();
+        c.lineWidth = edited ? 3 : (sel ? 2 : 1);
         c.strokeStyle = orig ? (edited ? warn : muted) : (sel ? cssVar('--mp-primary', '#337ab7') : col);
         c.stroke();
         var label = orig ? f.name : f.gene;
