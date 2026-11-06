@@ -196,3 +196,16 @@ test_that("unnamed features fall back to their note as raw name", {
   expect_equal(gm$raw_name, c("control region", "tandem repeat"))
   expect_equal(gm$gene, c("ctrl", NA))
 })
+
+test_that("new_project_userAnnot stores each original contig in user_contigs", {
+  testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
+  fx <- ua_fixture(withr::local_tempdir())
+  ua_init(fx)
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(fx$proj, ".sqlite"))
+  withr::defer(DBI::dbDisconnect(con))
+  uc <- DBI::dbReadTable(con, "user_contigs")
+  expect_setequal(uc$ID, c("UA_LINEAR", "UA_CIRCULAR"))
+  fa <- Biostrings::readDNAStringSet(file.path(fx$asm, "UA_CIRCULAR.fasta"))
+  expect_identical(uc$sequence[uc$ID == "UA_CIRCULAR"], toupper(as.character(fa[[1]])))
+  expect_identical(uc$length[uc$ID == "UA_CIRCULAR"], Biostrings::width(fa)[1])
+})

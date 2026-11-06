@@ -70,6 +70,12 @@ new_db_userAnnot <- function(
   )
   DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_user_annotations_name
                        ON user_annotations(raw_name, feature_type)")
+  DBI::dbExecute(
+    con,
+    "CREATE TABLE user_contigs (
+      ID TEXT PRIMARY KEY, sequence TEXT NOT NULL, length INTEGER NOT NULL
+    );"
+  )
   imp <- import_user_annotations(con, mapping, assembly_path, annotation_path, mapping_id)
   DBI::dbExecute(
     con,
@@ -88,7 +94,8 @@ import_user_annotations <- function(con, mapping, assembly_path, annotation_path
                                     mapping_id = "ID") {
   ids <- as.character(mapping[[mapping_id]])
   parsed <- lapply(seq_along(ids), function(i) {
-    L <- unname(Biostrings::fasta.seqlengths(.ua_path(assembly_path, mapping$Assembly[i])))[1]
+    fa <- Biostrings::readDNAStringSet(.ua_path(assembly_path, mapping$Assembly[i]))
+    L <- Biostrings::width(fa)[1]
     fn <- mapping$Annotation[i]
     p <- parse_user_annotation(.ua_path(annotation_path, fn), contig_length = L)
     ac <- sub("^([ACGTUacgtu]{3})$", "(\\1)", p$anticodon_raw)
@@ -105,10 +112,13 @@ import_user_annotations <- function(con, mapping, assembly_path, annotation_path
       pseudo = p$pseudo, note = p$note, attrs = p$attrs,
       source_file = basename(fn), contig_length = as.integer(L)
     )
-    list(rows = rows, dropped = attr(p, "dropped_types"), warnings = attr(p, "warnings"))
+    list(rows = rows, dropped = attr(p, "dropped_types"), warnings = attr(p, "warnings"),
+         contig = data.frame(ID = ids[i], sequence = toupper(as.character(fa[[1]])),
+                             length = as.integer(L)))
   })
   ua <- dplyr::bind_rows(lapply(parsed, `[[`, "rows"))
   DBI::dbAppendTable(con, "user_annotations", ua)
+  DBI::dbAppendTable(con, "user_contigs", dplyr::bind_rows(lapply(parsed, `[[`, "contig")))
 
   ua$guess <- guess_gene(ua$raw_name, dplyr::na_if(ua$feature_type, ""), ua$raw_product,
                          ua$note)$gene
