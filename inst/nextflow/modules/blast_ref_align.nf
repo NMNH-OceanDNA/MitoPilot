@@ -50,8 +50,8 @@ process blast_ref_align {
       MitoPilot::compute_blast_ref_alignment( \
         assembly_seq    = paste(readLines('_assembly.txt'), collapse = ''), \
         ref_seq         = paste(readLines('_ref.txt'),      collapse = ''), \
-        rotation        = rot\$rotation, \
-        sample_rotation = rot\$sample_rotation, \
+        rotation        = rot[['rotation']], \
+        sample_rotation = rot[['sample_rotation']], \
         output_file     = '!{outDir}/!{outFile}' \
     )"
     '''
