@@ -737,6 +737,65 @@ guess_orf_gene <- function(refHits_json, threshold = ORF_ASSIGN_SIM_THRESHOLD) {
   )
 }
 
+#' JOIN group id from a `JOIN: mode=... group=N` notes marker
+#'
+#' @param notes character vector of notes
+#' @return integer vector, NA where there is no marker
+#' @noRd
+join_group_id <- function(notes) {
+  as.integer(
+    stringr::str_match(
+      dplyr::coalesce(as.character(notes), ""),
+      "^JOIN: mode=\\w+ group=(\\d+)"
+    )[, 2]
+  )
+}
+
+#' TRUE for rows carrying a JOIN marker
+#'
+#' @param notes character vector of notes
+#' @noRd
+is_join_member <- function(notes) {
+  !is.na(join_group_id(notes))
+}
+
+#' TRUE for the first row of each JOIN group and for every non-member row
+#'
+#' @param annotations annotations data frame with contig and notes
+#' @noRd
+join_copy_row <- function(annotations) {
+  grp <- join_group_id(annotations$notes)
+  is.na(grp) | !duplicated(paste(annotations$contig, grp))
+}
+
+#' Reading-frame offset of a CDS: 2 or 3, else 1 (NA/NULL/out of range)
+#'
+#' @param x `codon_start` value(s)
+#' @noRd
+codon_offset <- function(x) {
+  x <- suppressWarnings(as.integer(x))
+  if (length(x) == 0L) return(1L)
+  ifelse(!is.na(x) & x %in% 2:3, x, 1L)
+}
+
+#' TRUE for PCG rows curation must leave at their imported coordinates
+#'
+#' @param notes character vector of notes
+#' @param codon_start `codon_start` column, or NULL when absent
+#' @noRd
+skip_boundary_curation <- function(notes, codon_start) {
+  is_join_member(notes) | codon_offset(codon_start) > 1L
+}
+
+#' Spliced translation a JOIN group is BLASTed with in curation
+#'
+#' @inheritParams splice_join_cds
+#' @return character scalar
+#' @noRd
+group_refhits_translation <- function(members, seq, genetic_code) {
+  splice_join_cds(members, seq, genetic_code)$translation
+}
+
 #' Next unused join-group id for a set of annotations
 #'
 #' Join groups are tagged in the `notes` field with a `JOIN: mode=... group=N`
@@ -748,12 +807,7 @@ guess_orf_gene <- function(refHits_json, threshold = ORF_ASSIGN_SIM_THRESHOLD) {
 #' @return integer group id, 1 when no join markers are present.
 #' @noRd
 next_join_group <- function(notes) {
-  grps <- as.integer(
-    stringr::str_match(
-      dplyr::coalesce(as.character(notes), ""),
-      "^JOIN: mode=\\w+ group=(\\d+)"
-    )[, 2]
-  )
+  grps <- join_group_id(notes)
   if (all(is.na(grps))) 1L else max(grps, na.rm = TRUE) + 1L
 }
 
@@ -776,14 +830,15 @@ mute_partial_codon_warning <- function(expr) {
 #' annotate-details editor's spliced-CDS preview / alignment.
 #'
 #' @param members data frame of the group's annotation rows. Requires columns
-#'   pos1, pos2, direction, start_codon, stop_codon, partial_start, partial_stop.
+#'   pos1, pos2, direction, start_codon, stop_codon, partial_start, partial_stop;
+#'   an optional `codon_start` on the 5' member offsets the reading frame.
 #' @param seq the scaffold assembly sequence (DNAString/DNAStringSet) the members
 #'   belong to.
 #' @param genetic_code a resolved Biostrings genetic-code vector (e.g.
 #'   `session$userData$gcode` or `Biostrings::getGeneticCode("2")`).
 #'
 #' @return list with `dna`, `translation` (terminal stop stripped), `start_codon`,
-#'   `stop_codon`, `partial_start`, `partial_stop`, `pos1`, `pos2`, `length`,
+#'   `stop_codon`, `partial_start`, `partial_stop`, `codon_start`, `pos1`, `pos2`, `length`,
 #'   `direction`, and `segments`: a data frame (one row per exon, ordered 5'->3')
 #'   with `member_row` (index into `members`), `pos1`, `pos2`, `aa_start`, `aa_end`.
 #' @keywords internal
@@ -818,9 +873,13 @@ splice_join_cds <- function(members, seq, genetic_code) {
   merged <- Biostrings::DNAStringSet(paste(exon_seqs, collapse = ""))
   if (direction == "-") merged <- Biostrings::reverseComplement(merged)
 
+  i5 <- if (direction == "-") n else 1L
+  codon_start <- codon_offset(exons$codon_start[i5])
+  off <- codon_start - 1L
+
   translation <- mute_partial_codon_warning(
-    Biostrings::translate(merged, genetic.code = genetic_code,
-                          if.fuzzy.codon = "solve")
+    Biostrings::translate(Biostrings::subseq(merged, start = 1L + off),
+                          genetic.code = genetic_code, if.fuzzy.codon = "solve")
   ) |>
     as.character()
   translation <- sub("\\*$", "", translation)
@@ -836,8 +895,8 @@ splice_join_cds <- function(members, seq, genetic_code) {
     member_row = exons_53$.__row,
     pos1 = exons_53$pos1,
     pos2 = exons_53$pos2,
-    aa_start = pmin(floor((cum_start - 1) / 3) + 1, aa_len),
-    aa_end = pmin(ceiling(cum_end / 3), aa_len),
+    aa_start = pmin(pmax(floor((cum_start - 1 - off) / 3) + 1, 1), aa_len),
+    aa_end = pmin(pmax(ceiling((cum_end - off) / 3), 1), aa_len),
     stringsAsFactors = FALSE
   )
 
@@ -875,6 +934,7 @@ splice_join_cds <- function(members, seq, genetic_code) {
     stop_codon = stop_codon,
     partial_start = partial_start,
     partial_stop = partial_stop,
+    codon_start = codon_start,
     pos1 = gene_pos1,
     pos2 = gene_pos2,
     length = sum(seg_len),

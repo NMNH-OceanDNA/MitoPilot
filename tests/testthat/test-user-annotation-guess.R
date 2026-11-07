@@ -1,0 +1,77 @@
+test_that("guess_gene maps names", {
+  g <- function(n, t, p = NA) guess_gene(n, t, p)
+  chk <- function(n, t, p, gene, type) {
+    r <- guess_gene(n, t, p)
+    expect_equal(r$gene, gene)
+    expect_equal(r$type, type)
+  }
+  chk("COX1", "CDS", NA, "cox1", "PCG")
+  chk("YP_000001.1", "CDS", "cytochrome c oxidase subunit I", "cox1", "PCG")
+  chk("COI", "CDS", NA, "cox1", "PCG")
+  chk("ATPase 6", "CDS", NA, "atp6", "PCG")
+  chk("YP_x", "CDS", "ATP synthase F0 subunit 6", "atp6", "PCG")
+  chk("YP_x", "CDS", "ATP synthase F0 subunit 8", "atp8", "PCG")
+  chk("YP_x", "CDS", "ATP synthase FO subunit 8", "atp8", "PCG")
+  chk("YP_x", "CDS", "ATP synthase F0 subunit a", "atp6", "PCG")
+  chk("YP_x", "CDS", "ATP synthase subunit 9", "atp9", "PCG")
+  chk("ND4L", "gene", NA, "nad4l", "PCG")
+  chk("16S", "rRNA", NA, "rrnL", "rRNA")
+  chk("RNR1", "rRNA", "12S ribosomal RNA", "rrnS", "rRNA")
+  chk("tRNA-Leu (CUN)", "tRNA", NA, "trnL", "tRNA")
+  chk("trnL2(taa)", "tRNA", NA, "trnL", "tRNA")
+  chk("tRNA-Ser(uca)", NA, NA, "trnS", "tRNA")
+  chk("TRNF", "gene", "tRNA-Phe", "trnF", "tRNA")
+  chk("cox1", NA, NA, "cox1", "PCG")
+  chk("COI CDS 5' Partial CDS", "CDS", NA, "cox1", "PCG")
+  chk("cox1_intron_ORF", "CDS", NA, NA_character_, NA_character_)
+  chk("COX1 intron ORF", "CDS", NA, NA_character_, NA_character_)
+  chk("cob_i1_orf", "CDS", NA, NA_character_, NA_character_)
+  chk("nad4 like", "CDS", NA, NA_character_, NA_character_)
+  chk("D-loop", "misc_feature", NA, "ctrl", "ctrl")
+  chk("OH", "gene", NA, "ctrl", "ctrl")
+  chk(NA, "D-loop", NA, "ctrl", "ctrl")
+  chk("", "D_loop", NA, "ctrl", "ctrl")
+  chk("control region", "misc_feature", NA, "ctrl", "ctrl")
+  chk("CR", NA, NA, "ctrl", "ctrl")
+  chk("putative control region", "misc_feature", NA, "ctrl", "ctrl")
+  chk("x1", "origin_of_replication", NA, "ctrl", "ctrl")
+  chk("OL", "rep_origin", NA, NA_character_, NA_character_)
+  chk("tandem repeat", "misc_feature", NA, NA_character_, NA_character_)
+  chk("MutS", "CDS", NA, "msh1", "PCG")
+  chk("mutS", "gene", NA, "msh1", "PCG")
+  chk("MutS gene", "CDS", NA, "msh1", "PCG")
+  chk("MutS homolog", "CDS", NA, "msh1", "PCG")
+  chk("YP_x", "CDS", "MutS mismatch DNA repair protein", "msh1", "PCG")
+  chk("ORF1", "CDS", NA, NA_character_, NA_character_)
+})
+
+test_that("guess_gene is vectorised", {
+  r <- guess_gene(c("COX1", "OH"), c("CDS", "gene"))
+  expect_equal(nrow(r), 2L)
+  expect_equal(r$gene, c("cox1", "ctrl"))
+  r <- guess_gene(c("", NA, "misc_feature"), c("misc_feature", "rep_origin", "misc_feature"),
+                  NA, c("control region", "L-strand origin", NA))
+  expect_equal(r$gene, c("ctrl", NA, NA))
+  expect_equal(r$type, c("ctrl", NA, NA))
+  r <- guess_gene(c("trnP", "nad5", "COX1", NA, ""),
+                  c("tRNA", "CDS", "CDS", "rep_origin", "misc_feature"), NA,
+                  c("adjacent to control region", "overlaps D-loop", "cr", "H-strand origin",
+                    "control region"))
+  expect_equal(r$gene, c("trnP", "nad5", "cox1", "ctrl", "ctrl"))
+  expect_equal(guess_gene("YP_1", "CDS", "D-loop adjacent cytochrome b")$gene, "cob")
+  r <- guess_gene(c(NA, NA, NA, "D-loop"),
+                  c("repeat_region", "misc_feature", "D-loop", "misc_feature"), NA,
+                  c("tandem repeats in control region", "conserved sequence block in control region",
+                    "contains L-strand promoter", "contains L-strand promoter"))
+  expect_equal(r$gene, c(NA, NA, "ctrl", NA))
+  expect_equal(guess_gene("CSB in control region", "misc_feature")$gene, NA_character_)
+})
+
+test_that("parse_anticodon", {
+  expect_equal(parse_anticodon("tRNA-Ser (uca)"), "TCA")
+  expect_equal(parse_anticodon("anticodon:gaa"), "GAA")
+  expect_equal(parse_anticodon("(pos:1234..1236,aa:Phe,seq:gaa)"), "GAA")
+  expect_equal(parse_anticodon("tRNA-Leu-UAA"), "TAA")
+  expect_true(is.na(parse_anticodon("tRNA-Phe")))
+  expect_true(is.na(parse_anticodon(NA)))
+})

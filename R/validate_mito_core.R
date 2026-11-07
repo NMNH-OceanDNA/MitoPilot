@@ -100,6 +100,25 @@ validate_mito_core <- function(
   # counter for warnings
   total_warnings <- 0
 
+  # JOIN groups: one gene copy; 5'/3' members ordered as splice_join_cds() does
+  join_key <- ifelse(
+    is_join_member(annotations$notes),
+    paste(annotations$contig, join_group_id(annotations$notes)),
+    NA_character_
+  )
+  if (!"join_translation" %in% names(annotations)) {
+    annotations$join_translation <- rep(NA_character_, nrow(annotations))
+  }
+  join_5p <- join_3p <- rep(TRUE, nrow(annotations))
+  for (k in unique(stats::na.omit(join_key))) {
+    m <- which(join_key == k)
+    m <- m[order(annotations$pos1[m])]
+    if (identical(annotations$direction[m[1]], "-")) m <- rev(m)
+    join_5p[m[-1]] <- FALSE
+    join_3p[m[-length(m)]] <- FALSE
+  }
+  copy_row <- is.na(join_key) | !duplicated(join_key)
+
   # Validate counts ----
   missing <- NA_character_
   extra <- NA_character_
@@ -116,14 +135,16 @@ validate_mito_core <- function(
     gene_annotations <- annotations |>
       dplyr::filter(gene == {{ gene }})
 
+    n_copies <- sum(annotations$gene %in% gene & copy_row)
+
     ## Missing ----
-    if (nrow(gene_annotations) < min(gene_rules$count %||% 1)) {
+    if (n_copies < min(gene_rules$count %||% 1)) {
       missing <- semicolon_paste(missing, gene)
       next
     }
 
     ## Duplication ----
-    if (nrow(gene_annotations) > max(gene_rules$count %||% 1)) {
+    if (n_copies > max(gene_rules$count %||% 1)) {
       if (!(has_intron)) { # do not issue duplicate warnings for genes that may have introns
         extra <- semicolon_paste(extra, gene)
         annotations$warnings[annotations$gene == gene] <- semicolon_paste(annotations$warnings[annotations$gene == gene], "possible duplicate")
@@ -288,19 +309,20 @@ validate_mito_core <- function(
     refHits <- json_parse(refHits[[1]], TRUE)
 
     ## Internal Stop codons ----
+    if (!is.na(join_translation)) translation <- if (join_5p[i]) join_translation else NA
     if (!is.na(translation) && stringr::str_detect(translation, "\\*")) {
       annotations$warnings[i] <- warnings <- semicolon_paste(warnings, "internal stop codon")
       total_warnings <- total_warnings + 1
     }
 
     ## Improper Stop ----
-    if (!is.na(stop_codon) && stop_codon %nin% gene_rules$stop_codons) {
+    if (join_3p[i] && !is.na(stop_codon) && stop_codon %nin% gene_rules$stop_codons) {
       annotations$warnings[i] <- warnings <- semicolon_paste(warnings, "non-standard stop codon")
       total_warnings <- total_warnings + 1
     }
 
     ## Improper Start ----
-    if (!is.na(start_codon) && start_codon %nin% gene_rules$start_codons) {
+    if (join_5p[i] && !is.na(start_codon) && start_codon %nin% gene_rules$start_codons) {
       annotations$warnings[i] <- warnings <- semicolon_paste(warnings, "non-standard start codon")
       total_warnings <- total_warnings + 1
     }
@@ -332,13 +354,14 @@ validate_mito_core <- function(
       paste(collapse = ";")
   }
 
+  annotations$join_translation <- NULL
+
   # Final Summary ----
   summary <- data.frame(
     scaffolds = length(unique(annotations$contig)),
-    structure = annotations |>
-      dplyr::pull(gene) |>
+    structure = annotations$gene[copy_row] |>
       paste(collapse = "|"),
-    PCGCount = sum(annotations$type == "PCG"),
+    PCGCount = sum(annotations$type == "PCG" & copy_row),
     tRNACount = sum(annotations$type == "tRNA"),
     rRNACount = sum(annotations$type == "rRNA"),
     missing = missing,

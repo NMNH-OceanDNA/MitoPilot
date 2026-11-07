@@ -179,3 +179,25 @@ test_that("pan moves the view by a fraction of its width, back again, and clamps
   expect_equal(v[3], v[1], tolerance = 1e-6)
   expect_equal(v[4], 1)
 })
+
+test_that("original track sits above the sample lanes, toggles off, and is not clickable", {
+  b <- sy_page()
+  p <- sub("refFeatures:", paste0(
+    "original:[{name:'ND1',gene:'nad1',type:'PCG',pos1:10,pos2:123,dir:'+',status:'moved',orig1:10,orig2:123,odir:'+'}],",
+    " refFeatures:"), sy_payload(), fixed = TRUE)
+  r <- js(b, sprintf("(function(){ window.__inputs = []; window.__handlers.mpsyn(%s); window.mpsyn.whole('sy-canvas');
+    var s0 = window.mpsyn.state('sy-canvas');
+    var x = 60 + (150 - s0.viewStart) * s0.ppc, y = 22 + 4 + 8;
+    var h = window.mpsyn.hitTest('sy-canvas', x, y);
+    window.mpsyn.click('sy-canvas', x, y); var s1 = window.mpsyn.state('sy-canvas');
+    var tip = window.mpsyn.tipAt('sy-canvas', x, y);
+    var box = document.getElementById('sy-show_orig'); box.checked = false; box.dispatchEvent(new Event('change'));
+    var s2 = window.mpsyn.state('sy-canvas');
+    return JSON.stringify({o0:s0.origLanes, sL:s0.sampleLanes, track:h && h.f.track, sel:s1.selected,
+      sent:window.__inputs.length, tip:tip, o2:s2.origLanes, shorter:s2.height < s0.height});})()", p))
+  x <- L(r)
+  expect_equal(x$o0, 1); expect_equal(x$sL, 2); expect_equal(x$track, "orig")
+  expect_null(x$sel); expect_equal(x$sent, 0)
+  expect_match(x$tip, "boundaries changed by curation"); expect_match(x$tip, "ND1")
+  expect_equal(x$o2, 0); expect_true(x$shorter)
+})

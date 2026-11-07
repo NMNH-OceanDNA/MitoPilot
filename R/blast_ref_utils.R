@@ -714,9 +714,15 @@ prepend_blast_hit_to_refhits <- function(annotations, blast_ref_file) {
     tryCatch(expr, error = function(e) NA_real_)
   }
 
+  # JOIN members score against the group's spliced protein
+  focal <- annotations$translation
+  if ("join_translation" %in% names(annotations)) {
+    focal <- dplyr::coalesce(as.character(annotations$join_translation), focal)
+  }
+
   # Update each PCG row's refHits
   annotations$refHits <- purrr::pmap_chr(
-    list(annotations$type, annotations$gene, annotations$translation, annotations$refHits),
+    list(annotations$type, annotations$gene, focal, annotations$refHits),
     function(type, gene, translation, refHits_json) {
       if (type != "PCG") return(refHits_json)
 
@@ -1046,7 +1052,8 @@ normalize_pcg <- function(n, product = NA_character_) {
     # share one reference DB + ruleset rule.
     "dpo"="dpo", "polb"="dpo", "dnapolymerase"="dpo", "dnapolymeraseb"="dpo",
     "dnapolymerasetypeb"="dpo", "dnab"="dpo", "dnahelicase"="dpo",
-    "replicationhelicasesubunit"="dpo"
+    "replicationhelicasesubunit"="dpo",
+    "msh1"="msh1", "muts"="msh1", "mutshomolog"="msh1", "mismatchrepairprotein"="msh1"
   )
 
   key <- tolower(trimws(n))
@@ -1101,11 +1108,20 @@ pcg_from_product <- function(product) {
     return("cob")
   }
 
-  # ATP synthase F0 subunit X / ATPase X
-  m <- regmatches(p, regexpr("(?:atp[^a-z0-9]*synthase|atpase)[^0-9]*([0-9]+)", p, perl = TRUE))
+  # ATP synthase F0 subunit X / ATPase X; "subunit a" is atp6
+  if (grepl("atp[^a-z0-9]*synthase(?:[^a-z0-9]*f[0o])?[^a-z0-9]*subunit[^a-z0-9]*a\\b", p,
+            perl = TRUE)) {
+    return("atp6")
+  }
+  m <- regmatches(p, regexpr("(?:atp[^a-z0-9]*synthase|atpase)(?:[^a-z0-9]*f[0o]\\b)?[^0-9]*([0-9]+)",
+                             p, perl = TRUE))
   if (length(m) > 0 && nchar(m) > 0) {
     sub_id <- regmatches(m, regexpr("[0-9]+$", m, perl = TRUE))
     return(paste0("atp", sub_id))
+  }
+
+  if (grepl("\\bmuts\\b|mismatch[^a-z0-9]*(?:dna[^a-z0-9]*)?repair", p, perl = TRUE)) {
+    return("msh1")
   }
 
   NA_character_

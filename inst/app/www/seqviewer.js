@@ -110,6 +110,9 @@
     return v || fallback;
   }
   function typeColor(t) { return cssVar('--mp-type-' + String(t || '').toLowerCase(), '#888888'); }
+  // Original (imported) track: what curation did to each user feature.
+  var STATUS_TEXT = { unchanged: 'unchanged', moved: 'boundaries changed by curation', dropped: 'dropped by curation',
+                      unmapped: 'unmapped name, dropped on import', clipped: 'clipped by trim' };
   function niceStep(raw) {
     var p = Math.pow(10, Math.floor(Math.log10(raw)));
     var m = raw / p;
@@ -127,6 +130,7 @@
     this.showReads = true; this.readsInput = null; this.readsMaxBp = 1000;
     this.reads = null; this.readsWindow = null; this.readsTimer = null; this.readsNonce = 0; this.readsSent = null;
     this.version = null; this.selected = null; this.nLanes = 0;
+    this.orig = []; this.nOrigLanes = 0; this.showOrig = true;
     this.viewStart = 1; this.ppb = 1;
     this.showNt = true; this.showAa = true; this.showCov = true; this.showErr = true;
     this.depth = null; this.err = null; this.depthMax = 0; this.errMax = 0;
@@ -150,6 +154,8 @@
     if (!sameSeq) { this.reads = null; this.readsWindow = null; this.readsSent = null; }
     this.feats = (p.features || []).map(function (f) { return Object.assign({}, f); });
     this.nLanes = G.lanes(this.feats, this.len);
+    this.orig = (p.original || []).map(function (f) { return Object.assign({}, f); });
+    this.nOrigLanes = G.lanes(this.orig, this.len);
     this.depth = p.depth || null; this.err = p.err || null;
     var mx = function (a, floor) { return (a || []).reduce(function (m, d) { return d !== null && d > m ? d : m; }, floor); };
     this.depthMax = mx(this.depth, 1); this.errMax = mx(this.err, 0);
@@ -242,6 +248,8 @@
   Viewer.prototype.consOn = function () { return this.ntOn() && !!this.seq2; };
   Viewer.prototype.readsOn = function () { return this.showReads && !!this.readsInput && this.viewLen() <= this.readsMaxBp; };
   Viewer.prototype.readRows = function () { return this.readsOn() && this.reads ? this.reads.rows : 0; };
+  Viewer.prototype.origOn = function () { return this.showOrig && this.orig.length > 0; };
+  Viewer.prototype.origH = function () { return this.origOn() ? this.nOrigLanes * LANE_H + PAD : 0; };
   // Visible window. On a circular unit it is left unclamped, so a view over the
   // origin asks for both sides; R reads them and the reply echoes these values.
   Viewer.prototype.viewWindow = function () {
@@ -288,12 +296,13 @@
   Viewer.prototype.topH = function () {
     return RULER_H + PAD + (this.covOn() ? COV_H + GAP : 0) + (this.errOn() ? ERR_H + GAP : 0);
   };
-  Viewer.prototype.laneY = function (lane) { return this.topH() + lane * LANE_H; };
+  Viewer.prototype.origY = function (lane) { return this.topH() + lane * LANE_H; };
+  Viewer.prototype.laneY = function (lane) { return this.topH() + this.origH() + lane * LANE_H; };
   Viewer.prototype.height = function () {
     var pcgs = this.showAa && this.ppb >= AA_MIN ? this.aaRows.length : 0;
     var nt = (this.ntOn() ? NT_H : 0) + (this.consOn() ? NT_H : 0);
     var rd = this.readRows() && !this.readsCanvas ? this.readRows() * READ_H + PAD : 0;
-    return this.topH() + this.nLanes * LANE_H + PAD + nt + pcgs * AA_H + rd + PAD;
+    return this.topH() + this.origH() + this.nLanes * LANE_H + PAD + nt + pcgs * AA_H + rd + PAD;
   };
   Viewer.prototype.draw = function () {
     if (!this.len || !this.canvas.offsetParent) return;
@@ -318,8 +327,14 @@
     var y = RULER_H + PAD;
     if (this.covOn()) { this.drawTrack(c, W, y, COV_H, this.depth, this.depthMax, 'depth', false); y += COV_H + GAP; }
     if (this.errOn()) { this.drawTrack(c, W, y, ERR_H, this.err, Math.max(this.errMax, ERR_FLAG * 2), 'error', true); y += ERR_H + GAP; }
+    if (this.origOn()) this.drawOrigLanes(c);
     this.drawJoins(c); this.drawLanes(c);
-    y = this.topH() + this.nLanes * LANE_H + PAD;
+    if (this.origOn()) {
+      c.fillStyle = cssVar('--mp-text-muted', '#6a6a6a'); c.textAlign = 'right'; c.textBaseline = 'middle';
+      c.fillText('user', GUTTER - 6, this.origY(0) + (LANE_H - 6) / 2, GUTTER - 10);
+      if (this.nLanes) c.fillText('curated', GUTTER - 6, this.laneY(0) + (LANE_H - 6) / 2, GUTTER - 10);
+    }
+    y = this.topH() + this.origH() + this.nLanes * LANE_H + PAD;
     if (this.ntOn()) { this.drawNt(c, y, this.seq, this.seqLabel, null); y += NT_H; }
     if (this.consOn()) { this.drawNt(c, y, this.seq2, this.seq2Label, this.seq); y += NT_H; }
     this.aaRows.forEach(function (f) { this.drawAa(c, f, y); y += AA_H; }, this);
@@ -418,6 +433,32 @@
 
         if (x1 - x0 > c.measureText(f.gene).width + 8) { c.fillStyle = cssVar('--mp-text', '#333'); c.fillText(f.gene, (x0 + x1) / 2, y + h / 2); }
         this.hits.push({ x0: x0, x1: x1, y0: y, y1: y + h, f: f, row: f.row });
+      }, this);
+    }, this);
+  };
+  // Muted copy of drawLanes for the original track: same arrow, lighter fill,
+  // grey outline, amber outline when curation changed the feature. Hits carry
+  // orig so click ignores them.
+  Viewer.prototype.drawOrigLanes = function (c) {
+    var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = '#e69f00', warnSoft = cssVar('--mp-warning-soft', '#fde8d0');
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    this.orig.forEach(function (f) {
+      var col = typeColor(f.type), y = this.origY(f.lane), h = LANE_H - 6, edited = f.status !== 'unchanged';
+      this.segments(f).forEach(function (seg) {
+        var x0 = Math.max(GUTTER, this.x(seg[0])), x1 = Math.min(this.wrap.clientWidth, this.x(seg[1] + 1));
+        if (x1 - x0 < 1) return;
+        var fwd = f.dir !== '-', head = Math.min(8, x1 - x0);
+        var pts = fwd ? [[x0, y], [x1 - head, y], [x1, y + h / 2], [x1 - head, y + h], [x0, y + h]]
+                      : [[x1, y], [x0 + head, y], [x0, y + h / 2], [x0 + head, y + h], [x1, y + h]];
+        c.beginPath();
+        c.moveTo(pts[0][0], pts[0][1]);
+        for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+        c.closePath();
+        c.fillStyle = edited ? warnSoft : col + '22'; c.fill();
+        c.setLineDash([]); c.lineWidth = edited ? 3 : 1; c.strokeStyle = edited ? warn : muted; c.stroke();
+        c.lineWidth = 1;
+        if (x1 - x0 > c.measureText(f.name).width + 8) { c.fillStyle = muted; c.fillText(f.name, (x0 + x1) / 2, y + h / 2); }
+        this.hits.push({ x0: x0, x1: x1, y0: y, y1: y + h, f: f, orig: true });
       }, this);
     }, this);
   };
@@ -567,6 +608,7 @@
   };
   Viewer.prototype.click = function (px, py) {
     var h = this.hitTest(px, py);
+    if (h && h.orig) return;
     this.selected = h && h.f ? h.f.row : null;
     if (h && h.f && this.input && window.Shiny) {
       window.Shiny.setInputValue(this.input, { row: h.f.row, nonce: Date.now() }, { priority: 'event' });
@@ -604,8 +646,13 @@
       if (self.depth && self.depth[b.pos - 1] !== null) t += ' | depth ' + self.depth[b.pos - 1];
       if (self.seq2) { var c2 = self.seq2.charAt(b.pos - 1); if (c2 && c2 !== b.base) t += ' | consensus ' + c2; }
       if (self.err && self.err[b.pos - 1] !== null) t += ', error ' + (self.err[b.pos - 1] * 100).toFixed(1) + '%';
-      if (h && h.f) t += ' | ' + h.f.gene + (h.codon !== undefined ? ' codon ' + (h.codon + 1) + ' ' + h.letter : ' (' + h.f.type + ')');
-      if (h && h.f && typeof h.f.notes === 'string' && h.f.notes) t += ' | ' + h.f.notes;
+      if (h && h.orig) {
+        var o = h.f;
+        t += ' | Original "' + o.name + '" -> "' + (o.gene || 'unmapped') + '" ' + o.dir + ' ' + o.pos1.toLocaleString() + '-' + o.pos2.toLocaleString() +
+          ' | ' + (STATUS_TEXT[o.status] || o.status);
+        if (o.orig1 !== o.pos1 || o.orig2 !== o.pos2) t += ' (originally ' + o.orig1.toLocaleString() + '-' + o.orig2.toLocaleString() + ')';
+      } else if (h && h.f) t += ' | ' + h.f.gene + (h.codon !== undefined ? ' codon ' + (h.codon + 1) + ' ' + h.letter : ' (' + h.f.type + ')');
+      if (h && !h.orig && h.f && typeof h.f.notes === 'string' && h.f.notes) t += ' | ' + h.f.notes;
       if (h && h.read) {
         t += ' | read ' + h.read.strand + ' ' + h.read.start.toLocaleString() + '-' + h.read.end.toLocaleString();
         var mm = self.reads && self.reads.mm.find(function (m) { return m.row === h.row && m.pos === b.pos; });
@@ -640,7 +687,7 @@
       });
     });
     var go = document.getElementById(prefix + '-goto');
-    [['show_nt', 'showNt'], ['show_aa', 'showAa'], ['show_cov', 'showCov'], ['show_err', 'showErr'], ['show_reads', 'showReads']].forEach(function (pair) {
+    [['show_nt', 'showNt'], ['show_aa', 'showAa'], ['show_cov', 'showCov'], ['show_err', 'showErr'], ['show_reads', 'showReads'], ['show_orig', 'showOrig']].forEach(function (pair) {
       var box = document.getElementById(prefix + '-' + pair[0]);
       if (box) { self[pair[1]] = box.checked; box.addEventListener('change', function () { self[pair[1]] = box.checked; self.draw(); }); }
     });
@@ -678,9 +725,11 @@
              seq2Len: v.seq2.length,
              readsWindow: v.readsWindow, nReads: v.reads ? v.reads.reads.length : 0, readRows: v.readRows(),
              readsPanelH: v.readsCanvas ? (v.readsWrap.hidden ? 0 : parseInt(v.readsCanvas.style.height, 10) || 0) : null,
-             nLanes: v.nLanes, features: v.feats.map(function (f) { return { row: f.row, gene: f.gene, pos1: f.pos1, pos2: f.pos2, lane: f.lane }; }) };
+             nLanes: v.nLanes, features: v.feats.map(function (f) { return { row: f.row, gene: f.gene, pos1: f.pos1, pos2: f.pos2, lane: f.lane }; }),
+             nOrigLanes: v.origOn() ? v.nOrigLanes : 0,
+             original: v.orig.map(function (f) { return { name: f.name, pos1: f.pos1, pos2: f.pos2, lane: f.lane, status: f.status }; }) };
   };
-  window.mpseq.ui = { cssVar: cssVar, typeColor: typeColor, niceStep: niceStep };
+  window.mpseq.ui = { cssVar: cssVar, typeColor: typeColor, niceStep: niceStep, STATUS_TEXT: STATUS_TEXT };
   window.mpseq.fasta = function (id) { var v = get(id); return v ? v.visibleFasta() : null; };
   window.mpseq.zoom = function (id, f) { var v = get(id); if (v) v.zoom(f); };
   window.mpseq.fit = function (id, row) { var v = get(id); if (v) v.fit(row); };

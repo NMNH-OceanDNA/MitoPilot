@@ -27,13 +27,16 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
 
   # Per-unit annotations rollup (warnings + ORF count) keyed on the unit.
   annotations <- dplyr::tbl(db, "annotations") |>
-    dplyr::select(ID, path, scaffold, type, warnings) |>
+    dplyr::select(ID, path, scaffold, type, warnings, tool, gene, pos1) |>
     dplyr::collect() |>
+    dplyr::arrange(pos1) |>
     dplyr::group_by(ID, path, scaffold) |>
     dplyr::summarise(
       warnings_details = warnings[!is.na(warnings) & warnings != ""] |>
         paste(collapse = "; "),
       ORFCount = sum(type == "ORF"),
+      toolCount = sum(.is_tool_row(tool, type)),
+      toolGenes = paste(gene[.is_tool_row(tool, type)], collapse = "; "),
       .groups = "drop"
     )
 
@@ -97,6 +100,8 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
       tRNACount,
       rRNACount,
       ORFCount,
+      toolCount,
+      toolGenes,
       missing,
       extra,
       warnings,
@@ -119,6 +124,14 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
         as.integer(ORFCount)
       )
     ) |>
+    dplyr::mutate(
+      toolCount = if (isTRUE(session$userData$user_annot)) {
+        dplyr::coalesce(as.integer(toolCount), 0L)
+      } else 0L,
+      toolGenes = if (isTRUE(session$userData$user_annot)) {
+        dplyr::coalesce(toolGenes, "")
+      } else ""
+    ) |>
     dplyr::select(-use_orffinder) |>
     dplyr::arrange(ID, path, scaffold) |>
     # Ref-align status is only meaningful when this unit has a real BLAST hit.
@@ -130,6 +143,29 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
     ) |>
     dplyr::relocate(blast_ref_status, .after = blast_accession) |>
     dplyr::mutate(ID_verified = dplyr::coalesce(ID_verified, "no"))
+}
+
+# Features added by MitoPilot's tools in a user-annotation project (not ORFs).
+.is_tool_row <- function(tool, type) {
+  !is.na(tool) & tool != "user" & !(type %in% "ORF")
+}
+
+#' Count and pos1-ordered gene list of tool-added features in one unit
+#' @noRd
+tool_feature_summary <- function(ann, user_annot) {
+  if (!isTRUE(user_annot) || is.null(ann$tool) || nrow(ann) == 0) {
+    return(list(n = 0L, genes = ""))
+  }
+  ann <- ann[order(ann$pos1), , drop = FALSE]
+  k <- .is_tool_row(ann$tool, ann$type)
+  list(n = sum(k), genes = paste(ann$gene[k], collapse = "; "))
+}
+
+#' Columns left out of the Annotate table's CSV download
+#' @noRd
+annotate_csv_drop <- function(user_annot) {
+  c("output", "view", "poor_blast_ref", "warnings_details", "blast_accession_auto",
+    "toolGenes", if (!isTRUE(user_annot)) "toolCount")
 }
 
 #' Populate the Annotate table - one row per (ID, path, scaffold) unit
@@ -164,7 +200,7 @@ fetch_annotate_data <- function(session = getDefaultReactiveDomain()) {
         "length", "topology", "scaffolds", "blast_accession", "blast_ref_status",
         "blast_accession_auto", "blast_species", "blast_lineage", "blast_pident",
         "blast_qcovs", "structure", "PCGCount", "tRNACount", "rRNACount",
-        "ORFCount", "missing", "extra", "warnings", "reviewed", "problematic",
+        "ORFCount", "toolCount", "toolGenes", "missing", "extra", "warnings", "reviewed", "problematic",
         "partial", "time_stamp", "export_group", "export_time_stamp",
         "annotate_notes", "warnings_details", "poor_blast_ref", "output", "view"
       )),
@@ -230,6 +266,7 @@ get_top_hits_local <- function(
 #' @noRd
 annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
   ns <- session$ns
+  user_annot <- isTRUE(session$userData$user_annot)
 
   current <- list()
   # An annotate row can carry NA option sets (a unit rebuilt with nothing to
@@ -241,6 +278,7 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
   sel_curate[is.na(sel_curate)] <- "default"
   if (length(unique(sel_annotate)) == 1) {
     current <- rv$annotate_opts[rv$annotate_opts$annotate_opts == sel_annotate[1], ]
+    run_tools_on <- isTRUE(as.logical(current$run_tools %||% 0L))
     cur_params <- rv$curate_opts$params[rv$curate_opts$curate_opts == sel_curate[1]] |>
       jsonlite::fromJSON()
 
@@ -299,20 +337,37 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             selectizeInput(
               ns("start_gene"),
               label = "Starting gene for circular assemblies:",
-              choices = MITO_GENE_CHOICES,
-              selected = current$start_gene %||% character(0),
+              choices = c("(none)" = "", MITO_GENE_CHOICES),
+              selected = dplyr::coalesce(current$start_gene[1], ""),
               width = "100%",
               options = list(
                 create = FALSE,
-                maxItems = 1
+                maxItems = 1,
+                allowEmptyOption = TRUE
               )
             ) |> shinyjs::disabled()
           )
         ),
         opts_help("Circular mitogenomes are rotated to begin at this gene, giving a ",
                   "consistent start position across samples (e.g. tRNA-Phe in vertebrates)."),
+        if (user_annot) {
+          div(
+            id = ns("run_tools_box"),
+            mp_checkbox(
+              ns("run_tools"),
+              label = "Run annotation tools",
+              value = run_tools_on
+            ) |> shinyjs::disabled(),
+            opts_help("Run MitoPilot's annotation tools and add any features they find that ",
+                      "your annotation does not have. The tools never replace or trim your features; a tool ",
+                      "feature is dropped where it overlaps one of yours. Curation still checks ",
+                      "every feature, yours included.")
+          )
+        },
         # Annotation tools section, boxed off from the surrounding options.
         div(
+          id = ns("tools_box"),
+          class = if (user_annot && !run_tools_on) "shinyjs-hide",
           style = paste(
             "border: 1px solid #ddd; border-radius: 6px;",
             "padding: 12px 14px 4px; margin: 8px 0 14px;"

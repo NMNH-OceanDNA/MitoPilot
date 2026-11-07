@@ -14,7 +14,7 @@ params.sqlRead =    'SELECT DISTINCT a.ID, a.path, a.scaffold, b.assemble_opts, 
                         'd.cpus, d.memory, d.ref_db, d.ref_dir, d.mitos_opts, d.use_mitos_best, d.trnaScan_opts, d.start_gene, d.arwen_opts, d.use_arwen, d.aragorn_opts, d.use_aragorn, ' +
                         'd.use_mitofinder, d.mitofinder_db, d.mitofinder_new_genes, d.mitofinder_allow_introns, d.mitofinder_opts, ' +
                         "(SELECT GROUP_CONCAT(a2.scaffold, ',') FROM assemblies a2 WHERE a2.ID = a.ID AND a2.path = a.path AND a2.scaffold != a.scaffold) AS ignore_scaffolds, " +
-                        'd.coverage_trim, d.retain_low_conf_trna, d.use_mitos, d.use_trnaScan, f.genetic_code, d.rescue_no_trna ' +
+                        'd.coverage_trim, d.retain_low_conf_trna, d.use_mitos, d.use_trnaScan, f.genetic_code, d.rescue_no_trna, d.run_tools ' +
                     'FROM assemblies a ' +
                     'JOIN assemble b ON a.ID = b.ID ' +
                     'JOIN annotate an ON an.ID = a.ID AND an.path = a.path AND an.scaffold = a.scaffold ' +
@@ -59,6 +59,8 @@ workflow ANNOTATE {
                         "No assembly output is present for this sample at all; it may have been moved or deleted.")
             }
 
+            def userAnnot = new File(launchDir.toString(), "user_annotations/${it[0]}_annotations.csv")
+
             tuple(
                 it[0],                                          // ID
                 it[1],                                          // path
@@ -91,11 +93,13 @@ workflow ANNOTATE {
                     use_mitos: it[24] != null ? it[24] as Integer : 1,      // use_mitos toggle (default on)
                     use_trnaScan: it[25] != null ? it[25] as Integer : 1,   // use_trnaScan toggle (default on)
                     genetic_code: it[26],                                   // per-sample genetic code (from samples table)
-                    rescue_no_trna: it[27] != null ? it[27] as Integer : 1  // second MITOS2 pass without tRNA prediction (default on)
+                    rescue_no_trna: it[27] != null ? it[27] as Integer : 1,  // second MITOS2 pass without tRNA prediction (default on)
+                    run_tools: it[28] != null ? it[28] as Integer : 1       // run MITOS2/tRNAscan alongside imported features (default on)
                 ],
                 file(it[7] + "/" + it[6]),                              // MITOS ref dir + clade (tarball)
                 it[6].replaceFirst(/\.tar\.gz$/, ''),               // ref_db without ".tar.gz"
-                file((it[17] != null && it[17].toString().trim()) ? it[17] : mitofinder_placeholder)  // MitoFinder reference .gb (or placeholder)
+                file((it[17] != null && it[17].toString().trim()) ? it[17] : mitofinder_placeholder),  // MitoFinder reference .gb (or placeholder)
+                userAnnot.exists() ? file(userAnnot.path) : []          // [] is Nextflow's optional-path idiom
             )
         }
         .set { annotate_pre }
@@ -110,7 +114,7 @@ workflow ANNOTATE {
         .map { t -> tuple(t[7], t) }
         .combine(annotate_refdirs, by: 0)
         .map { clade, t, refdir ->
-            tuple(t[0], t[1], t[2], t[3], t[4], t[5], refdir, t[7], t[8])
+            tuple(t[0], t[1], t[2], t[3], t[4], t[5], refdir, t[7], t[8], t[9])
         }
         .set { annotate_in }
 

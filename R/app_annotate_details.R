@@ -1,7 +1,3 @@
-#' annotate_details Server Functions
-#'
-#' @noRd
-
 #' Give a label-less Shiny input an accessible name
 #'
 #' A `label = NULL` input renders a bare `<input>` that screen readers and voice
@@ -453,6 +449,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       out <- mp_n(nrow(live), "feature")
       if (length(parts) > 0) out <- paste0(out, " - ", paste(parts, collapse = ", "))
       if (any(deleted)) out <- paste0(out, ", ", sum(deleted), " deleted")
+      n_tool <- tool_feature_summary(live, session$userData$user_annot)$n
+      if (n_tool > 0) out <- paste0(out, ", ", n_tool, " found by MitoPilot")
       out
     })
 
@@ -482,13 +480,9 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
               # JS (not R) cell renderer so the badge re-renders client-side on
               # updateReactable() after an edit; an R cell function is only run
               # at full render, leaving stale badges when rows are re-sorted.
-              cell = htmlwidgets::JS("
+              cell = htmlwidgets::JS(paste0("
                 function(cellInfo) {
-                  var colors = {ctrl:'#FAA34A', PCG:'#60BD68', rRNA:'#5DA5DA', tRNA:'#F17CB0', ORF:'#4D4D4D'};
-                  var v = cellInfo.value || '';
-                  var c = colors[v] || '#888888';
-                  var badge = '<span style=\"background:' + c + '30;color:#111111;border:1px solid ' + c +
-                    ';border-radius:3px;padding:1px 4px;font-size:11px;white-space:nowrap;\">' + v + '</span>';
+                  ", MITO_TYPE_BADGE_JS, "
                   // Non-standard MitoFinder gene: PCG from MitoFinder with no
                   // canonical product. Flag so the user knows it can be renamed.
                   var row = cellInfo.row || {};
@@ -499,7 +493,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
                   }
                   return badge;
                 }
-              ")
+              "))
             ),
             gene = colDef(show = T,
                           name = "Gene",
@@ -1115,7 +1109,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         },
         if (has_ref) caption,
         if (has_aln) {
-          synteny_viewer_ui(ns)
+          synteny_viewer_ui(ns, isTRUE(session$userData$user_annot))
         } else if (has_ref) {
           div(class = "mp-coverage-caption", "No alignment is available for this reference.")
         }
@@ -1976,7 +1970,20 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     # Built here, not in the call: a lazily forced argument would capture the
     # child module's session and look up the table in the wrong namespace.
     seqview_sel <- reactive(reactable::getReactableState("table", "selected"))
-    sv <- seqview_server("seqview", rv, asmb_edit_tick, seqview_sel)
+    # Original (imported) annotation track, user-annotation projects only.
+    orig_track <- reactive({
+      if (!isTRUE(session$userData$user_annot)) return(NULL)
+      asmb_edit_tick()
+      gargoyle::watch("annotations_modal")
+      u <- rv$updating
+      req(rv$annotations, !is.null(u), length(u$ID) == 1)
+      tryCatch({
+        o <- original_features(session$userData$con, u$ID, u$path, u$scaffold)
+        if (isTRUE(o$ok)) o$rows <- flag_original(o$rows, rv$annotations, o$length)
+        o
+      }, error = function(e) list(ok = FALSE, reason = ORIG_NOTE_NO_PLACE))
+    })
+    sv <- seqview_server("seqview", rv, asmb_edit_tick, seqview_sel, orig_track)
     observeEvent(sv$pick(), {
       reactable::updateReactable("table", selected = as.integer(sv$pick()$row))
     })
@@ -2000,10 +2007,13 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       req(!is.null(acc), !is.na(acc), nzchar(acc))
       cand <- rv$blast_ref_candidates
       lbl <- if (!is.null(cand)) cand$species[match(acc, cand$accession)] else NA
+      o <- orig_track()
+      output$synteny_orig_note <- renderUI(orig_note_ui(o))
       p <- synteny_payload(
         rv$annotations, rv$blast_ref, rv$blast_ref_aln, ctx$ID, acc,
         if (is.na(lbl) || !nzchar(lbl)) acc else lbl,
-        selected = sv$sel(), version = syn_version()
+        selected = sv$sel(), version = syn_version(),
+        original = if (isTRUE(o$ok)) o$rows
       )
       req(p)
       p$id <- ns("synteny_canvas"); p$input <- ns("synteny_pick")
@@ -3705,9 +3715,10 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       req(length(id) == 1)
       retained <- rv$annotations |>
         dplyr::filter(!stringr::str_detect(gene, "_DELETED_"))
-      pcg  <- sum(retained$type == "PCG",  na.rm = TRUE)
-      trna <- sum(retained$type == "tRNA", na.rm = TRUE)
-      rrna <- sum(retained$type == "rRNA", na.rm = TRUE)
+      cnt  <- count_feature_types(retained)
+      pcg  <- cnt[["PCG"]]
+      trna <- cnt[["tRNA"]]
+      rrna <- cnt[["rRNA"]]
       # missing/extra from this unit's curation count rules
       me <- tryCatch({
         co <- dplyr::tbl(con, "annotate") |>
@@ -3723,7 +3734,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       # ORF count is derived in the table; keep blank when ORF finding is off
       orf_blank <- "ORFCount" %in% names(rv$data) && !is.na(i) &&
         isTRUE(is.na(rv$data$ORFCount[i]))
-      orf <- if (orf_blank) NA_integer_ else as.integer(sum(retained$type == "ORF", na.rm = TRUE))
+      orf <- if (orf_blank) NA_integer_ else cnt[["ORF"]]
+      tf <- tool_feature_summary(retained, session$userData$user_annot)
       # Short-circuit if nothing the count/missing/extra columns track changed
       # (e.g. position-only codon edits) to avoid needless writes/refreshes.
       same <- function(a, b) (is.na(a) && is.na(b)) || (!is.na(a) && !is.na(b) && a == b)
@@ -3732,6 +3744,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
           identical(as.integer(rv$data$tRNACount[i]), as.integer(trna)) &&
           identical(as.integer(rv$data$rRNACount[i]), as.integer(rrna)) &&
           same(rv$data$ORFCount[i], orf) &&
+          identical(as.integer(rv$data$toolCount[i]), as.integer(tf$n)) &&
+          identical(rv$data$toolGenes[i], tf$genes) &&
           same(rv$data$missing[i], me$missing %||% NA_character_) &&
           same(rv$data$extra[i], me$extra %||% NA_character_)) {
         return(invisible(NULL))
@@ -3754,7 +3768,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         dplyr::rows_update(
           data.frame(ID = id, path = p, scaffold = s,
                      PCGCount = pcg, tRNACount = trna, rRNACount = rrna,
-                     ORFCount = orf, missing = upd$missing, extra = upd$extra,
+                     ORFCount = orf, toolCount = as.integer(tf$n), toolGenes = tf$genes,
+                     missing = upd$missing, extra = upd$extra,
                      stringsAsFactors = FALSE),
           by = c("ID", "path", "scaffold")
         )
@@ -4381,7 +4396,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
        });",
       ns("annotation_table_details"), ns("annotation_btns_wrapper")
     ))),
-    seqview_ui(ns("seqview")),
+    seqview_ui(ns("seqview"), user_annot = isTRUE(session$userData$user_annot)),
     tags$details(
       id = ns("blast_synteny_details"),
       tags$summary("BLAST Reference Synteny"),

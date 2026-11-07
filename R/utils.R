@@ -69,6 +69,7 @@ compute_missing_extra <- function(annotations, rules, default_rules) {
   if (length(rules) == 0L) {
     return(list(missing = NA_character_, extra = NA_character_))
   }
+  annotations <- annotations[join_copy_row(annotations), , drop = FALSE]
   eff <- rules |>
     purrr::map(~ utils::modifyList(default_rules[[.x$type]] %||% list(), .x))
   missing <- NA_character_
@@ -83,6 +84,17 @@ compute_missing_extra <- function(annotations, rules, default_rules) {
     }
   }
   list(missing = missing, extra = extra)
+}
+
+#' Per-type feature counts, a JOIN group counted once
+#'
+#' @param annotations data frame of (non-deleted) annotations
+#' @return named integer: PCG, tRNA, rRNA, ORF
+#' @noRd
+count_feature_types <- function(annotations) {
+  t <- annotations$type[join_copy_row(annotations)]
+  vapply(c(PCG = "PCG", tRNA = "tRNA", rRNA = "rRNA", ORF = "ORF"),
+         function(x) sum(t == x, na.rm = TRUE), integer(1))
 }
 
 #' toJSON wrapper

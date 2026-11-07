@@ -357,6 +357,121 @@ $(document).on('shiny:value', function(e) {
 // A "?" inside a <summary> opens its popover without folding the section
 $(document).on('click', 'summary .mp-help-icon', function(e) { e.preventDefault(); });
 
+// Imported gene-name review: chips and selects follow the table's filters.
+window.mpGN = {
+  esc: function(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  },
+  select: function(ci, input, opts) {
+    var e = mpGN.esc, cur = ci.value === null || ci.value === undefined ? '(drop)' : String(ci.value);
+    if (!opts.some(function(o) { return o[0] === cur; })) opts = opts.concat([[cur, cur]]);
+    return '<select class="form-control input-sm mp-gn-pick" aria-label="Gene for ' + e(ci.row.label) +
+      '" data-input="' + input + '" data-raw="' + e(ci.row.raw_name) + '" data-ft="' + e(ci.row.feature_type) +
+      '" onclick="event.stopPropagation()" onchange="mpGN.pick(this)">' +
+      opts.map(function(o) {
+        return '<option value="' + e(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + e(o[1]) + '</option>';
+      }).join('') + '</select>';
+  },
+  pick: function(el) {
+    if (!el.value) return;
+    Shiny.setInputValue(el.dataset.input, { raw_name: el.dataset.raw, feature_type: el.dataset.ft, gene: el.value },
+                        { priority: 'event' });
+  },
+  chip: function(tbl, v) { Reactable.setFilter(tbl, 'status', v || undefined); },
+  mark: function(tbl) {
+    mpGN.unsz(false);
+    var f = {};
+    try { Reactable.getState(tbl).filters.forEach(function(x) { f[x.id] = x.value; }); } catch (e) { return; }
+    document.querySelectorAll('.mp-gn-chip[data-tbl="' + tbl + '"]').forEach(function(el) {
+      var on = el.dataset.v === (f.status || '');
+      el.classList.toggle('active', on);
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('select.mp-gn-filter[data-tbl="' + tbl + '"]').forEach(function(el) {
+      el.value = f[el.dataset.col] || '';
+    });
+  },
+  fit: function(tbl) {
+    var m = document.getElementById('shiny-modal'), t = m && m.querySelector('#' + tbl + ' .ReactTable');
+    if (!t) return;
+    var other = m.querySelector('.modal-content').offsetHeight - t.offsetHeight;
+    t.style.height = Math.max(320, window.innerHeight - other - 2 * m.querySelector('.modal-dialog').offsetTop - 10) + 'px';
+  },
+  open: function(tbl) {
+    var timer, onResize = function() { clearTimeout(timer); timer = setTimeout(function() { mpGN.fit(tbl); }, 100); };
+    window.addEventListener('resize', onResize);
+    $('#shiny-modal').one('shown.bs.modal', function() { mpGN.fit(tbl); })
+      .one('hidden.bs.modal', function() { window.removeEventListener('resize', onResize); mpGN.unsz(true); });
+  },
+  // selectize fires the native change, so the inline onchange still sends the pick
+  szs: [],
+  sz: function(el) {
+    if (el.selectize) return;
+    if (!$.fn.selectize) {
+      if (!mpGN.szWarned) console.log('mpGN: selectize not loaded, gene pickers stay native');
+      mpGN.szWarned = true;
+      return;
+    }
+    var s = $(el).selectize({
+      create: false, maxOptions: 200, dropdownParent: 'body', openOnFocus: true, closeAfterSelect: true,
+      score: function(q) {
+        var re = new RegExp('(^|[ (])' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        return function(it) { return re.test(it.text) ? 1 : 0; };
+      },
+      onChange: function(v) { if (v) this.lastGood = v; },
+      onBlur: function() { if (!this.getValue()) this.setValue(this.lastGood, true); }
+    })[0].selectize;
+    s.lastGood = el.value;
+    s.$wrapper.on('click', function(e) { e.stopPropagation(); });
+    mpGN.szs.push(s);
+    setTimeout(function() { s.focus(); }, 0);
+  },
+  unsz: function(all) {
+    mpGN.szs = mpGN.szs.filter(function(s) {
+      if (!all && document.contains(s.$input[0])) return true;
+      s.destroy();
+      return false;
+    });
+  },
+  cache: {},
+  detail: function(ri, tbl, input) {
+    var id = tbl + '-d-' + ri.index;
+    if (mpGN.cache[id]) return '<div class="mp-gn-detail" id="' + id + '">' + mpGN.cache[id] + '</div>';
+    var r = ri.values || ri.row;
+    setTimeout(function() {
+      Shiny.setInputValue(input, { raw_name: r.raw_name, feature_type: r.feature_type, id: id }, { priority: 'event' });
+    }, 0);
+    return '<div class="mp-gn-detail" id="' + id + '"><span class="text-muted">Loading...</span></div>';
+  },
+  init: function(tbl, v) {
+    Object.keys(mpGN.cache).forEach(function(k) { if (k.indexOf(tbl + '-d-') === 0) delete mpGN.cache[k]; });
+    mpMV.whenReady(tbl, function() {
+      if (v) Reactable.setFilter(tbl, 'status', v);
+      if (mpGN[tbl]) mpGN[tbl]();
+      mpGN[tbl] = Reactable.onStateChange(tbl, function() { mpGN.mark(tbl); });
+      mpGN.mark(tbl);
+      mpGN.fit(tbl);
+    });
+  }
+};
+$(document).on('mousedown focusin', '.mp-gn-tbl select[data-raw]', function(e) {
+  if (this.selectize || !$.fn.selectize) return mpGN.sz(this);
+  if (e.type === 'mousedown') {
+    e.preventDefault();
+    $(this).closest('.rt-td').one('click', function(ev) { ev.stopPropagation(); });
+  }
+  mpGN.sz(this);
+});
+$(document).ready(function() {
+  Shiny.addCustomMessageHandler('mp-gn-data', function(m) { mpGN.unsz(true); Reactable.setData(m.tbl, m.data); });
+  Shiny.addCustomMessageHandler('mp-gn-detail', function(m) {
+    mpGN.cache[m.id] = m.html;
+    var el = document.getElementById(m.id);
+    if (el) el.innerHTML = m.html;
+  });
+});
+
 // Safari has known issues; warn on every page load, then let the user carry on
 $(document).ready(function() {
   var ua = navigator.userAgent;
@@ -368,3 +483,15 @@ $(document).ready(function() {
     '<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Continue anyway</button></div>' +
     '</div></div></div>').appendTo('body').modal().on('hidden.bs.modal', function() { $(this).remove(); });
 });
+
+// The step toolbars repeat button ids (run_modal, state, lock). Shiny counts
+// clicks per element and drops a value equal to the last one sent, so keep
+// same-id counters in step before Shiny's own click handler increments.
+document.addEventListener('click', function(e) {
+  var el = $(e.target).closest('.action-button[id]')[0];
+  if (!el) return;
+  var twins = $('[id="' + el.id + '"].action-button');
+  if (twins.length < 2) return;
+  var m = Math.max.apply(null, twins.map(function() { return $(this).data('val') || 0; }).get());
+  twins.data('val', m);
+}, true);

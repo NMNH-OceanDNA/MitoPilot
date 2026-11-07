@@ -61,7 +61,10 @@ raw input and performs the following steps.
 
 Optionally, MitoPilot can proceed straight to annotation and curation if
 the user supplies mitogenome assemblies with the
-`new_project_userAsmb()` function.
+`new_project_userAsmb()` function. If you already have an annotation
+for each assembly (GFF3, BED, or GenBank feature table), use
+`new_project_userAnnot()` to skip assembly and annotation and go
+straight to review, curation, and validation.
 
 ![](man/figures/workflow_overview.png)
 

@@ -1041,6 +1041,18 @@ a.mp-link:focus-visible {
 .mp-mv-toggle.active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); font-weight: 600; }
 .mp-mv-count { margin-right: auto; }
 
+/* Imported gene-name review: status chips, compact selects, detail panel */
+.mp-gn-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.mp-gn-chip.active { background: var(--mp-primary-soft); border-color: var(--mp-primary); font-weight: 600;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12); }
+.mp-gn-tbl select.form-control { height: 26px; padding: 2px 6px; }
+.modal-body.mp-gn-modal { overflow: visible; max-height: none; }
+body > .selectize-dropdown.mp-gn-pick { z-index: 1060; font-size: 12px; }
+.mp-gn-tbl .selectize-input { min-height: 26px; padding: 2px 6px; }
+.mp-gn-detail { padding: 6px 8px 8px 32px; background: var(--mp-surface); max-height: 200px; overflow: auto; }
+.mp-gn-detail .table { margin: 0; font-size: 0.92em; }
+.mp-gn-detail th { position: sticky; top: 0; background: var(--mp-surface); white-space: nowrap; }
+
 /* negative margins keep the logo from growing the line, which shifts the box */
 .nmnh-logo {
   height: 1.2em;

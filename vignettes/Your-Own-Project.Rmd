@@ -344,8 +344,12 @@ and let you perform annotation, curation, and export.
 
 [Using Your Own Assemblies](Your-Own-Assemblies.html) covers the extra mapping
 columns, projects with no raw reads, and the optional steps for whole-genome
-assemblies: finding the mitochondrial contigs, circularizing linear ones, and
+assemblies: finding the mitochondrial contigs, circularization, and
 joining a mitogenome that arrived in several pieces.
+
+If you also have annotations for each assembly, use
+`new_project_userAnnot()` and see
+[Using Your Own Annotations](Your-Own-Annotations.html).
 
 <hr class="part-break" />
 

@@ -5,7 +5,8 @@ ANNOTATE_COL_GROUPS <- list(
   Stats    = c("length_raw", "length", "topology", "scaffolds"),
   BLAST    = c("blast_ref_status", "blast_accession", "blast_species",
                "blast_lineage", "blast_pident", "blast_qcovs"),
-  Counts   = c("PCGCount", "tRNACount", "rRNACount", "ORFCount", "missing", "extra"),
+  Counts   = c("PCGCount", "tRNACount", "rRNACount", "ORFCount", "toolCount",
+               "missing", "extra"),
   Review   = c("ID_verified", "reviewed", "problematic", "partial", "warnings"),
   Export   = c("export_group", "export_time_stamp"),
   Notes    = c("time_stamp", "annotate_notes"),
@@ -481,6 +482,9 @@ annotate_server <- function(id) {
           tRNACount = colDef(show = TRUE, class = .grp("tRNACount"), headerClass = .grp("tRNACount"), name = .nm("tRNACount"), header = .hd("tRNACount"), align = "center"),
           rRNACount = colDef(show = TRUE, class = .grp("rRNACount"), headerClass = .grp("rRNACount"), name = .nm("rRNACount"), header = .hd("rRNACount"), align = "center"),
           ORFCount = colDef(show = TRUE, class = .grp("ORFCount"), headerClass = .grp("ORFCount"), name = .nm("ORFCount"), header = .hd("ORFCount"), align = "center"),
+          toolCount = colDef(show = isTRUE(session$userData$user_annot), class = .grp("toolCount"), headerClass = .grp("toolCount"),
+                             name = .nm("toolCount"), header = .hd("toolCount"), align = "center", minWidth = 150,
+                             html = TRUE, cell = rt_tool_count()),
           missing = colDef(show = TRUE, class = .grp("missing"), headerClass = .grp("missing"),
                            name = .nm("missing"), header = .hd("missing"), html = TRUE, cell = rt_longtext()),
           extra = colDef(show = TRUE, class = .grp("extra"), headerClass = .grp("extra"),
@@ -1059,6 +1063,10 @@ annotate_server <- function(id) {
           value = isTRUE(as.logical(cur$rescue_no_trna %||% 1L))
         )
         shinyWidgets::updatePrettyCheckbox(
+          inputId = "run_tools",
+          value = isTRUE(as.logical(cur$run_tools %||% 1L))
+        )
+        shinyWidgets::updatePrettyCheckbox(
           inputId = "use_arwen",
           value = isTRUE(as.logical(cur$use_arwen))
         )
@@ -1112,11 +1120,12 @@ annotate_server <- function(id) {
         )
         updateSelectizeInput(
           inputId = "start_gene",
-          choices = MITO_GENE_CHOICES,
-          selected = cur$start_gene %||% character(0),
+          choices = c("(none)" = "", MITO_GENE_CHOICES),
+          selected = dplyr::coalesce(cur$start_gene[1], ""),
           options = list(
             create = FALSE,
-            maxItems = 1
+            maxItems = 1,
+            allowEmptyOption = TRUE
           )
         )
       }
@@ -1128,6 +1137,7 @@ annotate_server <- function(id) {
       shinyjs::toggleState("mitos_opts", condition = input$edit_annotate_opts)
       shinyjs::toggleState("use_mitos_best", condition = input$edit_annotate_opts)
       shinyjs::toggleState("rescue_no_trna", condition = input$edit_annotate_opts)
+      shinyjs::toggleState("run_tools", condition = input$edit_annotate_opts)
       # shinyjs::toggleState("mitos_ref_dir", condition = input$edit_annotate_opts) # TODO: custom / alt ref db for mitos
       shinyjs::toggleState("mitos_ref_db", condition = input$edit_annotate_opts)
       shinyjs::toggleState("use_trnaScan", condition = input$edit_annotate_opts)
@@ -1217,10 +1227,22 @@ annotate_server <- function(id) {
     observeEvent(input$use_aragorn, {
       shinyjs::toggle("aragorn_box", condition = isTRUE(input$use_aragorn))
     })
+    observeEvent(input$run_tools, {
+      shinyjs::toggle("tools_box", condition = isTRUE(input$run_tools))
+    })
     ## Save Changes ----
     observeEvent(input$update_annotate_opts, {
       ## Add to params table if new or editing ----
       if (input$edit_annotate_opts) {
+        user_annot <- isTRUE(session$userData$user_annot)
+        if (user_annot && isTRUE(input$run_tools) &&
+            !any(vapply(c("use_mitos", "use_trnaScan", "use_arwen", "use_aragorn", "use_mitofinder"),
+                        function(x) isTRUE(input[[x]]), logical(1)))) {
+          mp_alert("No annotation tool selected",
+                   "Turn on at least one tool, or switch off Run annotation tools.",
+                   type = "warning")
+          return()
+        }
         dplyr::tbl(session$userData$con, "annotate_opts") |>
           dplyr::rows_upsert(
             data.frame(
@@ -1244,11 +1266,12 @@ annotate_server <- function(id) {
               mitofinder_new_genes = as.integer(isTRUE(input$mitofinder_new_genes)),
               mitofinder_allow_introns = as.integer(isTRUE(input$mitofinder_allow_introns)),
               mitofinder_opts = input$mitofinder_opts %||% "",
-              start_gene = req(input$start_gene),
+              start_gene = if (length(input$start_gene) && nzchar(input$start_gene)) input$start_gene else NA_character_,
               coverage_trim = as.integer(isTRUE(input$coverage_trim)),
               feature_trim = as.integer(isTRUE(input$feature_trim)),
               ref_based_rc = as.integer(isTRUE(input$ref_based_rc)),
-              retain_low_conf_trna = as.integer(isTRUE(input$retain_low_conf_trna))
+              retain_low_conf_trna = as.integer(isTRUE(input$retain_low_conf_trna)),
+              run_tools = if (user_annot) as.integer(isTRUE(input$run_tools)) else 1L
             ),
             in_place = TRUE,
             copy = TRUE,
@@ -1698,7 +1721,7 @@ annotate_server <- function(id) {
     annotations_details_server(ns("annotations"), rv, table_id = ns("table"))
 
     # CSV Export ----
-    .export_cols_drop <- c("output", "view", "poor_blast_ref", "warnings_details", "blast_accession_auto")
+    .export_cols_drop <- annotate_csv_drop(session$userData$user_annot)
 
     observe({
       shinyjs::toggleState("export_selected", condition = length(selected()) > 0)

@@ -228,6 +228,7 @@ backwards_compatibility <- function(
       )) &&
       "use_mitos_best" %in% names(annotate_opts_table) &&
       "rescue_no_trna" %in% names(annotate_opts_table) &&
+      "run_tools" %in% names(annotate_opts_table) &&
       "use_aragorn" %in% names(annotate_opts_table) &&
       "aragorn_opts" %in% names(annotate_opts_table) &&
       "max_paths" %in% names(assemble_opts_table) &&
@@ -235,6 +236,7 @@ backwards_compatibility <- function(
       "tool" %in% DBI::dbListFields(con, "annotations") &&
       "partial_start" %in% DBI::dbListFields(con, "annotations") &&
       "partial_stop" %in% DBI::dbListFields(con, "annotations") &&
+      "codon_start" %in% DBI::dbListFields(con, "annotations") &&
       "blast_ref_annotations" %in% DBI::dbListTables(con) &&
       "blast_ref_alignment" %in% DBI::dbListTables(con) &&
       "assembly_backup" %in% DBI::dbListTables(con) &&
@@ -774,6 +776,10 @@ backwards_compatibility <- function(
     message("added 'partial_stop' column to annotations table")
     DBI::dbExecute(con, "ALTER TABLE annotations ADD COLUMN partial_stop INTEGER")
   }
+  if(!("codon_start" %in% annotations_fields)){
+    message("added 'codon_start' column to annotations table")
+    DBI::dbExecute(con, "ALTER TABLE annotations ADD COLUMN codon_start INTEGER")
+  }
   # if linear_complete column doesn't exist on curate_opts, add it (default 0)
   if(!("linear_complete" %in% DBI::dbListFields(con, "curate_opts"))){
     message("added 'linear_complete' column to curate_opts table")
@@ -872,6 +878,32 @@ backwards_compatibility <- function(
     glue::glue_sql(
       "ALTER TABLE annotate_opts
        ADD COLUMN rescue_no_trna INTEGER",
+      .con = con
+    ) |> DBI::dbExecute(con, statement = _)
+
+    dplyr::tbl(con, "annotate_opts") |>
+      dplyr::rows_upsert(
+        annotate_opts_table,
+        in_place = TRUE,
+        copy = TRUE,
+        by = "annotate_opts"
+      )
+  }
+
+  # if run_tools column doesn't exist, add it (off for user-annotation projects)
+  if(!("run_tools" %in% names(annotate_opts_table))){
+    message("added 'run_tools' column to annotate_opts table")
+    annotate_opts_table$run_tools <- rep(1L, nrow(annotate_opts_table))
+    if (is_user_annot(con)) {
+      annotate_opts_table$run_tools <- 0L
+      tool_cols <- c("use_mitos", "use_trnaScan", "use_arwen", "use_aragorn", "use_mitofinder")
+      none <- rowSums(as.matrix(annotate_opts_table[tool_cols]), na.rm = TRUE) == 0
+      annotate_opts_table$use_mitos[none] <- 1L
+      annotate_opts_table$use_trnaScan[none] <- 1L
+    }
+    glue::glue_sql(
+      "ALTER TABLE annotate_opts
+       ADD COLUMN run_tools INTEGER",
       .con = con
     ) |> DBI::dbExecute(con, statement = _)
 
@@ -2299,6 +2331,17 @@ backwards_compatibility <- function(
 is_user_asmb <- function(con) {
   isTRUE(tryCatch(
     "assembly" %in% DBI::dbListFields(con, "samples"),
+    error = function(e) FALSE
+  ))
+}
+
+#' Is this a user-annotation project (imported annotation files)?
+#'
+#' @param con An open connection to a project database.
+#' @noRd
+is_user_annot <- function(con) {
+  isTRUE(tryCatch(
+    "gene_name_map" %in% DBI::dbListTables(con),
     error = function(e) FALSE
   ))
 }

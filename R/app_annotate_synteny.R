@@ -7,7 +7,7 @@
 #' was rotated to a linear reference. NULL when there is no usable alignment.
 #' @noRd
 synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
-                            ref_label, selected = NULL, version = 0L) {
+                            ref_label, selected = NULL, version = 0L, original = NULL) {
   if (is.null(aln) || nrow(aln) == 0) return(NULL)
   s <- toupper(as.character(aln$aligned_sample[1]))
   r <- toupper(as.character(aln$aligned_ref[1]))
@@ -32,7 +32,7 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
   sel <- if (length(selected) == 1L && !is.na(selected) && selected %in% rows) {
     as.integer(selected)
   }
-  list(
+  out <- list(
     sampleLabel = sample_label, refAcc = ref_acc, refLabel = ref_label,
     refRc = isTRUE(aln$ref_rc[1]), s = s, r = r,
     refLength = as.integer(aln$ref_length[1]),
@@ -41,11 +41,13 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
     sampleFeatures = sample_feats, refFeatures = ref_feats,
     selected = sel, version = as.integer(version)
   )
+  out$original <- original_payload(original)
+  out
 }
 
 #' Synteny viewer controls + canvas block (tools/synteny_viewer_spec.md, section 5)
 #' @noRd
-synteny_viewer_ui <- function(ns) {
+synteny_viewer_ui <- function(ns, user_annot = FALSE) {
   btn <- function(action, label, icon = NULL, title = NULL) {
     tags$button(
       type = "button", class = "btn btn-default", `data-mpsyn` = action,
@@ -58,9 +60,11 @@ synteny_viewer_ui <- function(ns) {
       btn("fit", "Fit gene"),
       btn("whole", "Whole alignment"),
       btn("zoom_in", NULL, icon("magnifying-glass-plus"), "Zoom in"),
-      btn("zoom_out", NULL, icon("magnifying-glass-minus"), "Zoom out")
+      btn("zoom_out", NULL, icon("magnifying-glass-minus"), "Zoom out"),
+      if (user_annot) mp_checkbox(ns("show_orig"), label = "Original", value = TRUE)
     ),
     uiOutput(ns("synteny_rot_note")),
+    if (user_annot) uiOutput(ns("synteny_orig_note")),
     div(class = "mp-coverage-caption",
         paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a sample gene to select its row.",
               "Bases appear when zoomed in.")),

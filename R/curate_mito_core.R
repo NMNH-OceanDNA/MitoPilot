@@ -354,33 +354,59 @@ curate_mito_core <- function(
     }
   })
 
-  annotations$refHits <- annotations |>
-    dplyr::select(type, gene, translation) |>
-    purrr::pmap(function(type, gene, translation) {
-      if (type != "PCG") {
+  pcg_refhits <- function(gene, translation) {
+    ## Gene ref database ----
+    ref_db <- stringr::str_glue(ref_dbs[[gene]] %||% ref_dbs[["default"]])
+
+    # No per-gene reference DB (e.g. a non-standard MitoFinder gene): BLAST the
+    # translation against the combined all-gene DB like an ORF so candidate
+    # identities still surface in the alignment.
+    if (!file.exists(as.character(ref_db))) {
+      cdb <- combined_ref_db()
+      if (is.null(cdb) || is.na(translation) || !nzchar(translation)) {
+        return('{}')
+      }
+      out <- get_top_hits_orf(cdb, translation, max_blast_hits) |>
+        json_string()
+      return(out %||% '{}')
+    }
+
+    out <- get_top_hits(gene_dbs(gene), translation, max_blast_hits) |>
+      json_string()
+    out %||% '{}'
+  }
+
+  # A JOIN group is BLASTed once, as its spliced protein, and every member
+  # carries the same hits. The spliced protein rides along for validation.
+  join_key <- ifelse(
+    annotations$type == "PCG" & is_join_member(annotations$notes),
+    paste(annotations$contig, join_group_id(annotations$notes)),
+    NA_character_
+  )
+  annotations$join_translation <- rep(NA_character_, nrow(annotations))
+  for (k in unique(stats::na.omit(join_key))) {
+    m <- which(join_key == k)
+    annotations$join_translation[m] <- tryCatch(
+      group_refhits_translation(
+        annotations[m, ], assembly[contig_key[annotations$contig[m[1]]]], genetic_code
+      ),
+      error = function(e) NA_character_
+    )
+  }
+  annotations$refHits <- purrr::pmap(
+    list(annotations$type, annotations$gene, annotations$translation, join_key),
+    function(type, gene, translation, key) {
+      if (type != "PCG" || !is.na(key)) {
         return(NA)
       }
-
-      ## Gene ref database ----
-      ref_db <- stringr::str_glue(ref_dbs[[gene]] %||% ref_dbs[["default"]])
-
-      # No per-gene reference DB (e.g. a non-standard MitoFinder gene): BLAST the
-      # translation against the combined all-gene DB like an ORF so candidate
-      # identities still surface in the alignment.
-      if (!file.exists(as.character(ref_db))) {
-        cdb <- combined_ref_db()
-        if (is.null(cdb) || is.na(translation) || !nzchar(translation)) {
-          return('{}')
-        }
-        out <- get_top_hits_orf(cdb, translation, max_blast_hits) |>
-          json_string()
-        return(out %||% '{}')
-      }
-
-      out <- get_top_hits(gene_dbs(gene), translation, max_blast_hits) |>
-        json_string()
-      out %||% '{}'
-    })
+      pcg_refhits(gene, translation)
+    }
+  )
+  for (k in unique(stats::na.omit(join_key))) {
+    m <- which(join_key == k)
+    tr <- annotations$join_translation[m[1]]
+    annotations$refHits[m] <- if (is.na(tr) || !nzchar(tr)) '{}' else pcg_refhits(annotations$gene[m[1]], tr)
+  }
 
 
   # Prepend remote BLAST top hit to refHits for each PCG
@@ -430,6 +456,11 @@ curate_mito_core <- function(
         cur$warnings,
         stringr::str_glue("{n_ambiguous} ambiguous bases in CDS")
       )
+    }
+
+    # JOIN members and frame-offset CDSs keep the coordinates they arrived with
+    if (skip_boundary_curation(notes, cur$codon_start)) {
+      return(cur)
     }
 
     # Stop if no hits above threshold
@@ -839,6 +870,7 @@ curate_mito_core <- function(
   ## Stop codon trimming ----
   for (idx in seq_len(nrow(annotations))) {
     if (annotations$type[idx] != "PCG") next
+    if (skip_boundary_curation(annotations$notes[idx], annotations$codon_start[idx])) next
     gene <- annotations$gene[idx]
     overlap_rules <- rules[[gene]][["overlap"]]
     stop_opts <- rules[[gene]][["stop_codons"]]
@@ -903,6 +935,8 @@ curate_mito_core <- function(
       break
     }
   }
+
+  annotations <- assess_partial_ends(annotations, assembly, contig_key, rules)
 
   # End trimming ----
   # Remove un-annotated regions at the beginning or end of linear contigs

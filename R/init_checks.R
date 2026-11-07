@@ -186,6 +186,8 @@ check_sample_ids <- function(ids, iss = .issues()) {
 #' @param assembly_path NULL skips assembly-file checks; "NA" means the
 #'   Assembly column holds full paths
 #' @param check_assemblies run assembly-file checks at all (the pre-flight only)
+#' @param user_annot Annotation column is required (user-annotation project)
+#' @param annotation_path directory holding the Annotation files
 #' @noRd
 check_mapping <- function(mapping, mapping_id = "ID", mapping_taxon = "Taxon",
                           mapping_geome = "GEOME_BCID",
@@ -194,6 +196,7 @@ check_mapping <- function(mapping, mapping_id = "ID", mapping_taxon = "Taxon",
                           need_reads = TRUE, user_asmb = FALSE,
                           data_path = NULL, assembly_path = NULL,
                           check_assemblies = FALSE, find_mitogenome = FALSE,
+                          user_annot = FALSE, annotation_path = NULL,
                           iss = .issues()) {
   cols <- colnames(mapping)
   n <- nrow(mapping)
@@ -213,6 +216,9 @@ check_mapping <- function(mapping, mapping_id = "ID", mapping_taxon = "Taxon",
   }
   if (user_asmb && "Assembly" %nin% cols) {
     iss$err("mapping columns: 'Assembly' column not found")
+  }
+  if (user_annot && "Annotation" %nin% cols) {
+    iss$err("mapping columns: 'Annotation' column not found")
   }
   src_cols <- c(GEOME = mapping_geome, GBIF = mapping_gbif, NCBI = mapping_ncbi)
   for (src in names(src_cols)[src_cols == mapping_id]) {
@@ -337,11 +343,102 @@ check_mapping <- function(mapping, mapping_id = "ID", mapping_taxon = "Taxon",
       if (any(dup)) iss$warn("mapping Assembly: the same file is used by ", .lst(lab[dup]))
       if (check_assemblies && (is.null(assembly_path) || !.is_remote(assembly_path))) {
         .check_assembly_files(fa[!miss], lab[!miss], topo[!miss], assembly_path,
-                              find_mitogenome, iss)
+                              find_mitogenome, iss, single_contig = user_annot)
+        if (user_annot && "Annotation" %in% cols) {
+          check_user_annotations(mapping[!miss, , drop = FALSE], assembly_path,
+                                 annotation_path, iss, labels = lab[!miss])
+        }
       }
     }
   }
   iss
+}
+
+#' Each sample's annotation file must parse and fit its single-contig FASTA
+#' @param labels sample labels for messages
+#' @noRd
+check_user_annotations <- function(mapping, assembly_path, annotation_path, iss,
+                                   labels = mapping$ID) {
+  if (!.is_na_sentinel(annotation_path) && !dir.exists(annotation_path)) {
+    iss$err("annotation_path: directory not found: ", annotation_path)
+    return(invisible(iss))
+  }
+  ann <- as.character(mapping$Annotation)
+  topo <- if ("Topology" %in% colnames(mapping)) as.character(mapping$Topology) else ""
+  topo <- rep_len(topo, nrow(mapping))
+  for (i in seq_len(nrow(mapping))) {
+    lab <- labels[i]
+    fn <- ann[i]
+    if (is.na(fn) || !nzchar(fn)) {
+      iss$err("mapping Annotation: empty for ", lab)
+      next
+    }
+    if (!grepl("\\.(gff3?|bed|tbl)$", fn, ignore.case = TRUE)) {
+      iss$err("annotations: ", fn, " (", lab, ") must end in .gff, .gff3, .bed, or .tbl")
+      next
+    }
+    path <- .ua_path(annotation_path, fn)
+    if (!file.exists(path) || dir.exists(path)) {
+      iss$err("annotations: ", fn, " (", lab, ") not found",
+              if (.is_na_sentinel(annotation_path)) "" else paste0(" in ", annotation_path))
+      next
+    }
+    len <- tryCatch(Biostrings::fasta.seqlengths(.ua_path(assembly_path, mapping$Assembly[i])),
+                    error = function(e) NULL)
+    if (length(len) > 1L) {
+      msg <- paste0("assemblies: ", mapping$Assembly[i], " (", lab, ") holds ", length(len),
+                    " sequences; a user-annotation project needs exactly one sequence per FASTA")
+      if (!msg %in% iss$errors) iss$err(msg)
+    }
+    if (length(len) != 1L) next
+    L <- unname(len)
+    p <- tryCatch(parse_user_annotation(path, contig_length = L), error = function(e) {
+      iss$err("annotations: ", fn, " (", lab, "): ", conditionMessage(e))
+      NULL
+    })
+    if (is.null(p)) next
+    where <- paste0(fn, " (", lab, ")")
+    if (nrow(p) == 0L) {
+      iss$err("annotations: ", where, " has no recognized features")
+      next
+    }
+    sid <- sub("\\s.*$", "", names(len))
+    if (!identical(p$seqid[1], sid)) {
+      iss$err("annotations: ", where, " uses seqid '", p$seqid[1], "' but FASTA ",
+              mapping$Assembly[i], " is named '", sid, "'")
+    }
+    if (grepl("\\.gff3?$", fn, ignore.case = TRUE)) {
+      g <- .ua_split(grep("^[^#>]", .ua_lines(path)$text, value = TRUE), 9L)
+      bad <- suppressWarnings(as.integer(g[, 4]) > as.integer(g[, 5]))
+      if (any(bad, na.rm = TRUE)) {
+        iss$err("annotations: ", where, " has ", sum(bad, na.rm = TRUE),
+                " row(s) with start after end")
+        next
+      }
+    }
+    past <- pmax(p$pos1, p$pos2) > L
+    if (any(past)) {
+      iss$err("annotations: ", where, " has feature(s) past the end of the ", L,
+              " bp contig: ", .lst(unique(p$raw_name[past])))
+    }
+    if (!identical(topo[i], "circular")) {
+      wrap <- p$pos1 > p$pos2
+      if (any(wrap)) {
+        iss$err("annotations: ", where, " has feature(s) spanning the origin but the ",
+                "sample is linear: ", .lst(unique(p$raw_name[wrap])))
+      }
+      if (isTRUE(attr(p, "is_circular"))) {
+        iss$err("annotations: ", where, " says Is_circular=true but the sample is linear")
+      }
+    }
+  }
+  invisible(iss)
+}
+
+#' Annotation or assembly file path; an NA directory means `fn` is a full path
+#' @noRd
+.ua_path <- function(dir, fn) {
+  if (.is_na_sentinel(dir)) fn else file.path(dir, fn)
 }
 
 #' Every read file must exist and start like FASTQ (first record header)
@@ -371,7 +468,7 @@ check_mapping <- function(mapping, mapping_id = "ID", mapping_taxon = "Taxon",
 #' Every assembly must exist and parse as FASTA; topology only fits one contig
 #' @noRd
 .check_assembly_files <- function(files, labels, topo, assembly_path,
-                                  find_mitogenome, iss) {
+                                  find_mitogenome, iss, single_contig = FALSE) {
   paths <- if (.is_na_sentinel(assembly_path)) files else file.path(assembly_path, files)
   ok <- file.exists(paths) & !dir.exists(paths)
   if (any(!ok)) {
@@ -388,12 +485,15 @@ check_mapping <- function(mapping, mapping_id = "ID", mapping_taxon = "Taxon",
     if (is.na(n)) next
     if (n == 0L) {
       iss$err("assemblies: ", files[i], " (", labels[i], ") holds no sequences")
+    } else if (n > 1L && single_contig) {
+      iss$err("assemblies: ", files[i], " (", labels[i], ") holds ", n, " sequences; ",
+              "a user-annotation project needs exactly one sequence per FASTA")
     } else if (n > 1L && nzchar(topo[i])) {
       iss$warn("assemblies: ", labels[i], " declares Topology '", topo[i], "' but ",
                files[i], " holds ", n, " contigs; a topology only applies to a ",
                "single-sequence mitogenome and will be ignored (recorded as 'multi')")
     }
-    if (n > 100L && !isTRUE(find_mitogenome)) {
+    if (n > 100L && !isTRUE(find_mitogenome) && !single_contig) {
       iss$warn("assemblies: ", files[i], " (", labels[i], ") holds ", n, " contigs; ",
                "for a whole-genome assembly use find_mitogenome = TRUE")
     }
@@ -551,6 +651,7 @@ preflight_project <- function(path, mapping_fn, mapping_id, data_path, no_raw_da
                               container = NULL, min_depth = 2e6, genetic_code = NULL,
                               ncbi_api_key = NULL, custom_seeds_db = NULL,
                               custom_labels_db = NULL, force = FALSE,
+                              user_annot = FALSE, annotation_path = NULL,
                               db_fun = new_db, dots = list()) {
   iss <- .issues()
 
@@ -600,7 +701,8 @@ preflight_project <- function(path, mapping_fn, mapping_id, data_path, no_raw_da
                   need_reads = !no_raw_data, user_asmb = user_asmb,
                   data_path = if (no_raw_data) NULL else data_path,
                   assembly_path = assembly_path, check_assemblies = user_asmb,
-                  find_mitogenome = find_mitogenome, iss = iss)
+                  find_mitogenome = find_mitogenome, user_annot = user_annot,
+                  annotation_path = annotation_path, iss = iss)
     # MapToRef reference column: its validator already reports every row.
     if (!user_asmb && mapping_id %in% colnames(mapping)) {
       tryCatch({

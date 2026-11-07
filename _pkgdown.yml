@@ -50,6 +50,8 @@ navbar:
         href: articles/Your-Own-Project.html
       - text: "Using your own assemblies"
         href: articles/Your-Own-Assemblies.html
+      - text: "Using your own annotations"
+        href: articles/Your-Own-Annotations.html
       - text: "Choosing an assembly method"
         href: articles/Assembly-Methods.html
       - text: "Difficult assemblies"
@@ -102,6 +104,7 @@ articles:
   contents:
   - 'Your-Own-Project'
   - 'Your-Own-Assemblies'
+  - 'Your-Own-Annotations'
   - 'Assembly-Methods'
   - 'Difficult-Assemblies'
   - 'Ruleset-Browser'
@@ -135,8 +138,10 @@ reference:
   - MitoPilot
   - new_project
   - new_project_userAsmb
+  - new_project_userAnnot
   - new_test_project
   - new_test_project_userAsmb
+  - new_test_project_userAnnot
 
 - title: "Project database"
   desc: >
@@ -144,6 +149,7 @@ reference:
   contents:
   - new_db
   - new_db_userAsmb
+  - new_db_userAnnot
   - add_samples
   - update_sample_metadata
   - fetch_geome

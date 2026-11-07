@@ -65,3 +65,17 @@ test_that("payload carries the sample copy rotation, defaulting to 0", {
   p <- synteny_payload(syn_ann(), syn_ref(), a, "S1", "NC_1", "x")
   expect_equal(p$sampleRotation, 25L)
 })
+
+test_that("original features are carried only when given", {
+  o <- data.frame(name = c("COI", "rep"), gene = c("cox1", NA), type = c("PCG", ""),
+                  pos1 = c(10L, 50L), pos2 = c(39L, 60L), dir = "+",
+                  status = c("unchanged", "unmapped"), orig1 = c(10L, 50L), orig2 = c(39L, 60L),
+                  odir = "+", stringsAsFactors = FALSE)
+  p <- synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x", original = o)
+  expect_length(p$original, 2)
+  expect_equal(p$original[[1]][c("name", "gene", "type", "status", "dir")],
+               list(name = "COI", gene = "cox1", type = "PCG", status = "unchanged", dir = "+"))
+  expect_null(p$original[[2]]$gene)
+  expect_null(synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x")$original)
+  expect_null(synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x", original = o[0, ])$original)
+})

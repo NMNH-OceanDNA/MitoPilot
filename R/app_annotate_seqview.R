@@ -7,7 +7,8 @@
 #' stored (1-based, inclusive, pos1 > pos2 for an origin-crossing feature).
 #' @noRd
 seqview_payload <- function(annotations, seq, topology, unit,
-                            selected = NULL, version = 0L, coverage = NULL) {
+                            selected = NULL, version = 0L, coverage = NULL,
+                            original = NULL) {
   seq <- toupper(as.character(seq)[1])
   a <- annotations
   yes <- function(x) {
@@ -42,6 +43,7 @@ seqview_payload <- function(annotations, seq, topology, unit,
     unit = unit, len = nchar(seq), topology = topology, seq = seq,
     version = as.integer(version), selected = sel, features = feats
   )
+  out$original <- original_payload(original)
   # Per-base read depth and error rate, indexed by position; NA -> null. An
   # all-NA column (assembly supplied without reads) is left out so the track
   # is not drawn at all.
@@ -57,7 +59,9 @@ seqview_payload <- function(annotations, seq, topology, unit,
 
 #' Sequence viewer section (tools/nt_viewer_spec.md, section 3)
 #' @noRd
-seqview_ui <- function(id) {
+#' @param user_annot TRUE in user-annotation projects: adds the Original track toggle
+#' @noRd
+seqview_ui <- function(id, user_annot = FALSE) {
   ns <- NS(id)
   btn <- function(action, label, icon = NULL, title = NULL) {
     tags$button(
@@ -82,11 +86,13 @@ seqview_ui <- function(id) {
       mp_checkbox(ns("show_cov"), label = "Coverage", value = TRUE),
       mp_checkbox(ns("show_err"), label = "Error rate", value = TRUE),
       mp_checkbox(ns("show_nt"), label = "Nucleotides", value = TRUE),
-      mp_checkbox(ns("show_aa"), label = "Amino acids", value = TRUE)
+      mp_checkbox(ns("show_aa"), label = "Amino acids", value = TRUE),
+      if (user_annot) mp_checkbox(ns("show_orig"), label = "Original", value = TRUE)
     ),
+    if (user_annot) uiOutput(ns("orig_note")),
     div(class = "mp-coverage-caption",
         paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a gene to select its row.",
-              "Letters appear when zoomed in. Copy sequence copies the bases in view. Error rate bars turn orange above 5%.")),
+              "Zoom in to see nucleotide sequence and translations. Copy sequence copies the bases in view. Error rate bars turn orange above 5%.")),
     uiOutput(ns("empty")),
     div(
       class = "mp-seqview",
@@ -99,8 +105,9 @@ seqview_ui <- function(id) {
 #' @param rv the annotate module's reactive values (annotations, updating, editing)
 #' @param tick reactiveVal bumped when the assembly sequence changes
 #' @param selected reactive of the annotation table's selected row indices
+#' @param original reactive: original_features() + flag_original() result, or NULL
 #' @noRd
-seqview_server <- function(id, rv, tick, selected) {
+seqview_server <- function(id, rv, tick, selected, original = reactive(NULL)) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -150,10 +157,13 @@ seqview_server <- function(id, rv, tick, selected) {
         return()
       }
       output$empty <- renderUI(NULL)
+      o <- original()
+      output$orig_note <- renderUI(orig_note_ui(o))
       p <- seqview_payload(
         rv$annotations, s, rv$updating$topology %||% "linear",
         paste(rv$updating$ID, rv$updating$path, rv$updating$scaffold, sep = "."),
-        selected = cur_sel(), version = version(), coverage = rv$coverage
+        selected = cur_sel(), version = version(), coverage = rv$coverage,
+        original = if (isTRUE(o$ok)) o$rows
       )
       p$id <- ns("canvas")
       p$input <- ns("pick")
