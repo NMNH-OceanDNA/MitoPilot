@@ -30,7 +30,7 @@
   // circular sample was aligned to a linear reference), and back.
   function sampleRot(p, n, sRot) { return n ? ((p - 1 - (sRot || 0)) % n + n) % n + 1 : p; }
   function sampleUnrot(k, n, sRot) { return n ? ((k - 1 + (sRot || 0)) % n + n) % n + 1 : k; }
-  function sampleCol(p, sNongap, sRot) { return sNongap[clampIdx(sampleRot(p, sNongap.length, sRot), sNongap.length) - 1]; }
+  function sampleCol(p, sNongap, sRot) { var n = sNongap.length; return sNongap[sampleRot(clampIdx(p, n), n, sRot) - 1]; }
   function rotFlip(p, refLength, rotation, rc) {
     var pr = ((p - 1 - rotation) % refLength + refLength) % refLength + 1;
     return rc ? refLength - pr + 1 : pr;
