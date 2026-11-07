@@ -57,3 +57,11 @@ test_that("viewer UI carries the namespaced canvas, tip, and the four controls",
     expect_match(html, sprintf('data-mpsyn="%s"', a), fixed = TRUE)
   }
 })
+
+test_that("payload carries the sample copy rotation, defaulting to 0", {
+  p <- synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x")
+  expect_equal(p$sampleRotation, 0L)
+  a <- syn_aln(); a$sample_rotation <- 25L
+  p <- synteny_payload(syn_ann(), syn_ref(), a, "S1", "NC_1", "x")
+  expect_equal(p$sampleRotation, 25L)
+})

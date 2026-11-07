@@ -161,32 +161,29 @@ aln_test_db <- function(topology = "circular") {
   DBI::dbExecute(con, "CREATE TABLE blast_ref_alignment (
     ID TEXT, path INTEGER, scaffold INTEGER, accession TEXT,
     aligned_sample TEXT, aligned_ref TEXT, rotation INTEGER, ref_length INTEGER,
-    ref_start INTEGER, strand TEXT, time_stamp INTEGER,
+    ref_start INTEGER, strand TEXT, sample_rotation INTEGER DEFAULT 0, time_stamp INTEGER,
     PRIMARY KEY (ID, path, scaffold, accession))")
   DBI::dbExecute(con, "CREATE TABLE blast_ref_sequences (
     accession TEXT PRIMARY KEY, sequence TEXT, topology TEXT)")
   DBI::dbExecute(con, "CREATE TABLE assemblies (
-    ID TEXT, path INTEGER, scaffold INTEGER, sequence TEXT)")
+    ID TEXT, path INTEGER, scaffold INTEGER, sequence TEXT, topology TEXT)")
   DBI::dbExecute(con, "CREATE TABLE blast_ref_annotations (
-    accession TEXT, gene TEXT, pos1 INTEGER)")
-  DBI::dbExecute(con, "CREATE TABLE annotate (
-    ID TEXT, path INTEGER, scaffold INTEGER, annotate_opts TEXT)")
-  DBI::dbExecute(con, "CREATE TABLE annotate_opts (
-    annotate_opts TEXT, start_gene TEXT)")
+    accession TEXT, gene TEXT, pos1 INTEGER, pos2 INTEGER, direction TEXT)")
+  DBI::dbExecute(con, "CREATE TABLE annotations (
+    ID TEXT, path INTEGER, scaffold INTEGER, gene TEXT, pos1 INTEGER, pos2 INTEGER, direction TEXT)")
 
   a <- make_aln(.sample, .ref)
   DBI::dbExecute(
-    con, "INSERT INTO blast_ref_alignment VALUES ('S1',1,1,'ACC1',?,?,?,?,?,?,0)",
+    con, "INSERT INTO blast_ref_alignment VALUES ('S1',1,1,'ACC1',?,?,?,?,?,?,0,0)",
     params = list(a$aligned_sample[1], a$aligned_ref[1], a$rotation[1],
                   a$ref_length[1], a$ref_start[1], a$strand[1])
   )
   DBI::dbExecute(con, "INSERT INTO blast_ref_sequences VALUES ('ACC1', ?, ?)",
                  params = list(.ref, topology))
-  DBI::dbExecute(con, "INSERT INTO assemblies VALUES ('S1',1,1,?)",
+  DBI::dbExecute(con, "INSERT INTO assemblies VALUES ('S1',1,1,?,'circular')",
                  params = list(.sample))
-  DBI::dbExecute(con, "INSERT INTO blast_ref_annotations VALUES ('ACC1','COX1',41)")
-  DBI::dbExecute(con, "INSERT INTO annotate VALUES ('S1',1,1,'default')")
-  DBI::dbExecute(con, "INSERT INTO annotate_opts VALUES ('default','COX1')")
+  DBI::dbExecute(con, "INSERT INTO blast_ref_annotations VALUES ('ACC1','COX1',41,100,'+')")
+  DBI::dbExecute(con, "INSERT INTO annotations VALUES ('S1',1,1,'COX1',1,60,'+')")
   con
 }
 
@@ -230,8 +227,8 @@ test_that("ensure_ref_alignment recomputes a missing row", {
   expect_equal(nrow(row), 1)
   expect_equal(ungapped(row$aligned_sample[1]), .sample)
   expect_equal(nchar(ungapped(row$aligned_ref[1])), row$ref_length[1])
-  # Circular reference + a start_gene at position 41 -> 40 bp rotation, same as
-  # the pipeline's own SQL.
+  # Circular reference whose copy of the sample's first gene sits at position 41
+  # -> 40 bp rotation, same rule as the pipeline (ref_rotation_offset).
   expect_equal(row$rotation[1], 40)
 })
 
@@ -253,5 +250,35 @@ test_that("ensure_ref_alignment is a no-op when the reference sequence is absent
   DBI::dbExecute(con, "DELETE FROM blast_ref_alignment")
   DBI::dbExecute(con, "DELETE FROM blast_ref_sequences")
   expect_false(ensure_ref_alignment(con, "S1", 1, 1, "ACC1"))
+  expect_equal(nrow(DBI::dbGetQuery(con, "SELECT * FROM blast_ref_alignment")), 0)
+})
+
+test_that("ensure_ref_alignment rotates the sample copy against a linear reference", {
+  con <- aln_test_db("linear")
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbExecute(con, "DELETE FROM blast_ref_alignment")
+  # Circular sample, linear reference whose first gene (COX1 at ref 41) the
+  # sample carries at position 1 -> no reference rotation, no sample rotation.
+  expect_true(ensure_ref_alignment(con, "S1", 1, 1, "ACC1"))
+  row <- DBI::dbGetQuery(con, "SELECT * FROM blast_ref_alignment")
+  expect_equal(row$rotation[1], 0); expect_equal(row$sample_rotation[1], 0)
+  # Move the sample's COX1 to position 31 (same strand): the aligned copy of the
+  # sample starts there, the stored sequence does not change.
+  DBI::dbExecute(con, "UPDATE annotations SET pos1 = 31, pos2 = 90")
+  DBI::dbExecute(con, "DELETE FROM blast_ref_alignment")
+  expect_true(ensure_ref_alignment(con, "S1", 1, 1, "ACC1"))
+  row <- DBI::dbGetQuery(con, "SELECT * FROM blast_ref_alignment")
+  n <- nchar(.sample)
+  expect_equal(row$sample_rotation[1], 30)
+  expect_equal(ungapped(row$aligned_sample[1]), paste0(substr(.sample, 31L, n), substr(.sample, 1L, 30L)))
+  expect_equal(DBI::dbGetQuery(con, "SELECT sequence FROM assemblies")$sequence, .sample)
+})
+
+test_that("a row aligned from a rotated sample copy is dropped by a trim, not projected", {
+  con <- aln_test_db("linear")
+  on.exit(DBI::dbDisconnect(con))
+  DBI::dbExecute(con, "UPDATE blast_ref_alignment SET sample_rotation = 30")
+  n <- nchar(.sample)
+  project_ref_alignment_trim(con, "S1", 1, 1, n, 31L, n - 25L)
   expect_equal(nrow(DBI::dbGetQuery(con, "SELECT * FROM blast_ref_alignment")), 0)
 })

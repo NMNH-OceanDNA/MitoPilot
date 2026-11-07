@@ -3,7 +3,8 @@
 #' Synteny viewer payload (tools/synteny_viewer_spec.md, section 4)
 #'
 #' Pure: no Shiny, no database. Coordinates pass through as stored; the browser
-#' maps them to alignment columns. NULL when there is no usable alignment.
+#' maps them to alignment columns, through `sampleRotation` when the sample copy
+#' was rotated to a linear reference. NULL when there is no usable alignment.
 #' @noRd
 synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
                             ref_label, selected = NULL, version = 0L) {
@@ -36,6 +37,7 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
     refRc = isTRUE(aln$ref_rc[1]), s = s, r = r,
     refLength = as.integer(aln$ref_length[1]),
     rotation = as.integer(aln$rotation[1]),
+    sampleRotation = as.integer(aln$sample_rotation[1] %||% 0L) %||% 0L,
     sampleFeatures = sample_feats, refFeatures = ref_feats,
     selected = sel, version = as.integer(version)
   )
@@ -58,6 +60,7 @@ synteny_viewer_ui <- function(ns) {
       btn("zoom_in", NULL, icon("magnifying-glass-plus"), "Zoom in"),
       btn("zoom_out", NULL, icon("magnifying-glass-minus"), "Zoom out")
     ),
+    uiOutput(ns("synteny_rot_note")),
     div(class = "mp-coverage-caption",
         paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a sample gene to select its row.",
               "Bases appear when zoomed in.")),

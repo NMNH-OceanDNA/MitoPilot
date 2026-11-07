@@ -2008,6 +2008,14 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       req(p)
       p$id <- ns("synteny_canvas"); p$input <- ns("synteny_pick")
       session$sendCustomMessage("mpsyn", p)
+      output$synteny_rot_note <- renderUI({
+        if (isTRUE(p$sampleRotation > 0)) {
+          div(class = "mp-coverage-caption",
+              sprintf(paste("Sample drawn starting at stored position %s to line up with this linear reference;",
+                            "the saved sequence and all coordinates are unchanged."),
+                      format(p$sampleRotation + 1L, big.mark = ",")))
+        }
+      })
     })
     observeEvent(sv$sel(), {
       session$sendCustomMessage("mpsyn_select", list(id = ns("synteny_canvas"), row = sv$sel()))

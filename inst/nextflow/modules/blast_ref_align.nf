@@ -23,8 +23,9 @@ process blast_ref_align {
 
     input:
         // assembly_seq and ref_seq are plain nucleotide strings (no headers)
-        // rotation is the 0-based offset into the reference for the anchor gene
-        tuple val(id), val(path), val(scaffold), val(accession), val(assembly_seq), val(ref_seq), val(rotation)
+        // ref_feats / sample_feats are 'gene|pos1|pos2|direction;...' gene tables;
+        // the rotation is derived from them (see MitoPilot::ref_rotation_offset)
+        tuple val(id), val(path), val(scaffold), val(accession), val(assembly_seq), val(ref_seq), val(ref_topology), val(ref_feats), val(sample_feats), val(sample_topology)
 
     output:
         tuple val(id), val(path), val(scaffold), val(accession), path("${id}/annotate/blast_ref_alignment_${path}_${scaffold}_${accession}.csv")
@@ -35,19 +36,23 @@ process blast_ref_align {
     '''
     export OMP_NUM_THREADS=1 # fix for OpenBLAS blas_thread_init error
     mkdir -p !{outDir}
-    # blast_ref_align output contract v2: CSV has 6 columns
-    # (aligned_sample, aligned_ref, rotation, ref_length, ref_start, strand).
+    # blast_ref_align output contract v4: CSV has 7 columns
+    # (aligned_sample, aligned_ref, rotation, ref_length, ref_start, strand, sample_rotation).
     # This version string is part of the task script, so bumping it invalidates
     # the Nextflow -resume cache: a changed aligner output format cannot be
     # silently reused across package upgrades (downstream parser needs 6 cols).
     # Write sequences to files - avoids Rscript -e expression length limits
     printf '%s\n' '!{assembly_seq}' > _assembly.txt
     printf '%s\n' '!{ref_seq}'      > _ref.txt
-    Rscript -e "MitoPilot::compute_blast_ref_alignment( \
-        assembly_seq = paste(readLines('_assembly.txt'), collapse = ''), \
-        ref_seq      = paste(readLines('_ref.txt'),      collapse = ''), \
-        rotation     = !{rotation}, \
-        output_file  = '!{outDir}/!{outFile}' \
+    printf '%s\n' '!{ref_feats}'    > _ref_feats.txt
+    printf '%s\n' '!{sample_feats}' > _sample_feats.txt
+    Rscript -e "rot <- MitoPilot::alignment_rotations(readLines('_ref_feats.txt'), readLines('_sample_feats.txt'), '!{ref_topology}', '!{sample_topology}'); \
+      MitoPilot::compute_blast_ref_alignment( \
+        assembly_seq    = paste(readLines('_assembly.txt'), collapse = ''), \
+        ref_seq         = paste(readLines('_ref.txt'),      collapse = ''), \
+        rotation        = rot\$rotation, \
+        sample_rotation = rot\$sample_rotation, \
+        output_file     = '!{outDir}/!{outFile}' \
     )"
     '''
 }

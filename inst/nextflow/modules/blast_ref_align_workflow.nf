@@ -18,22 +18,26 @@ def appendTaggedNoteSql(String tag, String msg) {
     return "CASE WHEN ${stripped} = '' THEN '${tagged}' ELSE ${stripped} || '; ${tagged}' END"
 }
 
-// Reference sequence and rotation per candidate reference for newly-curated
-// samples (gated on curate_out). One row per (ID, candidate accession). rank=1 is
-// the top hit. Rotation is computed from that accession's own annotations, but
-// ONLY for references that are truly circular (s.topology = 'circular'); a linear
-// GenBank reference keeps its native coordinates (rotation 0) so the synteny plot
-// is not artificially rotated to the start gene.
+// Reference sequence, topology and gene table per candidate reference for
+// newly-curated samples (gated on curate_out). One row per (ID, candidate
+// accession). rank=1 is the top hit. The rotation itself is computed in the
+// align process (MitoPilot::ref_rotation_offset) from the reference gene table
+// and the unit's own annotations: a circular reference is rotated so the
+// sample's first annotated gene anchors both sequences; against a linear GenBank
+// reference (native coordinates, rotation 0) a circular sample's alignment copy
+// is rotated to the reference's first gene instead (sample_rotation; the stored
+// sequence is untouched).
+// Gene tables travel as compact 'gene|pos1|pos2|direction;...' strings.
 // Assembly sequence comes from the curate output FASTA (already rotated to start_gene).
+def featsSql(String tbl, String where) {
+    return "COALESCE((SELECT GROUP_CONCAT(x.gene || '|' || x.pos1 || '|' || x.pos2 || '|' || x.direction, ';') " +
+           "FROM ${tbl} x WHERE ${where}), '')"
+}
 params.sqlReadRef =
-    'SELECT c.ID, c.accession, c.rank, s.sequence, ' +
-        'CASE WHEN s.topology = \'circular\' THEN ' +
-            'COALESCE((SELECT MIN(r.pos1) - 1 FROM blast_ref_annotations r ' +
-                      'WHERE r.accession = c.accession AND r.gene = d.start_gene), 0) ' +
-        'ELSE 0 END ' +
+    'SELECT c.ID, c.accession, c.rank, s.sequence, COALESCE(s.topology, \'linear\'), ' +
+        featsSql('blast_ref_annotations', 'x.accession = c.accession') + ' ' +
     'FROM (SELECT ID, accession, MIN(rank) AS rank FROM blast_ref_candidates ' +
          'GROUP BY ID, accession) c ' +
-    'JOIN annotate_opts d ON d.annotate_opts = (SELECT an.annotate_opts FROM annotate an WHERE an.ID = c.ID ORDER BY an.path, an.scaffold LIMIT 1) ' +
     'JOIN blast_ref_sequences s ON c.accession = s.accession'
 
 // Backfill: samples already validated in a prior run (assemblies.sequence is the
@@ -41,28 +45,62 @@ params.sqlReadRef =
 // is the post-VALIDATE state and is the only safe signal that the stored sequence
 // has been rotated to start_gene - for userAsmb projects, assemblies.sequence is
 // pre-populated with the unrotated user FASTA in WF1_userAsmb and only becomes
-// rotated after CURATE runs in WF2.
+// rotated after CURATE runs in WF2. The unit's annotations are in the DB here, so
+// the sample gene table comes from SQL too.
 params.sqlBackfill =
-    'SELECT b.ID, cd.accession, cd.rank, a.sequence, s.sequence, ' +
-        'CASE WHEN s.topology = \'circular\' THEN ' +
-            'COALESCE((SELECT MIN(r.pos1) - 1 FROM blast_ref_annotations r ' +
-                      'WHERE r.accession = cd.accession AND r.gene = d.start_gene), 0) ' +
-        'ELSE 0 END, ' +
-    'a.path, a.scaffold ' +
+    'SELECT b.ID, cd.accession, cd.rank, a.sequence, s.sequence, COALESCE(s.topology, \'linear\'), ' +
+        featsSql('blast_ref_annotations', 'x.accession = cd.accession') + ', ' +
+        featsSql('annotations', 'x.ID = a.ID AND x.path = a.path AND x.scaffold = a.scaffold') + ', ' +
+    'a.path, a.scaffold, COALESCE(a.topology, \'linear\') ' +
     'FROM assemble b ' +
     'JOIN (SELECT ID, accession, MIN(rank) AS rank FROM blast_ref_candidates ' +
          'GROUP BY ID, accession) cd ON cd.ID = b.ID ' +
     'JOIN assemblies a   ON b.ID = a.ID AND a.ignore = 0 ' +
     'JOIN annotate c     ON c.ID = a.ID AND c.path = a.path AND c.scaffold = a.scaffold ' +
-    'JOIN annotate_opts d ON c.annotate_opts = d.annotate_opts ' +
     'JOIN blast_ref_sequences s ON cd.accession = s.accession ' +
     'WHERE a.sequence IS NOT NULL ' +
       'AND c.annotate_switch = 2 ' +
       'AND NOT EXISTS (SELECT 1 FROM blast_ref_alignment al WHERE al.ID = b.ID AND al.path = a.path AND al.scaffold = a.scaffold AND al.accession = cd.accession)'
 
+// Sample gene table for one scaffold from the curate annotations CSV (per path,
+// 'contig' = ID.path.scaffold). Same 'gene|pos1|pos2|direction;...' format as
+// featsSql. Quoted-field aware split; a row broken by an embedded newline only
+// loses itself (pos1 fails to parse).
+def csvSplit(String l) {
+    return l.split(',(?=(?:[^"]*"[^"]*")*[^"]*$)', -1).collect { it.replaceAll('^"|"$', '') }
+}
+// One scaffold's record from the per-path curate FASTA ('>ID.path.scaffold topology').
+// Returns [sequence, topology]; falls back to every record joined when no header
+// names the scaffold (single-record files written before headers carried it).
+def scaffoldRecord(fastaFile, scaffold) {
+    def seqs = [:]; def topo = [:]; def cur = null
+    fastaFile.readLines().each { l ->
+        if (l.startsWith('>')) {
+            def parts = l.substring(1).trim().split(/\s+/, 2)
+            cur = parts[0]; seqs[cur] = new StringBuilder(); topo[cur] = parts.length > 1 ? parts[1] : 'linear'
+        } else if (cur != null) { seqs[cur].append(l.trim()) }
+    }
+    def key = seqs.keySet().find { it.endsWith(".${scaffold}") }
+    if (key) return [seqs[key].toString(), topo[key]]
+    return [seqs.values().collect { it.toString() }.join(''), 'linear']
+}
+
+def sampleFeats(annFile, scaffold) {
+    def lines = annFile.readLines()
+    if (lines.size() < 2) return ''
+    def ix = [:]; csvSplit(lines[0]).eachWithIndex { c, i -> ix[c.trim()] = i }
+    def need = ['contig', 'gene', 'pos1', 'pos2', 'direction']
+    if (!need.every { ix.containsKey(it) }) return ''
+    def maxIx = need.collect { ix[it] }.max()
+    lines.drop(1).collect { csvSplit(it) }
+        .findAll { f -> f.size() > maxIx && f[ix['contig']].endsWith(".${scaffold}") && f[ix['pos1']].isInteger() }
+        .collect { f -> [f[ix['gene']], f[ix['pos1']], f[ix['pos2']], f[ix['direction']]].join('|').replace("'", '') }
+        .join(';')
+}
+
 params.sqlWriteAlignment = '''INSERT OR REPLACE INTO blast_ref_alignment
-    (ID, path, scaffold, accession, aligned_sample, aligned_ref, rotation, ref_length, ref_start, strand, time_stamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'''
+    (ID, path, scaffold, accession, aligned_sample, aligned_ref, rotation, ref_length, ref_start, strand, sample_rotation, time_stamp)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'''
 
 // Mark the 'BLAST Ref Align' field (poor_blast_ref) = 'failed' and add an [align]
 // note when blast_ref_align fails for a sample (errorStrategy 'ignore' suppresses
@@ -82,33 +120,29 @@ workflow BLAST_REF_ALIGN {
         curate_out  // (id, path, scaffold, annotations, assembly_fasta, coverage, work_dir) [per unit]
 
     main:
-        // Reference data (sequence + rotation) available at WF2 startup from WF1.
+        // Reference data (sequence, topology, gene table) available at WF2 startup from WF1.
         // combine(by:0) below buffers this finite fromQuery side, so no deadlock.
         channel.fromQuery(params.sqlReadRef, db: 'sqlite')
-            .map { row -> tuple(row[0], row[1], (row[2] as Integer) == 1, row[3], row[4] as Long) }
-            .filter { id, accession, is_top, ref_seq, rotation -> ref_seq }
-            .set { ref_ch }  // (id, accession, is_top, ref_seq, rotation)
+            .map { row -> tuple(row[0], row[1], (row[2] as Integer) == 1, row[3], row[4]?.toString() ?: 'linear', row[5]?.toString() ?: '') }
+            .filter { id, accession, is_top, ref_seq, topology, ref_feats -> ref_seq }
+            .set { ref_ch }  // (id, accession, is_top, ref_seq, topology, ref_feats)
 
         // Newly-validated units: gate on `validated` so alignment runs after
         // VALIDATE completes, then align EACH scaffold's own curated assembly to
         // every candidate reference. blast_ref_alignment is keyed
         // (ID, path, scaffold, accession).
         curate_out
-            .map { tuple(it[0], it[1], it[2], it[4]) }   // (id, path, scaffold, assembly_fasta)
+            .map { tuple(it[0], it[1], it[2], it[3], it[4]) }   // (id, path, scaffold, annotations, assembly_fasta)
             .set { curate_assembly }
         validated
             .map { tuple(it[0], it[1], it[2]) }          // (id, path, scaffold)
             .unique()
             .join(curate_assembly, by: [0, 1, 2])
-            .map { id, path, scaffold, assembly_fasta ->
-                tuple(id, path, scaffold, assembly_fasta)
-            }
             .combine(ref_ch, by: 0)                       // ref_ch keyed by id -> broadcast to every scaffold
-            .map { id, path, scaffold, assembly_fasta, accession, is_top, ref_seq, rotation ->
-                def seq = assembly_fasta.readLines()
-                    .findAll { !it.startsWith('>') }
-                    .join('')
-                tuple(id, path, scaffold, accession, is_top, seq, ref_seq, rotation)
+            .map { id, path, scaffold, annotations, assembly_fasta, accession, is_top, ref_seq, topology, ref_feats ->
+                def rec = scaffoldRecord(assembly_fasta, scaffold)
+                tuple(id, path, scaffold, accession, is_top, rec[0], ref_seq, topology, ref_feats,
+                      sampleFeats(annotations, scaffold), rec[1])
             }
             .set { new_align_in }
 
@@ -121,7 +155,9 @@ workflow BLAST_REF_ALIGN {
                 def ref_seq   = row[4]?.toString()
                 if (!accession || !asm_seq || !ref_seq) return null
                 if (!ref_seq.matches('[ACGTNacgtnRYSWKMBDHVryswkmbdhv]+')) return null
-                tuple(row[0], row[6], row[7], accession, is_top, asm_seq, ref_seq, row[5] as Long)
+                tuple(row[0], row[8], row[9], accession, is_top, asm_seq, ref_seq,
+                      row[5]?.toString() ?: 'linear', row[6]?.toString() ?: '', (row[7]?.toString() ?: '').replace("'", ''),
+                      row[10]?.toString() ?: 'linear')
             }
             .filter { it != null }
             .set { backfill_ch }
@@ -132,13 +168,13 @@ workflow BLAST_REF_ALIGN {
         // TOP-ref alignment can flag the sample. Scaffold is in the key so one
         // scaffold's success does not mask a sibling's top-ref failure.
         align_in
-            .filter { id, path, scaffold, accession, is_top, assembly_seq, ref_seq, rotation -> is_top }
-            .map    { id, path, scaffold, accession, is_top, assembly_seq, ref_seq, rotation -> tuple("${id}|${path}|${scaffold}|${accession}".toString(), id) }
+            .filter { it[4] }
+            .map    { tuple("${it[0]}|${it[1]}|${it[2]}|${it[3]}".toString(), it[0]) }
             .set { top_align_keys }
 
         blast_ref_align(
-            align_in.map { id, path, scaffold, accession, is_top, assembly_seq, ref_seq, rotation ->
-                tuple(id, path, scaffold, accession, assembly_seq, ref_seq, rotation)
+            align_in.map { id, path, scaffold, accession, is_top, assembly_seq, ref_seq, topology, ref_feats, sample_feats, sample_topology ->
+                tuple(id, path, scaffold, accession, assembly_seq, ref_seq, topology, ref_feats, sample_feats, sample_topology)
             }
         ).set { align_out }
 
@@ -147,9 +183,9 @@ workflow BLAST_REF_ALIGN {
             .map { id, path, scaffold, accession, csv_file ->
                 def lines = csv_file.readLines()
                 if (lines.size() < 2) return null
-                // CSV columns: aligned_sample, aligned_ref, rotation, ref_length, ref_start, strand
+                // CSV columns: aligned_sample, aligned_ref, rotation, ref_length, ref_start, strand, sample_rotation
                 def parts = lines[1].split(',', -1).collect { it.replaceAll('^"|"$', '') }
-                if (parts.size() < 6) return null
+                if (parts.size() < 7) return null
                 def ts = java.time.Instant.now().getEpochSecond()
                 tuple(
                     id,
@@ -162,6 +198,7 @@ workflow BLAST_REF_ALIGN {
                     parts[3].toLong(),  // ref_length
                     parts[4].toLong(),  // ref_start
                     parts[5],           // strand
+                    parts[6].toLong(),  // sample_rotation
                     ts
                 )
             }

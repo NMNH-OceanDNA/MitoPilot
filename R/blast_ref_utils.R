@@ -1266,38 +1266,103 @@ normalize_blast_ref_alignment <- function(aln) {
   aln
 }
 
-#' Reference rotation offset for one unit's synteny alignment
+#' Reference rotation offset for a synteny alignment
 #'
-#' Mirrors the SQL in \code{blast_ref_align_workflow.nf}: a circular reference is
-#' rotated so the sample's \code{start_gene} anchors both sequences; a linear
-#' reference keeps its native coordinates.
+#' A circular reference is rotated so the sample's first annotated gene (the
+#' lowest `pos1` among genes the reference also carries) anchors both
+#' sequences. The anchor goes to the reference START when the gene has the same
+#' strand on both sequences, and to the reference END when the strands differ:
+#' the aligner then reverse complements the sample, which puts the sample's
+#' first gene last. A linear reference keeps its native coordinates. The same
+#' rule serves a rotated circular sample (first gene is `start_gene`) and a
+#' linear user contig (first gene is whatever the contig starts with).
 #'
-#' @return 0-based offset, 0 when unknown or the reference is linear.
-#' @noRd
-unit_ref_rotation <- function(con, id, path, scaffold, accession) {
+#' @param ref_feats,sample_feats data frames with `gene`, `pos1`, `pos2`,
+#'   `direction`, or the compact `gene|pos1|pos2|direction;...` string the
+#'   Nextflow workflow builds from those columns.
+#' @param ref_topology "circular" or anything else (no rotation).
+#' @return 0-based offset into the reference; 0 when unknown.
+#' @export
+ref_rotation_offset <- function(ref_feats, sample_feats, ref_topology = "linear") {
+  if (length(ref_topology) != 1L || is.na(ref_topology) || ref_topology != "circular") return(0L)
+  parse <- function(x) {
+    if (is.data.frame(x)) return(x)
+    rows <- strsplit(paste(x, collapse = ""), ";", fixed = TRUE)[[1]]
+    f <- strsplit(rows, "|", fixed = TRUE)
+    f <- f[lengths(f) == 4L]
+    if (!length(f)) return(data.frame(gene = character(), pos1 = integer(), pos2 = integer(), direction = character()))
+    m <- do.call(rbind, f)
+    data.frame(gene = m[, 1], pos1 = suppressWarnings(as.integer(m[, 2])),
+               pos2 = suppressWarnings(as.integer(m[, 3])), direction = m[, 4],
+               stringsAsFactors = FALSE)
+  }
   tryCatch({
-    topo <- DBI::dbGetQuery(
+    ref <- parse(ref_feats); smp <- parse(sample_feats)
+    ok <- function(d) d[!is.na(d$gene) & !is.na(d$pos1) & d$pos1 > 0, , drop = FALSE]
+    ref <- ok(ref); smp <- ok(smp)
+    smp <- smp[smp$gene %in% ref$gene, , drop = FALSE]
+    if (!nrow(smp)) return(0L)
+    a <- smp[order(smp$pos1), ][1, ]
+    r <- ref[ref$gene == a$gene, , drop = FALSE]
+    r <- r[order(r$pos1), ][1, ]
+    if (identical(as.character(a$direction), as.character(r$direction))) {
+      as.integer(r$pos1) - 1L
+    } else {
+      as.integer(r$pos2)
+    }
+  }, error = function(e) 0L)
+}
+
+#' Which side of a synteny alignment to rotate, and by how much
+#'
+#' A circular reference is rotated to the sample's first gene
+#' ([ref_rotation_offset()]). When the reference is linear but the sample is
+#' circular, the sample's alignment copy is rotated to the reference's first gene
+#' instead (same rule, roles swapped); the stored sample sequence is untouched and
+#' the synteny viewer maps coordinates back. Two linear sequences: neither moves.
+#'
+#' @inheritParams ref_rotation_offset
+#' @param sample_topology "circular" or anything else.
+#' @return list(rotation, sample_rotation), both 0-based offsets.
+#' @export
+alignment_rotations <- function(ref_feats, sample_feats, ref_topology = "linear",
+                                sample_topology = "linear") {
+  circ <- function(t) length(t) == 1L && !is.na(t) && t == "circular"
+  if (circ(ref_topology)) {
+    list(rotation = ref_rotation_offset(ref_feats, sample_feats, "circular"), sample_rotation = 0L)
+  } else if (circ(sample_topology)) {
+    list(rotation = 0L, sample_rotation = ref_rotation_offset(sample_feats, ref_feats, "circular"))
+  } else {
+    list(rotation = 0L, sample_rotation = 0L)
+  }
+}
+
+#' [alignment_rotations()] for one unit, read from the project database
+#' @noRd
+unit_rotations <- function(con, id, path, scaffold, accession) {
+  none <- list(rotation = 0L, sample_rotation = 0L)
+  tryCatch({
+    key <- list(as.character(id), as.integer(path), as.integer(scaffold))
+    ref_topo <- DBI::dbGetQuery(
       con, "SELECT topology FROM blast_ref_sequences WHERE accession = ?",
       params = list(as.character(accession))
     )$topology
-    if (length(topo) == 0 || is.na(topo[1]) || topo[1] != "circular") return(0L)
-    sg <- DBI::dbGetQuery(
+    smp_topo <- DBI::dbGetQuery(
+      con, "SELECT topology FROM assemblies WHERE ID = ? AND path = ? AND scaffold = ?",
+      params = key
+    )$topology
+    ref <- DBI::dbGetQuery(
+      con, "SELECT gene, pos1, pos2, direction FROM blast_ref_annotations WHERE accession = ?",
+      params = list(as.character(accession))
+    )
+    smp <- DBI::dbGetQuery(
       con,
-      "SELECT o.start_gene FROM annotate a
-         JOIN annotate_opts o ON o.annotate_opts = a.annotate_opts
-       WHERE a.ID = ? AND a.path = ? AND a.scaffold = ?",
-      params = list(as.character(id), as.integer(path), as.integer(scaffold))
-    )$start_gene
-    if (length(sg) == 0 || is.na(sg[1]) || !nzchar(sg[1])) return(0L)
-    pos <- DBI::dbGetQuery(
-      con,
-      "SELECT MIN(pos1) AS p FROM blast_ref_annotations
-       WHERE accession = ? AND gene = ?",
-      params = list(as.character(accession), as.character(sg[1]))
-    )$p
-    if (length(pos) == 0 || is.na(pos[1])) return(0L)
-    as.integer(pos[1]) - 1L
-  }, error = function(e) 0L)
+      "SELECT gene, pos1, pos2, direction FROM annotations
+       WHERE ID = ? AND path = ? AND scaffold = ?",
+      params = key
+    )
+    alignment_rotations(ref, smp, ref_topo[1], smp_topo[1])
+  }, error = function(e) none)
 }
 
 #' Compute and cache one unit's reference alignment on demand
@@ -1345,11 +1410,13 @@ ensure_ref_alignment <- function(con, id, path, scaffold, accession,
 
     out <- tempfile(fileext = ".csv")
     on.exit(unlink(out), add = TRUE)
+    rot <- unit_rotations(con, id, path, scaffold, accession)
     compute_blast_ref_alignment(
-      assembly_seq = asm[1],
-      ref_seq      = ref[1],
-      rotation     = unit_ref_rotation(con, id, path, scaffold, accession),
-      output_file  = out
+      assembly_seq    = asm[1],
+      ref_seq         = ref[1],
+      rotation        = rot$rotation,
+      output_file     = out,
+      sample_rotation = rot$sample_rotation
     )
     if (!file.exists(out)) return(FALSE)
     res <- utils::read.csv(out, stringsAsFactors = FALSE)
@@ -1360,14 +1427,15 @@ ensure_ref_alignment <- function(con, id, path, scaffold, accession,
       con,
       "INSERT OR REPLACE INTO blast_ref_alignment
          (ID, path, scaffold, accession, aligned_sample, aligned_ref, rotation,
-          ref_length, ref_start, strand, time_stamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          ref_length, ref_start, strand, sample_rotation, time_stamp)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       params = list(
         as.character(id), as.integer(path), as.integer(scaffold),
         as.character(accession),
         res$aligned_sample[1], res$aligned_ref[1],
         as.integer(res$rotation[1]), as.integer(res$ref_length[1]),
         as.integer(res$ref_start[1]), as.character(res$strand[1]),
+        as.integer(res$sample_rotation[1]),
         as.integer(Sys.time())
       )
     )
@@ -1386,6 +1454,9 @@ ensure_ref_alignment <- function(con, id, path, scaffold, accession,
 #'
 #' @param assembly_seq nucleotide sequence string for the sample assembly
 #' @param ref_seq nucleotide sequence string for the BLAST reference genome
+#' @param sample_rotation integer offset (0-based) applied to the SAMPLE copy
+#'   before aligning, for a circular sample against a linear reference; the
+#'   stored sequence is not changed
 #' @param rotation integer offset (0-based) used to rotate the reference so
 #'   that it starts at the same anchor gene as the sample assembly.  Equals
 #'   \code{pos1 - 1} of the anchor gene in the reference's
@@ -1396,14 +1467,15 @@ ensure_ref_alignment <- function(con, id, path, scaffold, accession,
 #'
 #' @export
 compute_blast_ref_alignment <- function(assembly_seq, ref_seq, rotation = 0L,
-                                        output_file) {
+                                        output_file, sample_rotation = 0L) {
   empty <- data.frame(
-    aligned_sample = character(),
-    aligned_ref    = character(),
-    rotation       = integer(),
-    ref_length     = integer(),
-    ref_start      = integer(),
-    strand         = character()
+    aligned_sample  = character(),
+    aligned_ref     = character(),
+    rotation        = integer(),
+    ref_length      = integer(),
+    ref_start       = integer(),
+    strand          = character(),
+    sample_rotation = integer()
   )
 
   # Quick guard: first character must be a valid IUPAC nucleotide.
@@ -1417,6 +1489,7 @@ compute_blast_ref_alignment <- function(assembly_seq, ref_seq, rotation = 0L,
 
   tryCatch({
     rotation <- as.integer(rotation)
+    sample_rotation <- as.integer(sample_rotation)
 
     # Sanitise: keep only valid IUPAC nucleotide characters
     clean <- function(s) gsub("[^ACGTNacgtnRYSWKMBDHVryswkmbdhv]", "N", s)
@@ -1424,13 +1497,15 @@ compute_blast_ref_alignment <- function(assembly_seq, ref_seq, rotation = 0L,
     ref_dna    <- Biostrings::DNAString(clean(ref_seq))
     ref_len    <- length(ref_dna)
 
-    # Rotate the reference so anchor gene aligns with sample start (circular refs).
-    if (rotation > 0L && rotation < ref_len) {
-      ref_dna <- Biostrings::xscat(
-        Biostrings::subseq(ref_dna, rotation + 1L, ref_len),
-        Biostrings::subseq(ref_dna, 1L, rotation)
-      )
+    rot <- function(x, k) {
+      n <- length(x)
+      if (is.na(k) || k <= 0L || k >= n) return(x)
+      Biostrings::xscat(Biostrings::subseq(x, k + 1L, n), Biostrings::subseq(x, 1L, k))
     }
+    # Rotate the reference so anchor gene aligns with sample start (circular refs),
+    # or the sample copy so it starts where a linear reference does (circular samples).
+    ref_dna    <- rot(ref_dna, rotation)
+    sample_dna <- rot(sample_dna, sample_rotation)
 
     # baseOnly = FALSE so the matrix includes IUPAC ambiguity codes (esp. N, code
     # 15). Consensus/joined Path 0 assemblies carry N gap-spacers and ambiguity
@@ -1484,6 +1559,7 @@ compute_blast_ref_alignment <- function(assembly_seq, ref_seq, rotation = 0L,
       ref_length     = ref_len,
       ref_start      = ws - 1L,   # 0-based window start in rotated-ref coords
       strand         = strand,
+      sample_rotation = sample_rotation,
       stringsAsFactors = FALSE
     )
     write.csv(result, output_file, row.names = FALSE)

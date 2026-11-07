@@ -850,6 +850,7 @@ new_db <- function(
       ref_length INTEGER NOT NULL,
       ref_start INTEGER NOT NULL DEFAULT 0,
       strand TEXT NOT NULL DEFAULT '+',
+      sample_rotation INTEGER NOT NULL DEFAULT 0,
       time_stamp INTEGER,
       PRIMARY KEY (ID, path, scaffold, accession)
     );"
