@@ -26,7 +26,11 @@
     return out;
   }
   function clampIdx(p, n) { return Math.min(Math.max(p, 1), n); }
-  function sampleCol(p, sNongap) { return sNongap[clampIdx(p, sNongap.length) - 1]; }
+  // Stored sample position -> position in the aligned copy (rotated by sRot when a
+  // circular sample was aligned to a linear reference), and back.
+  function sampleRot(p, n, sRot) { return n ? ((p - 1 - (sRot || 0)) % n + n) % n + 1 : p; }
+  function sampleUnrot(k, n, sRot) { return n ? ((k - 1 + (sRot || 0)) % n + n) % n + 1 : k; }
+  function sampleCol(p, sNongap, sRot) { return sNongap[clampIdx(sampleRot(p, sNongap.length, sRot), sNongap.length) - 1]; }
   function rotFlip(p, refLength, rotation, rc) {
     var pr = ((p - 1 - rotation) % refLength + refLength) % refLength + 1;
     return rc ? refLength - pr + 1 : pr;
@@ -44,7 +48,7 @@
     if (ctx.rc) return { c1: b, c2: a, dir: f.dir === '-' ? '+' : '-' };
     return { c1: a, c2: b, dir: f.dir };
   }
-  function sampleAt(c, s, sCounts) { return s.charAt(c - 1) === '-' ? null : sCounts[c]; }
+  function sampleAt(c, s, sCounts, sRot) { return s.charAt(c - 1) === '-' ? null : sampleUnrot(sCounts[c], sCounts[sCounts.length - 1], sRot); }
   function refAt(c, r, rCounts, refLength, rotation, rc) {
     if (r.charAt(c - 1) === '-') return null;
     var k = rCounts[c], pr = rc ? refLength - k + 1 : k;
@@ -120,7 +124,7 @@
     this.input = p.input; this.version = p.version;
     if (!same) {
       this.s = p.s; this.r = p.r; this.L = p.s.length;
-      this.refLength = p.refLength; this.rotation = p.rotation; this.rc = !!p.refRc;
+      this.refLength = p.refLength; this.rotation = p.rotation; this.rc = !!p.refRc; this.sRot = p.sampleRotation || 0;
       this.sNongap = G.nongap(p.s); this.rNongap = G.nongap(p.r);
       this.sCounts = G.counts(p.s); this.rCounts = G.counts(p.r);
       this.cls = G.classify(p.s, p.r);
@@ -130,7 +134,7 @@
     this.sFeats = (p.sampleFeatures || []).map(function (f) {
       return { row: f.row, gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: f.dir, track: 'sample',
                partial5: !!f.partial5, partial3: !!f.partial3,
-               c1: G.sampleCol(f.pos1, self.sNongap), c2: G.sampleCol(f.pos2, self.sNongap) };
+               c1: G.sampleCol(f.pos1, self.sNongap, self.sRot), c2: G.sampleCol(f.pos2, self.sNongap, self.sRot) };
     });
     var ctx = { rNongap: this.rNongap, refLength: this.refLength, rotation: this.rotation, rc: this.rc };
     this.rFeats = (p.refFeatures || []).map(function (f) {
@@ -347,7 +351,7 @@
         (f.partial5 ? " | 5' partial" : '') + (f.partial3 ? " | 3' partial" : '');
     }
     if (col < 1 || col > this.L) return '';
-    var sp = G.sampleAt(col, this.s, this.sCounts);
+    var sp = G.sampleAt(col, this.s, this.sCounts, this.sRot);
     var rp = G.refAt(col, this.r, this.rCounts, this.refLength, this.rotation, this.rc);
     return 'Column ' + col.toLocaleString() +
       ' | sample ' + (sp === null ? 'gap' : sp.toLocaleString() + ' ' + this.s.charAt(col - 1)) +

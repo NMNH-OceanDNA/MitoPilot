@@ -552,6 +552,13 @@ rotate_alignment_columns <- function(aligned_sample, aligned_ref, strand, rotati
   )
 }
 
+#' Was this row aligned from a rotated sample copy (circular sample, linear ref)?
+#' Its sample track is not in stored coordinates, so edits drop it for recompute.
+#' @noRd
+sample_copy_rotated <- function(rows, i) {
+  "sample_rotation" %in% names(rows) && isTRUE(rows$sample_rotation[i] > 0)
+}
+
 #' Which of these accessions are circular references?
 #' @noRd
 circular_ref_accessions <- function(con, accessions) {
@@ -577,7 +584,7 @@ project_ref_alignment_trim <- function(con, id, path, scaffold, n, from, to) {
   rows <- ref_alignment_rows(con, id, path, scaffold)
   if (is.null(rows)) return(invisible())
   for (i in seq_len(nrow(rows))) {
-    res <- tryCatch(
+    res <- if (sample_copy_rotated(rows, i)) NULL else tryCatch(
       project_alignment_trim(
         rows$aligned_sample[i], rows$aligned_ref[i], rows$strand[i],
         rows$rotation[i], n, from, to
@@ -600,7 +607,7 @@ rotate_ref_alignment <- function(con, id, path, scaffold, n, start) {
   if (is.null(rows)) return(invisible())
   circular <- circular_ref_accessions(con, rows$accession)
   for (i in seq_len(nrow(rows))) {
-    res <- if (!(rows$accession[i] %in% circular)) NULL else tryCatch(
+    res <- if (!(rows$accession[i] %in% circular) || sample_copy_rotated(rows, i)) NULL else tryCatch(
       rotate_alignment_columns(
         rows$aligned_sample[i], rows$aligned_ref[i], rows$strand[i],
         rows$rotation[i], rows$ref_length[i], n, start

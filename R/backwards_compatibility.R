@@ -292,6 +292,10 @@ backwards_compatibility <- function(
         error = function(e) FALSE
       )) &&
       isTRUE(tryCatch(
+        "sample_rotation" %in% DBI::dbListFields(con, "blast_ref_alignment"),
+        error = function(e) FALSE
+      )) &&
+      isTRUE(tryCatch(
         DBI::dbExistsTable(con, "scaffold_junctions"),
         error = function(e) FALSE
       )) &&
@@ -1797,6 +1801,7 @@ backwards_compatibility <- function(
         ref_length INTEGER NOT NULL,
         ref_start INTEGER NOT NULL DEFAULT 0,
         strand TEXT NOT NULL DEFAULT '+',
+        sample_rotation INTEGER NOT NULL DEFAULT 0,
         time_stamp INTEGER,
         PRIMARY KEY (ID, path, scaffold, accession)
       );"
@@ -1879,10 +1884,15 @@ backwards_compatibility <- function(
           ref_length INTEGER NOT NULL,
           ref_start INTEGER NOT NULL DEFAULT 0,
           strand TEXT NOT NULL DEFAULT '+',
+          sample_rotation INTEGER NOT NULL DEFAULT 0,
           time_stamp INTEGER,
           PRIMARY KEY (ID, path, scaffold, accession)
         );"
       )
+    }
+    if (!("sample_rotation" %in% DBI::dbListFields(con, "blast_ref_alignment"))) {
+      message("added 'sample_rotation' column to blast_ref_alignment table")
+      DBI::dbExecute(con, "ALTER TABLE blast_ref_alignment ADD COLUMN sample_rotation INTEGER NOT NULL DEFAULT 0")
     }
   }
 
