@@ -37,7 +37,7 @@ synteny_payload <- function(annotations, blast_ref, aln, sample_label, ref_acc,
     refRc = isTRUE(aln$ref_rc[1]), s = s, r = r,
     refLength = as.integer(aln$ref_length[1]),
     rotation = as.integer(aln$rotation[1]),
-    sampleRotation = as.integer(aln$sample_rotation[1] %||% 0L) %||% 0L,
+    sampleRotation = as.integer(aln$sample_rotation[1] %||% 0L),
     sampleFeatures = sample_feats, refFeatures = ref_feats,
     selected = sel, version = as.integer(version)
   )

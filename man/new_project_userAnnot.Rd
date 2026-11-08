@@ -51,15 +51,15 @@ the unique sample identifiers (default = "ID").}
 
 \item{mapping_geome}{Name of the mapping-file column holding GEOME BCIDs
 (optional). Stored as `GEOME_BCID`. See `vignette("Specimen-Metadata")`.
-Passed to `new_db_userAnnot()`.}
+Passed to `new_db_userAsmb()`.}
 
 \item{fetch_geome}{Fetch GEOME metadata for samples with a BCID during setup
 (default TRUE). Set FALSE when offline and run [fetch_geome()] later.
-Passed to `new_db_userAnnot()`.}
+Passed to `new_db_userAsmb()`.}
 
 \item{mapping_gbif}{Name of the mapping-file column holding GBIF occurrence
 IDs (optional). Stored as `GBIF_ID`. See `vignette("Specimen-Metadata")`.
-Passed to `new_db_userAnnot()`.}
+Passed to `new_db_userAsmb()`.}
 
 \item{fetch_gbif}{Fetch GBIF metadata for samples with a GBIF ID during setup
 (default TRUE). Set FALSE when offline and run [fetch_gbif()] later.}
@@ -75,7 +75,7 @@ value during setup (default TRUE). Set FALSE when offline and run
 \item{link_sources}{Follow links between GEOME, GBIF, and NCBI records to
 fill in IDs a sample does not have yet (default FALSE). Saved as the project
 setting. See `vignette("Specimen-Metadata")`.
-Passed to `new_db_userAnnot()`.}
+Passed to `new_db_userAsmb()`.}
 
 \item{data_path}{Path to the directory where the raw data is located. Can be
 a AWS s3 bucket even if not using AWS for pipeline execution. Not required
@@ -86,7 +86,8 @@ When TRUE, the read-mapping coverage step is skipped: `data_path` is
 ignored, coverage/depth statistics are left empty, and annotation coverage
 trimming is disabled. Use this to annotate an assembly you already have.}
 
-\item{assembly_path}{Path to the directory where the mitogenome assemblies are located.}
+\item{assembly_path}{Path to the directory where the mitogenome assemblies are located. Can be
+a AWS s3 bucket even if not using AWS for pipeline execution.}
 
 \item{annotation_path}{Path to the directory where the annotation files are
 located. Each file must name one seqid equal to the first word of its

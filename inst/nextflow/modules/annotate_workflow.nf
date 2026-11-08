@@ -59,7 +59,7 @@ workflow ANNOTATE {
                         "No assembly output is present for this sample at all; it may have been moved or deleted.")
             }
 
-            def userAnnot = new File(launchDir.toString(), "user_annotations/${it[0]}_annotations.csv")
+            def userAnnot = file("${launchDir}/user_annotations/${it[0]}_annotations.csv")
 
             tuple(
                 it[0],                                          // ID
@@ -99,7 +99,7 @@ workflow ANNOTATE {
                 file(it[7] + "/" + it[6]),                              // MITOS ref dir + clade (tarball)
                 it[6].replaceFirst(/\.tar\.gz$/, ''),               // ref_db without ".tar.gz"
                 file((it[17] != null && it[17].toString().trim()) ? it[17] : mitofinder_placeholder),  // MitoFinder reference .gb (or placeholder)
-                userAnnot.exists() ? file(userAnnot.path) : []          // [] is Nextflow's optional-path idiom
+                userAnnot.exists() ? userAnnot : []          // [] is Nextflow's optional-path idiom
             )
         }
         .set { annotate_pre }

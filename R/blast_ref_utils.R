@@ -359,11 +359,9 @@ fetch_blast_ref <- function(accession, output_file, sequence_file = NULL,
   df$partial_start <- as.integer(ifelse(minus, hi_open, lo_open))
   df$partial_stop  <- as.integer(ifelse(minus, lo_open, hi_open))
 
-  result <- df[!is.na(df$gene) & !is.na(df$type),
-               c("gene", "type", "pos1", "pos2", "direction")]
-  result$ref_length <- ref_length
-  result$partial_start <- df$partial_start[!is.na(df$gene) & !is.na(df$type)]
-  result$partial_stop  <- df$partial_stop[!is.na(df$gene) & !is.na(df$type)]
+  df$ref_length <- ref_length
+  result <- df[!is.na(df$gene), c("gene", "type", "pos1", "pos2", "direction",
+                                  "ref_length", "partial_start", "partial_stop")]
 
   list(result = result, taxid = taxid, gff_organism = gff_organism,
        genetic_code_num = genetic_code_num, ref_length = ref_length,
@@ -1289,18 +1287,15 @@ normalize_blast_ref_alignment <- function(aln) {
 #' sequences. The anchor goes to the reference START when the gene has the same
 #' strand on both sequences, and to the reference END when the strands differ:
 #' the aligner then reverse complements the sample, which puts the sample's
-#' first gene last. A linear reference keeps its native coordinates. The same
-#' rule serves a rotated circular sample (first gene is `start_gene`) and a
+#' first gene last. The same rule serves a rotated circular sample (first gene is `start_gene`) and a
 #' linear user contig (first gene is whatever the contig starts with).
 #'
 #' @param ref_feats,sample_feats data frames with `gene`, `pos1`, `pos2`,
 #'   `direction`, or the compact `gene|pos1|pos2|direction;...` string the
 #'   Nextflow workflow builds from those columns.
-#' @param ref_topology "circular" or anything else (no rotation).
 #' @return 0-based offset into the reference; 0 when unknown.
-#' @export
-ref_rotation_offset <- function(ref_feats, sample_feats, ref_topology = "linear") {
-  if (length(ref_topology) != 1L || is.na(ref_topology) || ref_topology != "circular") return(0L)
+#' @noRd
+ref_rotation_offset <- function(ref_feats, sample_feats) {
   parse <- function(x) {
     if (is.data.frame(x)) return(x)
     rows <- strsplit(paste(x, collapse = ""), ";", fixed = TRUE)[[1]]
@@ -1331,13 +1326,15 @@ ref_rotation_offset <- function(ref_feats, sample_feats, ref_topology = "linear"
 
 #' Which side of a synteny alignment to rotate, and by how much
 #'
-#' A circular reference is rotated to the sample's first gene
-#' ([ref_rotation_offset()]). When the reference is linear but the sample is
+#' A circular reference is rotated to the sample's first gene. When the reference is linear but the sample is
 #' circular, the sample's alignment copy is rotated to the reference's first gene
 #' instead (same rule, roles swapped); the stored sample sequence is untouched and
 #' the synteny viewer maps coordinates back. Two linear sequences: neither moves.
 #'
-#' @inheritParams ref_rotation_offset
+#' @param ref_feats,sample_feats data frames with `gene`, `pos1`, `pos2`,
+#'   `direction`, or the compact `gene|pos1|pos2|direction;...` string the
+#'   Nextflow workflow builds from those columns.
+#' @param ref_topology "circular" or anything else (no rotation).
 #' @param sample_topology "circular" or anything else.
 #' @return list(rotation, sample_rotation), both 0-based offsets.
 #' @export
@@ -1345,9 +1342,9 @@ alignment_rotations <- function(ref_feats, sample_feats, ref_topology = "linear"
                                 sample_topology = "linear") {
   circ <- function(t) length(t) == 1L && !is.na(t) && t == "circular"
   if (circ(ref_topology)) {
-    list(rotation = ref_rotation_offset(ref_feats, sample_feats, "circular"), sample_rotation = 0L)
+    list(rotation = ref_rotation_offset(ref_feats, sample_feats), sample_rotation = 0L)
   } else if (circ(sample_topology)) {
-    list(rotation = 0L, sample_rotation = ref_rotation_offset(sample_feats, ref_feats, "circular"))
+    list(rotation = 0L, sample_rotation = ref_rotation_offset(sample_feats, ref_feats))
   } else {
     list(rotation = 0L, sample_rotation = 0L)
   }

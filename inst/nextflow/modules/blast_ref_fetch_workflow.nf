@@ -88,6 +88,10 @@ params.sqlWriteBlastRefGoodHeld = "UPDATE assemble SET " +
     "assemble_notes = ${stripBlastAndRefTagsSql()} " +
     "WHERE ID = ?"
 
+def partialFlag(v) {
+    return v?.isLong() ? v.toLong() : 0L
+}
+
 workflow BLAST_REF_FETCH {
     take:
         // input: tuple(id, blast_accession, blast_species, blast_evalue, opts_id, is_top)
@@ -149,33 +153,11 @@ workflow BLAST_REF_FETCH {
         // accession across samples are idempotent (INSERT OR REPLACE by accession).
         ref_out
             .flatMap { id, accession, is_top, csv_file, seq_file, gc_file, json_file ->
-                def rows = []
-                def lines = csv_file.readLines()
-                if (lines.size() <= 1) return rows   // empty or header-only
                 def ts = java.time.Instant.now().getEpochSecond()
-                lines.drop(1).each { line ->
-                    if (line.trim()) {
-                        // CSV columns: gene,type,pos1,pos2,direction,ref_length,partial_start,partial_stop
-                        // Strip surrounding quotes written by R's write.csv
-                        def parts = line.split(',').collect { it.replaceAll('^"|"$', '') }
-                        if (parts.size() >= 6 && parts[2].isLong() && parts[3].isLong() && parts[5].isLong()) {
-                            def flag = { i -> parts.size() > i && parts[i].isLong() ? parts[i].toLong() : 0L }
-                            rows << tuple(
-                                accession,
-                                parts[0],              // gene
-                                parts[1],              // type
-                                parts[2].toLong(),     // pos1
-                                parts[3].toLong(),     // pos2
-                                parts[4],              // direction
-                                parts[5].toLong(),     // ref_length
-                                flag(6),               // partial_start
-                                flag(7),               // partial_stop
-                                ts                     // time_stamp
-                            )
-                        }
-                    }
-                }
-                rows
+                csv_file.splitCsv(header: true, quote: '"')
+                    .findAll { it.pos1?.isLong() && it.pos2?.isLong() && it.ref_length?.isLong() }
+                    .collect { tuple(accession, it.gene, it.type, it.pos1.toLong(), it.pos2.toLong(), it.direction,
+                                     it.ref_length.toLong(), partialFlag(it.partial_start), partialFlag(it.partial_stop), ts) }
             }
             .sqlInsert(statement: params.sqlWriteBlastRef, db: 'sqlite')
 

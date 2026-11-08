@@ -43,7 +43,7 @@ annot_import_data <- function(con, keys = NULL) {
   full <- vapply(split(ua$note, ku), function(v) v[!is.na(v)][1] %|NA|% "", "")
   full <- ifelse(endsWith(gm$raw_name, "...") & startsWith(full, stem), full, label)
   status <- ifelse(gm$manual %in% 1L, "edited", ifelse(is.na(gm$gene), "unmapped", "auto"))
-  cls <- vapply(gm$gene, function(g) if (is.na(g)) "none" else if (g == "ctrl") "ctrl" else mito_gene_type(g), "")
+  cls <- dplyr::coalesce(.ua_gene_type(gm$gene), "none")
   d <- data.frame(label = label, raw_name = gm$raw_name, title = full, ftype = unname(agg(ftype, "/")), class = unname(cls),
                   ids = unname(agg(ua$ID, ", ")), n_samples = gm$n_samples, n_features = gm$n_features,
                   gene = gm$gene, status = status, feature_type = gm$feature_type)

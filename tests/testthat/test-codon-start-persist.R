@@ -39,18 +39,12 @@ test_that("validate.nf writes codon_start with time_stamp and edited after it", 
     eval(parse(text = sub("^def \\w+ = \\[", "c(", sub("\\]$", ")", m))))
   }
   ins <- grab("insCols")
-  tsv <- grab("tsvCols")
   expect_true("codon_start" %in% ins)
-  expect_true("codon_start" %in% tsv)
-  # TSV columns bind at 4 + k (k from 0), right after ID/path/scaffold
-  expect_identical(ins[4:(3 + length(tsv))], tsv)
-  ts_idx <- as.integer(sub(".*setStr\\(ins, (\\d+), ts\\).*", "\\1",
-                           grep("setStr\\(ins, \\d+, ts\\)", nf, value = TRUE)))
-  ed_idx <- as.integer(sub(".*ins\\.setInt\\((\\d+), 0\\).*", "\\1",
-                           grep("ins\\.setInt\\(\\d+, 0\\)", nf, value = TRUE)))
-  expect_equal(ins[ts_idx], "time_stamp")
-  expect_equal(ins[ed_idx], "edited")
-  expect_equal(length(ins), ed_idx)
+  # TSV columns are insCols minus ID/path/scaffold and the two trailing columns
+  expect_true(any(grepl("def tsvCols = insCols[3..-3]", nf, fixed = TRUE)))
+  expect_identical(tail(ins, 2), c("time_stamp", "edited"))
+  expect_true(any(grepl("setStr(ins, insCols.size() - 1, ts)", nf, fixed = TRUE)))
+  expect_true(any(grepl("ins.setInt(insCols.size(), 0)", nf, fixed = TRUE)))
 })
 
 test_that("curate boundary loop skips codon_start > 1 rows", {

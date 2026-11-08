@@ -172,8 +172,7 @@ process write_curated_result {
             "INSERT OR REPLACE INTO annotations (${insCols.join(', ')}) " +
             "VALUES (${insCols.collect { '?' }.join(', ')})")
         // columns sourced from the TSV (contig is split into ID/path/scaffold)
-        def tsvCols = ['type','gene','product','pos1','pos2','length','direction','start_codon','stop_codon',
-                       'anticodon','tool','notes','warnings','translation','refHits','partial_start','partial_stop','codon_start']
+        def tsvCols = insCols[3..-3]
         annLines.drop(1).each { line ->
             if (line == null || line.length() == 0) return
             def f = line.split('\t', -1)
@@ -182,8 +181,8 @@ process write_curated_result {
             tsvCols.eachWithIndex { c, k ->
                 setStr(ins, 4 + k, ai.containsKey(c) ? f[ai[c]] : null)
             }
-            setStr(ins, 22, ts)           // time_stamp
-            ins.setInt(23, 0)             // edited
+            setStr(ins, insCols.size() - 1, ts)   // time_stamp
+            ins.setInt(insCols.size(), 0)         // edited
             ins.addBatch()
         }
         ins.executeBatch(); ins.close()

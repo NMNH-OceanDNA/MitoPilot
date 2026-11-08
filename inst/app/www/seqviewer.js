@@ -113,6 +113,36 @@
   // Original (imported) track: what curation did to each user feature.
   var STATUS_TEXT = { unchanged: 'unchanged', moved: 'boundaries changed by curation', dropped: 'dropped by curation',
                       unmapped: 'unmapped name, dropped on import', clipped: 'clipped by trim' };
+  function origTip(f) {
+    return 'Original "' + f.name + '" -> "' + (f.gene || 'unmapped') + '" ' + f.dir + ' ' +
+      f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString() + ' | ' + (STATUS_TEXT[f.status] || f.status) +
+      (f.orig1 !== f.pos1 || f.orig2 !== f.pos2 ? ' (originally ' + f.orig1.toLocaleString() + '-' + f.orig2.toLocaleString() + ')' : '');
+  }
+  // Traces the closed arrow for a piece [x0, x1] and returns its vertices:
+  // pts[4]-pts[0] is the flat edge (pos1 side when fwd), pts[1..3] the tip.
+  function arrowPath(c, x0, x1, y, h, fwd) {
+    var head = Math.min(8, x1 - x0);
+    var pts = fwd ? [[x0, y], [x1 - head, y], [x1, y + h / 2], [x1 - head, y + h], [x0, y + h]]
+                  : [[x1, y], [x0 + head, y], [x0, y + h / 2], [x0 + head, y + h], [x1, y + h]];
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath();
+    return pts;
+  }
+  // Outline stroked side by side so a partial end (partialEdge) is dashed
+  // where the piece shows that true end (own).
+  function strokeArrow(c, pts, fwd, edge, own) {
+    var dashStart = !!edge && edge !== 'end' && own.start, dashEnd = !!edge && edge !== 'start' && own.end;
+    var dashFlat = fwd ? dashStart : dashEnd, dashTip = fwd ? dashEnd : dashStart;
+    c.setLineDash([]);
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); c.lineTo(pts[1][0], pts[1][1]); c.stroke();
+    c.beginPath(); c.moveTo(pts[3][0], pts[3][1]); c.lineTo(pts[4][0], pts[4][1]); c.stroke();
+    c.setLineDash(dashTip ? [3, 2] : []);
+    c.beginPath(); c.moveTo(pts[1][0], pts[1][1]); c.lineTo(pts[2][0], pts[2][1]); c.lineTo(pts[3][0], pts[3][1]); c.stroke();
+    c.setLineDash(dashFlat ? [3, 2] : []);
+    c.beginPath(); c.moveTo(pts[4][0], pts[4][1]); c.lineTo(pts[0][0], pts[0][1]); c.stroke();
+    c.setLineDash([]);
+  }
   function niceStep(raw) {
     var p = Math.pow(10, Math.floor(Math.log10(raw)));
     var m = raw / p;
@@ -327,7 +357,7 @@
     var y = RULER_H + PAD;
     if (this.covOn()) { this.drawTrack(c, W, y, COV_H, this.depth, this.depthMax, 'depth', false); y += COV_H + GAP; }
     if (this.errOn()) { this.drawTrack(c, W, y, ERR_H, this.err, Math.max(this.errMax, ERR_FLAG * 2), 'error', true); y += ERR_H + GAP; }
-    if (this.origOn()) this.drawOrigLanes(c);
+    if (this.origOn()) this.drawLanes(c, true);
     this.drawJoins(c); this.drawLanes(c);
     if (this.origOn()) {
       c.fillStyle = cssVar('--mp-text-muted', '#6a6a6a'); c.textAlign = 'right'; c.textBaseline = 'middle';
@@ -394,71 +424,27 @@
       }
     }, this);
   };
-  Viewer.prototype.drawLanes = function (c) {
+  // orig draws the original track muted: lighter fill, grey outline, amber
+  // when curation changed the feature; its hits carry orig so click ignores them.
+  Viewer.prototype.drawLanes = function (c, orig) {
     var vs = this.viewStart, ve = this.viewStart + this.viewLen();
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    this.feats.forEach(function (f) {
-      var col = typeColor(f.type), y = this.laneY(f.lane), h = LANE_H - 6, edge = G.partialEdge(f);
-      this.segments(f).forEach(function (seg) {
-        var x0 = Math.max(GUTTER, this.x(seg[0])), x1 = Math.min(this.wrap.clientWidth, this.x(seg[1] + 1));
-        if (x1 - x0 < 1) return;
-        var fwd = f.dir !== '-', head = Math.min(8, x1 - x0);
-        // vertices in drawing order; pts[4]-pts[0] is the closing edge.
-        var pts = fwd ? [[x0, y], [x1 - head, y], [x1, y + h / 2], [x1 - head, y + h], [x0, y + h]]
-                      : [[x1, y], [x0 + head, y], [x0, y + h / 2], [x0 + head, y + h], [x1, y + h]];
-        c.beginPath();
-        c.moveTo(pts[0][0], pts[0][1]);
-        for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
-        c.closePath();
-        c.fillStyle = col + '55'; c.fill();
-        c.lineWidth = f.row === this.selected ? 2 : 1;
-        c.strokeStyle = f.row === this.selected ? cssVar('--mp-primary', '#337ab7') : col;
-
-        // the flat closing edge (pts[4]-pts[0]) is the pos1 side when fwd,
-        // pos2 side otherwise; the tip (pts[1..3]) is the other side.
-        var owns = edge ? G.segOwns(seg, vs, ve) : null;
-        var dashStart = !!edge && (edge === 'start' || edge === 'both') && owns.start;
-        var dashEnd = !!edge && (edge === 'end' || edge === 'both') && owns.end;
-        var dashFlat = fwd ? dashStart : dashEnd;
-        var dashTip = fwd ? dashEnd : dashStart;
-
-        c.setLineDash([]);
-        c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); c.lineTo(pts[1][0], pts[1][1]); c.stroke();
-        c.beginPath(); c.moveTo(pts[3][0], pts[3][1]); c.lineTo(pts[4][0], pts[4][1]); c.stroke();
-        c.setLineDash(dashTip ? [3, 2] : []);
-        c.beginPath(); c.moveTo(pts[1][0], pts[1][1]); c.lineTo(pts[2][0], pts[2][1]); c.lineTo(pts[3][0], pts[3][1]); c.stroke();
-        c.setLineDash(dashFlat ? [3, 2] : []);
-        c.beginPath(); c.moveTo(pts[4][0], pts[4][1]); c.lineTo(pts[0][0], pts[0][1]); c.stroke();
-        c.setLineDash([]);
-
-        if (x1 - x0 > c.measureText(f.gene).width + 8) { c.fillStyle = cssVar('--mp-text', '#333'); c.fillText(f.gene, (x0 + x1) / 2, y + h / 2); }
-        this.hits.push({ x0: x0, x1: x1, y0: y, y1: y + h, f: f, row: f.row });
-      }, this);
-    }, this);
-  };
-  // Muted copy of drawLanes for the original track: same arrow, lighter fill,
-  // grey outline, amber outline when curation changed the feature. Hits carry
-  // orig so click ignores them.
-  Viewer.prototype.drawOrigLanes = function (c) {
     var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = '#e69f00', warnSoft = cssVar('--mp-warning-soft', '#fde8d0');
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    this.orig.forEach(function (f) {
-      var col = typeColor(f.type), y = this.origY(f.lane), h = LANE_H - 6, edited = f.status !== 'unchanged';
+    (orig ? this.orig : this.feats).forEach(function (f) {
+      var col = typeColor(f.type), y = orig ? this.origY(f.lane) : this.laneY(f.lane), h = LANE_H - 6;
+      var edge = orig ? null : G.partialEdge(f), edited = orig && f.status !== 'unchanged', sel = !orig && f.row === this.selected;
       this.segments(f).forEach(function (seg) {
         var x0 = Math.max(GUTTER, this.x(seg[0])), x1 = Math.min(this.wrap.clientWidth, this.x(seg[1] + 1));
         if (x1 - x0 < 1) return;
-        var fwd = f.dir !== '-', head = Math.min(8, x1 - x0);
-        var pts = fwd ? [[x0, y], [x1 - head, y], [x1, y + h / 2], [x1 - head, y + h], [x0, y + h]]
-                      : [[x1, y], [x0 + head, y], [x0, y + h / 2], [x0 + head, y + h], [x1, y + h]];
-        c.beginPath();
-        c.moveTo(pts[0][0], pts[0][1]);
-        for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
-        c.closePath();
-        c.fillStyle = edited ? warnSoft : col + '22'; c.fill();
-        c.setLineDash([]); c.lineWidth = edited ? 3 : 1; c.strokeStyle = edited ? warn : muted; c.stroke();
-        c.lineWidth = 1;
-        if (x1 - x0 > c.measureText(f.name).width + 8) { c.fillStyle = muted; c.fillText(f.name, (x0 + x1) / 2, y + h / 2); }
-        this.hits.push({ x0: x0, x1: x1, y0: y, y1: y + h, f: f, orig: true });
+        var fwd = f.dir !== '-', pts = arrowPath(c, x0, x1, y, h, fwd);
+        c.fillStyle = edited ? warnSoft : col + (orig ? '22' : '55'); c.fill();
+        c.lineWidth = edited ? 3 : (sel ? 2 : 1);
+        c.strokeStyle = orig ? (edited ? warn : muted) : (sel ? cssVar('--mp-primary', '#337ab7') : col);
+        if (orig) { c.setLineDash([]); c.stroke(); c.lineWidth = 1; }
+        else strokeArrow(c, pts, fwd, edge, edge ? G.segOwns(seg, vs, ve) : null);
+        var label = orig ? f.name : f.gene;
+        if (x1 - x0 > c.measureText(label).width + 8) { c.fillStyle = orig ? muted : cssVar('--mp-text', '#333'); c.fillText(label, (x0 + x1) / 2, y + h / 2); }
+        this.hits.push(orig ? { x0: x0, x1: x1, y0: y, y1: y + h, f: f, orig: true } : { x0: x0, x1: x1, y0: y, y1: y + h, f: f, row: f.row });
       }, this);
     }, this);
   };
@@ -647,10 +633,7 @@
       if (self.seq2) { var c2 = self.seq2.charAt(b.pos - 1); if (c2 && c2 !== b.base) t += ' | consensus ' + c2; }
       if (self.err && self.err[b.pos - 1] !== null) t += ', error ' + (self.err[b.pos - 1] * 100).toFixed(1) + '%';
       if (h && h.orig) {
-        var o = h.f;
-        t += ' | Original "' + o.name + '" -> "' + (o.gene || 'unmapped') + '" ' + o.dir + ' ' + o.pos1.toLocaleString() + '-' + o.pos2.toLocaleString() +
-          ' | ' + (STATUS_TEXT[o.status] || o.status);
-        if (o.orig1 !== o.pos1 || o.orig2 !== o.pos2) t += ' (originally ' + o.orig1.toLocaleString() + '-' + o.orig2.toLocaleString() + ')';
+        t += ' | ' + origTip(h.f);
       } else if (h && h.f) t += ' | ' + h.f.gene + (h.codon !== undefined ? ' codon ' + (h.codon + 1) + ' ' + h.letter : ' (' + h.f.type + ')');
       if (h && !h.orig && h.f && typeof h.f.notes === 'string' && h.f.notes) t += ' | ' + h.f.notes;
       if (h && h.read) {
@@ -729,7 +712,8 @@
              nOrigLanes: v.origOn() ? v.nOrigLanes : 0,
              original: v.orig.map(function (f) { return { name: f.name, pos1: f.pos1, pos2: f.pos2, lane: f.lane, status: f.status }; }) };
   };
-  window.mpseq.ui = { cssVar: cssVar, typeColor: typeColor, niceStep: niceStep, STATUS_TEXT: STATUS_TEXT };
+  window.mpseq.ui = { cssVar: cssVar, typeColor: typeColor, niceStep: niceStep,
+                      origTip: origTip, arrowPath: arrowPath, strokeArrow: strokeArrow };
   window.mpseq.fasta = function (id) { var v = get(id); return v ? v.visibleFasta() : null; };
   window.mpseq.zoom = function (id, f) { var v = get(id); if (v) v.zoom(f); };
   window.mpseq.fit = function (id, row) { var v = get(id); if (v) v.fit(row); };

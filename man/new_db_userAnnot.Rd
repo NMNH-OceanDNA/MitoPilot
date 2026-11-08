@@ -10,7 +10,6 @@ new_db_userAnnot(
   mapping_id = "ID",
   assembly_path = NULL,
   annotation_path = NULL,
-  no_raw_data = FALSE,
   ...
 )
 }
@@ -26,9 +25,6 @@ new_db_userAnnot(
 \item{assembly_path}{Directory holding the assembly FASTA files}
 
 \item{annotation_path}{Directory holding the annotation files}
-
-\item{no_raw_data}{(logical) Initialize a project with no raw reads (default =
-FALSE).}
 
 \item{...}{Additional arguments passed to [new_db_userAsmb()].}
 }

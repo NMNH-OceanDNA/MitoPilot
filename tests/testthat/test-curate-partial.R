@@ -16,7 +16,7 @@ partial_rules <- function() {
 prow <- function(gene, type, pos1, pos2, direction = "+", contig = "L.1.1",
                  start_codon = NA_character_, stop_codon = NA_character_,
                  partial_start = 0L, partial_stop = 0L, notes = NA_character_) {
-  tibble::tibble(
+  dplyr::tibble(
     contig = contig, type = type, gene = gene,
     pos1 = as.integer(pos1), pos2 = as.integer(pos2), direction = direction,
     start_codon = start_codon, stop_codon = stop_codon,

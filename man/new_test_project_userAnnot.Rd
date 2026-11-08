@@ -7,7 +7,6 @@
 new_test_project_userAnnot(
   path = ".",
   no_raw_data = FALSE,
-  full_size = FALSE,
   executor = "local",
   container = paste0("macguigand/mitopilot:", utils::packageVersion("MitoPilot")),
   Rproj = TRUE,
@@ -22,9 +21,6 @@ working directory). Will be created if it does not already exist.}
 
 \item{no_raw_data}{(logical) Set the project up without raw reads (default =
 FALSE). See [new_project_userAnnot()].}
-
-\item{full_size}{(logical) Accepted for parity with [new_test_project_userAsmb()];
-has no effect, the reads are small synthetic files shipped with MitoPilot.}
 
 \item{executor}{The executor to use for running the nextflow pipeline. A
 built-in template ("local" (default), "awsbatch", "slurm", "sge", "pbs",

@@ -378,21 +378,8 @@ curate_mito_core <- function(
 
   # A JOIN group is BLASTed once, as its spliced protein, and every member
   # carries the same hits. The spliced protein rides along for validation.
-  join_key <- ifelse(
-    annotations$type == "PCG" & is_join_member(annotations$notes),
-    paste(annotations$contig, join_group_id(annotations$notes)),
-    NA_character_
-  )
+  join_key <- ifelse(annotations$type == "PCG", join_group_key(annotations), NA_character_)
   annotations$join_translation <- rep(NA_character_, nrow(annotations))
-  for (k in unique(stats::na.omit(join_key))) {
-    m <- which(join_key == k)
-    annotations$join_translation[m] <- tryCatch(
-      group_refhits_translation(
-        annotations[m, ], assembly[contig_key[annotations$contig[m[1]]]], genetic_code
-      ),
-      error = function(e) NA_character_
-    )
-  }
   annotations$refHits <- purrr::pmap(
     list(annotations$type, annotations$gene, annotations$translation, join_key),
     function(type, gene, translation, key) {
@@ -404,7 +391,13 @@ curate_mito_core <- function(
   )
   for (k in unique(stats::na.omit(join_key))) {
     m <- which(join_key == k)
-    tr <- annotations$join_translation[m[1]]
+    tr <- tryCatch(
+      splice_join_cds(
+        annotations[m, ], assembly[contig_key[annotations$contig[m[1]]]], genetic_code
+      )$translation,
+      error = function(e) NA_character_
+    )
+    annotations$join_translation[m] <- tr
     annotations$refHits[m] <- if (is.na(tr) || !nzchar(tr)) '{}' else pcg_refhits(annotations$gene[m[1]], tr)
   }
 

@@ -29,7 +29,6 @@ find_frame <- function(from, to, k = 60L) {
       m[m > 0]
     })
     n <- lengths(hits)
-    if (sum(n) == 0L) next
     if (sum(n) != 1L) next
     rc <- n[2] == 1L
     off <- as.integer(hits[[if (rc) 2L else 1L]][1]) - p
@@ -127,11 +126,7 @@ original_features <- function(con, ID, path, scaffold) {
     if (!is.null(f2)) m <- map_feature(m$pos1, m$pos2, m$dir, f2, L1, L2)
     if (is.null(m)) return(NULL)
     g <- ua$gene[i]
-    type <- if (!is.na(g)) {
-      if (g == "ctrl") "ctrl" else mito_gene_type(g)
-    } else {
-      switch(ua$feature_type[i], CDS = "PCG", tRNA = "tRNA", rRNA = "rRNA", "")
-    }
+    type <- dplyr::coalesce(.ua_gene_type(g), .gff_type_to_mito(ua$feature_type[i]), "")
     data.frame(
       name = ua$raw_name[i], gene = g, type = type,
       pos1 = m$pos1, pos2 = m$pos2, dir = m$dir,

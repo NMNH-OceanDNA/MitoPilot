@@ -58,7 +58,6 @@ seqview_payload <- function(annotations, seq, topology, unit,
 }
 
 #' Sequence viewer section (tools/nt_viewer_spec.md, section 3)
-#' @noRd
 #' @param user_annot TRUE in user-annotation projects: adds the Original track toggle
 #' @noRd
 seqview_ui <- function(id, user_annot = FALSE) {

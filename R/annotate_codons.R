@@ -13,10 +13,9 @@
 add_pcg_codons <- function(annotations, assembly, genetic_code) {
   gc <- Biostrings::getGeneticCode(as.character(genetic_code))
   lookup <- stats::setNames(names(assembly), sub("\\s.*$", "", names(assembly)))
-  added <- !"codon_start" %in% names(annotations)
-  if (added) annotations$codon_start <- NA_integer_
+  annotations$.cs <- rep_len(codon_offset(annotations$codon_start), nrow(annotations))
 
-  out <- annotations |>
+  annotations |>
     dplyr::rowwise() |>
     dplyr::mutate(
       .cds = if (type == "PCG" && !is.na(lookup[contig])) {
@@ -26,7 +25,6 @@ add_pcg_codons <- function(annotations, assembly, genetic_code) {
           unname(as.character(s))
         })
       } else NA_character_,
-      .cs = if (is.na(codon_start)) 1L else as.integer(codon_start),
       start_codon = if (!is.na(.cds)) substr(.cds, 1L, 3L) else NA_character_,
       stop_codon = if (!is.na(.cds)) {
         n <- nchar(.cds) - (.cs - 1L)
@@ -43,6 +41,4 @@ add_pcg_codons <- function(annotations, assembly, genetic_code) {
     ) |>
     dplyr::ungroup() |>
     dplyr::select(-.cds, -.cs)
-  if (added) out$codon_start <- NULL
-  out
 }

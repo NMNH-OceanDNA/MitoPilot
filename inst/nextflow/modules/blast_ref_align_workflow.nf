@@ -63,28 +63,13 @@ params.sqlBackfill =
       'AND NOT EXISTS (SELECT 1 FROM blast_ref_alignment al WHERE al.ID = b.ID AND al.path = a.path AND al.scaffold = a.scaffold AND al.accession = cd.accession)'
 
 // Sample gene table for one scaffold from the curate annotations CSV (per path,
-// 'contig' = ID.path.scaffold). Same 'gene|pos1|pos2|direction;...' format as
-// featsSql. Quoted-field aware split; a row broken by an embedded newline only
-// loses itself (pos1 fails to parse).
+// 'contig' = ID.path.scaffold). Same 'gene|pos1|pos2|direction;...' format as featsSql.
+// Quote-aware CSV split. Not splitCsv: the curate CSV's refHits column is JSON
+// with RFC-4180 doubled quotes, which Nextflow's splitCsv rejects ("Invalid CSV
+// value"). Verified 2026-11-07 on circ_fwd_annotations_1.1.csv.
 def csvSplit(String l) {
     return l.split(',(?=(?:[^"]*"[^"]*")*[^"]*$)', -1).collect { it.replaceAll('^"|"$', '') }
 }
-// One scaffold's record from the per-path curate FASTA ('>ID.path.scaffold topology').
-// Returns [sequence, topology]; falls back to every record joined when no header
-// names the scaffold (single-record files written before headers carried it).
-def scaffoldRecord(fastaFile, scaffold) {
-    def seqs = [:]; def topo = [:]; def cur = null
-    fastaFile.readLines().each { l ->
-        if (l.startsWith('>')) {
-            def parts = l.substring(1).trim().split(/\s+/, 2)
-            cur = parts[0]; seqs[cur] = new StringBuilder(); topo[cur] = parts.length > 1 ? parts[1] : 'linear'
-        } else if (cur != null) { seqs[cur].append(l.trim()) }
-    }
-    def key = seqs.keySet().find { it.endsWith(".${scaffold}") }
-    if (key) return [seqs[key].toString(), topo[key]]
-    return [seqs.values().collect { it.toString() }.join(''), 'linear']
-}
-
 def sampleFeats(annFile, scaffold) {
     def lines = annFile.readLines()
     if (lines.size() < 2) return ''
@@ -96,6 +81,15 @@ def sampleFeats(annFile, scaffold) {
         .findAll { f -> f.size() > maxIx && f[ix['contig']].endsWith(".${scaffold}") && f[ix['pos1']].isInteger() }
         .collect { f -> [f[ix['gene']], f[ix['pos1']], f[ix['pos2']], f[ix['direction']]].join('|').replace("'", '') }
         .join(';')
+}
+// One scaffold's record from the per-path curate FASTA ('>ID.path.scaffold topology').
+// Returns [sequence, topology]; falls back to every record joined when no header
+// names the scaffold (single-record files written before headers carried it).
+def scaffoldRecord(fastaFile, scaffold) {
+    def recs = fastaFile.splitFasta(record: [id: true, desc: true, seqString: true])
+    def r = recs.find { it.id.endsWith(".${scaffold}") }
+    if (r) return [r.seqString, r.desc ?: 'linear']
+    return [recs.collect { it.seqString }.join(''), 'linear']
 }
 
 params.sqlWriteAlignment = '''INSERT OR REPLACE INTO blast_ref_alignment
@@ -123,7 +117,7 @@ workflow BLAST_REF_ALIGN {
         // Reference data (sequence, topology, gene table) available at WF2 startup from WF1.
         // combine(by:0) below buffers this finite fromQuery side, so no deadlock.
         channel.fromQuery(params.sqlReadRef, db: 'sqlite')
-            .map { row -> tuple(row[0], row[1], (row[2] as Integer) == 1, row[3], row[4]?.toString() ?: 'linear', row[5]?.toString() ?: '') }
+            .map { row -> tuple(row[0], row[1], (row[2] as Integer) == 1, row[3], row[4].toString(), row[5].toString()) }
             .filter { id, accession, is_top, ref_seq, topology, ref_feats -> ref_seq }
             .set { ref_ch }  // (id, accession, is_top, ref_seq, topology, ref_feats)
 
@@ -156,8 +150,7 @@ workflow BLAST_REF_ALIGN {
                 if (!accession || !asm_seq || !ref_seq) return null
                 if (!ref_seq.matches('[ACGTNacgtnRYSWKMBDHVryswkmbdhv]+')) return null
                 tuple(row[0], row[8], row[9], accession, is_top, asm_seq, ref_seq,
-                      row[5]?.toString() ?: 'linear', row[6]?.toString() ?: '', (row[7]?.toString() ?: '').replace("'", ''),
-                      row[10]?.toString() ?: 'linear')
+                      row[5].toString(), row[6].toString(), row[7].toString().replace("'", ''), row[10].toString())
             }
             .filter { it != null }
             .set { backfill_ch }
@@ -173,34 +166,18 @@ workflow BLAST_REF_ALIGN {
             .set { top_align_keys }
 
         blast_ref_align(
-            align_in.map { id, path, scaffold, accession, is_top, assembly_seq, ref_seq, topology, ref_feats, sample_feats, sample_topology ->
-                tuple(id, path, scaffold, accession, assembly_seq, ref_seq, topology, ref_feats, sample_feats, sample_topology)
-            }
+            align_in.map { it[0..3] + it[5..-1] }   // drop is_top
         ).set { align_out }
 
         // Parse the one-row CSV and write to blast_ref_alignment table
         align_out
             .map { id, path, scaffold, accession, csv_file ->
-                def lines = csv_file.readLines()
-                if (lines.size() < 2) return null
-                // CSV columns: aligned_sample, aligned_ref, rotation, ref_length, ref_start, strand, sample_rotation
-                def parts = lines[1].split(',', -1).collect { it.replaceAll('^"|"$', '') }
-                if (parts.size() < 7) return null
-                def ts = java.time.Instant.now().getEpochSecond()
-                tuple(
-                    id,
-                    path,
-                    scaffold,
-                    accession,
-                    parts[0],           // aligned_sample
-                    parts[1],           // aligned_ref
-                    parts[2].toLong(),  // rotation
-                    parts[3].toLong(),  // ref_length
-                    parts[4].toLong(),  // ref_start
-                    parts[5],           // strand
-                    parts[6].toLong(),  // sample_rotation
-                    ts
-                )
+                def rows = csv_file.splitCsv(header: true, quote: '"')
+                if (!rows) return null
+                def r = rows[0]
+                tuple(id, path, scaffold, accession, r.aligned_sample, r.aligned_ref, r.rotation.toLong(),
+                      r.ref_length.toLong(), r.ref_start.toLong(), r.strand, r.sample_rotation.toLong(),
+                      java.time.Instant.now().getEpochSecond())
             }
             .filter { it != null }
             .sqlInsert(statement: params.sqlWriteAlignment, db: 'sqlite')

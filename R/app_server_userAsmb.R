@@ -233,8 +233,8 @@ app_server_userAsmb <- function(input, output, session) {
     annot_import_server("annot_import")
     shinyjs::show("gene_names")
     shinyjs::show("gene_names_annot")
-    observeEvent(input$gene_names, trigger("annot_import"))
-    observeEvent(input$gene_names_annot, trigger("annot_import"))
-    observeEvent(input$gene_names_header, trigger("annot_import"))
+    lapply(c("gene_names", "gene_names_annot", "gene_names_header"), \(id) {
+      observeEvent(input[[id]], trigger("annot_import"))
+    })
   }
 }

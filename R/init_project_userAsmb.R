@@ -153,35 +153,15 @@ new_project_userAsmb <- function(
                         find_mitogenome = find_mitogenome))
   )
 
-  # Create directory if it doesn't exist ----
-  if (!dir.exists(path)) {
-    message("Creating project directory: ", path)
-    dir.create(path, recursive = TRUE)
-  }
-  path <- normalizePath(path)
-  if (!no_raw_data && length(data_path) == 1) {
-    data_path <- normalizePath(data_path, mustWork = FALSE)
-  }
-  if (length(assembly_path) == 1 && !identical(assembly_path, "NA")) {
-    assembly_path <- normalizePath(assembly_path, mustWork = FALSE)
-  }
+  # Project directory, mapping copy, RStudio project ----
+  s <- .setup_project_dir(path, mapping_fn, data_path, assembly_path, no_raw_data, Rproj)
+  path <- s$path
+  data_path <- s$data_path
+  assembly_path <- s$assembly_path
+  mapping_out <- s$mapping_out
+  if (s$open_rproj) on.exit(rstudioapi::openProject(path, newSession = TRUE))
   if (!is.null(mitofinder_db)) {
     mitofinder_db <- normalizePath(mitofinder_db, mustWork = FALSE)
-  }
-  mapping_out <- file.path(path, "mapping.csv")
-  if (!identical(normalizePath(mapping_fn), normalizePath(mapping_out, mustWork = FALSE))) {
-    file.copy(mapping_fn, mapping_out, overwrite = TRUE)
-  }
-
-  # Initialize RStudio Project ----
-  # (optional & only if running form RStudio)
-  if (Rproj && !isFALSE(Sys.getenv("RSTUDIO", FALSE))) {
-    if (isFALSE(requireNamespace("rstudioapi", quietly = TRUE))) {
-      message("package 'rstudioapi' not available. Skipping RStudio project initialization.")
-    } else {
-      rstudioapi::initializeProject(path)
-      on.exit(rstudioapi::openProject(path, newSession = TRUE))
-    }
   }
 
   # Initialize sqlite db ----
@@ -213,21 +193,8 @@ new_project_userAsmb <- function(
   )
 
 
-  # Config file ----
-  # Resolve a saved profile / built-in template (or use an explicit path),
-  # then fill in the per-project placeholders.
-  config <- config %||% resolve_config(executor, profile_dir = profile_dir)
-  readLines(config) |>
-    fill_config(list(
-      CONTAINER_ENGINE = container_engine_block(
-        if (executor %in% c("local", "awsbatch")) "docker" else "singularity"),
-      CONTAINER_ID = container,
-      RAW_DIR = data_path,
-      ASMB_DIR = assembly_path,
-      MIN_DEPTH = format(2000000, scientific = FALSE),
-      NCBI_API_KEY = ncbi_api_key %||% ""
-    )) |>
-    writeLines(file.path(path, ".config"))
+  .write_project_config(path, config, executor, profile_dir, container,
+                        data_path, assembly_path, ncbi_api_key)
 
   message("Project initialized: ", path)
   message(open_app_hint(path))
