@@ -13,8 +13,6 @@
 #' @param mapping_id Column name of the mapping file to use as the primary key
 #' @param assembly_path Directory holding the assembly FASTA files
 #' @param annotation_path Directory holding the annotation files
-#' @param no_raw_data (logical) Initialize a project with no raw reads (default =
-#'   FALSE).
 #' @param ... Additional arguments passed to [new_db_userAsmb()].
 #' @return The import summary (invisibly).
 #' @export
@@ -25,7 +23,6 @@ new_db_userAnnot <- function(
     mapping_id = "ID",
     assembly_path = NULL,
     annotation_path = NULL,
-    no_raw_data = FALSE,
     ...) {
   mapping_fn <- mapping_fn %||% "./mapping.csv"
   mapping <- utils::read.csv(mapping_fn)
@@ -38,7 +35,7 @@ new_db_userAnnot <- function(
 
   new_db_userAsmb(
     db_path = db_path, mapping_fn = mapping_fn, mapping_id = mapping_id,
-    assembly_path = assembly_path, no_raw_data = no_raw_data,
+    assembly_path = assembly_path,
     find_mitogenome = FALSE, attempt_circularization = FALSE, join_scaffolds = FALSE,
     ...
   )
@@ -98,14 +95,13 @@ import_user_annotations <- function(con, mapping, assembly_path, annotation_path
     L <- Biostrings::width(fa)[1]
     fn <- mapping$Annotation[i]
     p <- parse_user_annotation(.ua_path(annotation_path, fn), contig_length = L)
-    ac <- sub("^([ACGTUacgtu]{3})$", "(\\1)", p$anticodon_raw)
     rows <- dplyr::tibble(
       ID = ids[i], feature_idx = seq_len(nrow(p)), seqid_raw = p$seqid,
       contig = paste0(ids[i], ".1.1"),
       feature_type = dplyr::coalesce(p$feature_type, ""),
       raw_name = dplyr::coalesce(p$raw_name, ""), raw_product = p$raw_product,
       pos1 = p$pos1, pos2 = p$pos2, direction = p$direction,
-      anticodon = parse_anticodon(ac),
+      anticodon = parse_anticodon(dplyr::coalesce(p$anticodon_raw, p$raw_name)),
       partial_start = p$partial_start, partial_stop = p$partial_stop,
       codon_start = p$codon_start, segment_group = p$segment_group,
       segment_mode = p$segment_mode, segment_note = p$segment_note,
@@ -177,25 +173,10 @@ user_annot_summary <- function(con, import = NULL) {
   }
   gm <- DBI::dbGetQuery(con, "SELECT raw_name, feature_type, n_samples, n_features, guess
                               FROM gene_name_map ORDER BY guess IS NULL, guess, raw_name")
-  gm$class <- ifelse(is.na(gm$guess), "none",
-                     ifelse(gm$guess == "ctrl", "ctrl", vapply(gm$guess, mito_gene_type, "")))
+  gm$class <- dplyr::coalesce(.ua_gene_type(gm$guess), "none")
   gm$guess[is.na(gm$guess)] <- "(unmapped)"
-  message(paste(c(lines, "", "Gene names found:", format_type_table(gm)), collapse = "\n"))
+  message(paste(c(lines, "", "Gene names found:",
+                  utils::capture.output(print(gm, row.names = FALSE))), collapse = "\n"))
   invisible(gm)
 }
 
-# print()-style table with the class column in the feature-type colours
-format_type_table <- function(gm) {
-  cols <- lapply(names(gm), function(n) format(c(n, as.character(gm[[n]])), justify = "right"))
-  names(cols) <- names(gm)
-  if (crayon::has_color()) {
-    paint <- function(v, cls) {
-      col <- MITO_TYPE_COLORS[cls]
-      ok <- !is.na(col)
-      v[ok] <- mapply(function(x, h) crayon::make_style(h)(x), v[ok], col[ok])
-      v
-    }
-    cols$class[-1] <- paint(cols$class[-1], gm$class)
-  }
-  do.call(paste, c(unname(cols), sep = " "))
-}

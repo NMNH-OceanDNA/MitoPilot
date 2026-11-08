@@ -29,7 +29,7 @@
   // Stored sample position -> position in the aligned copy (rotated by sRot when a
   // circular sample was aligned to a linear reference), and back.
   function sampleRot(p, n, sRot) { return n ? ((p - 1 - (sRot || 0)) % n + n) % n + 1 : p; }
-  function sampleUnrot(k, n, sRot) { return n ? ((k - 1 + (sRot || 0)) % n + n) % n + 1 : k; }
+  function sampleUnrot(k, n, sRot) { return sampleRot(k, n, -(sRot || 0)); }
   function sampleCol(p, sNongap, sRot) { var n = sNongap.length; return sNongap[sampleRot(clampIdx(p, n), n, sRot) - 1]; }
   function rotFlip(p, refLength, rotation, rc) {
     var pr = ((p - 1 - rotation) % refLength + refLength) % refLength + 1;
@@ -277,29 +277,12 @@
         if (pc[1] + 1 < vs || pc[0] > ve) return;
         var x0 = Math.max(GUTTER, self.x(pc[0])), x1 = Math.min(W, self.x(pc[1] + 1));
         if (x1 - x0 < 1) return;
-        var fwd = f.dir !== '-', head = Math.min(8, x1 - x0);
-        var pts = fwd ? [[x0, y], [x1 - head, y], [x1, y + h / 2], [x1 - head, y + h], [x0, y + h]]
-                      : [[x1, y], [x0 + head, y], [x0, y + h / 2], [x0 + head, y + h], [x1, y + h]];
-        c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
-        for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
-        c.closePath();
+        var fwd = f.dir !== '-', pts = ui().arrowPath(c, x0, x1, y, h, fwd);
         var sel = f.track === 'sample' && f.row === self.selected, edited = orig && f.status !== 'unchanged';
         c.fillStyle = edited ? warnSoft : col + (orig ? '22' : '55'); c.fill();
         c.lineWidth = edited ? 3 : (sel ? 2 : 1);
         c.strokeStyle = orig ? (edited ? warn : muted) : (sel ? cssVar('--mp-primary', '#337ab7') : col);
-        // flat closing edge (pts[4]-pts[0]) is the pos1 side when fwd, pos2
-        // side otherwise; a partial end is dashed
-        var own = edge ? G.owns(pc, f, vs, ve) : null;
-        var dashStart = !!edge && edge !== 'end' && own.start, dashEnd = !!edge && edge !== 'start' && own.end;
-        var dashFlat = fwd ? dashStart : dashEnd, dashTip = fwd ? dashEnd : dashStart;
-        c.setLineDash([]);
-        c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); c.lineTo(pts[1][0], pts[1][1]); c.stroke();
-        c.beginPath(); c.moveTo(pts[3][0], pts[3][1]); c.lineTo(pts[4][0], pts[4][1]); c.stroke();
-        c.setLineDash(dashTip ? [3, 2] : []);
-        c.beginPath(); c.moveTo(pts[1][0], pts[1][1]); c.lineTo(pts[2][0], pts[2][1]); c.lineTo(pts[3][0], pts[3][1]); c.stroke();
-        c.setLineDash(dashFlat ? [3, 2] : []);
-        c.beginPath(); c.moveTo(pts[4][0], pts[4][1]); c.lineTo(pts[0][0], pts[0][1]); c.stroke();
-        c.setLineDash([]);
+        ui().strokeArrow(c, pts, fwd, edge, edge ? G.owns(pc, f, vs, ve) : null);
         var label = orig ? f.name : f.gene;
         if (x1 - x0 > c.measureText(label).width + 8) {
           c.fillStyle = orig ? muted : cssVar('--mp-text', '#333'); c.fillText(label, (x0 + x1) / 2, y + h / 2);
@@ -358,12 +341,7 @@
   Viewer.prototype.tipText = function (col, h) {
     if (h) {
       var f = h.f;
-      if (f.track === 'orig') {
-        var st = (ui().STATUS_TEXT || {})[f.status] || f.status;
-        return 'Original "' + f.name + '" -> "' + (f.gene || 'unmapped') + '" ' + f.dir + ' ' +
-          f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString() + ' | ' + st +
-          (f.orig1 !== f.pos1 || f.orig2 !== f.pos2 ? ' (originally ' + f.orig1.toLocaleString() + '-' + f.orig2.toLocaleString() + ')' : '');
-      }
+      if (f.track === 'orig') return ui().origTip(f);
       return (f.track === 'sample' ? 'Sample ' : 'Reference ') + f.gene + ' (' + f.type + ') ' + f.dir +
         ' ' + f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString() +
         (f.partial5 ? " | 5' partial" : '') + (f.partial3 ? " | 3' partial" : '');

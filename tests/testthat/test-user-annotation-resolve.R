@@ -1,15 +1,5 @@
 ua_resolve_project <- function(td) {
-  src <- app_sys("test_data/assemblies")
-  asm <- file.path(td, "asm")
-  ann <- file.path(td, "ann")
-  dir.create(asm)
-  dir.create(ann)
-  file.copy(file.path(src, c("UA_LINEAR.fasta", "UA_CIRCULAR.fasta")), asm)
-  gff <- function(rows, fn) {
-    writeLines(c("##gff-version 3", paste("mito_contig", "src", rows, sep = "\t")),
-               file.path(ann, fn))
-  }
-  gff(c(
+  ua_project(td, list(lin.gff3 = ua_gff(c(
     "CDS\t100\t300\t.\t+\t0\tID=c1;Name=COX1",
     "tRNA\t700\t770\t.\t-\t.\tID=t1;Name=tRNA-Phe(gaa)",
     "CDS\t1000\t1200\t.\t+\t0\tID=o1;Name=ORF1",
@@ -18,21 +8,11 @@ ua_resolve_project <- function(td) {
     "CDS\t3000\t3900\t.\t+\t0\tID=n2;Name=ND2;pseudo=true",
     "misc_feature\t4000\t4100\t.\t+\t.\tID=d1;Name=D-loop",
     "rRNA\t5000\t6000\t.\t+\t.\tID=r1;Name=16S"
-  ), "lin.gff3")
-  gff(c(
+  )), circ.gff = ua_gff(c(
     "region\t1\t17265\t.\t+\t.\tID=reg;Is_circular=true",
     "CDS\t17000\t17400\t.\t+\t0\tID=c1;Name=cox1",
     "tRNA\t500\t570\t.\t+\t.\tID=t1;Name=trnL2(taa)"
-  ), "circ.gff")
-  m <- data.frame(ID = c("UA_LINEAR", "UA_CIRCULAR"), Taxon = "Danio rerio",
-                  Assembly = c("UA_LINEAR.fasta", "UA_CIRCULAR.fasta"),
-                  Topology = c("linear", "circular"), Annotation = c("lin.gff3", "circ.gff"))
-  utils::write.csv(m, file.path(td, "mapping.csv"), row.names = FALSE)
-  proj <- file.path(td, "proj")
-  suppressMessages(new_project_userAnnot(
-    path = proj, mapping_fn = file.path(td, "mapping.csv"), assembly_path = asm,
-    annotation_path = ann, no_raw_data = TRUE, Rproj = FALSE, executor = "local"))
-  proj
+  ))))
 }
 
 test_that("resolve, write, and confirm imported annotations", {

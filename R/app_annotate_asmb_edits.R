@@ -556,7 +556,7 @@ rotate_alignment_columns <- function(aligned_sample, aligned_ref, strand, rotati
 #' Its sample track is not in stored coordinates, so edits drop it for recompute.
 #' @noRd
 sample_copy_rotated <- function(rows, i) {
-  "sample_rotation" %in% names(rows) && isTRUE(rows$sample_rotation[i] > 0)
+  isTRUE(rows$sample_rotation[i] > 0)
 }
 
 #' Which of these accessions are circular references?

@@ -15,17 +15,6 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
        call. = FALSE)
 }
 
-#' Value of a GFF3 attribute, case-insensitive key, URL-decoded
-#'
-#' @param attrs raw column 9 strings
-#' @param key attribute name
-#'
-#' @noRd
-.gff_attr <- function(attrs, key) {
-  vapply(attrs, function(s) .ua_get(.gff_attr_list(s), key), character(1),
-         USE.NAMES = FALSE)
-}
-
 .gff_attr_list <- function(s) {
   if (is.na(s) || s %in% c("", ".")) return(character(0))
   kv <- trimws(strsplit(s, ";", fixed = TRUE)[[1]])
@@ -36,16 +25,13 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   stats::setNames(dec(val), dec(sub("=.*$", "", kv)))
 }
 
-# first present of `keys` in a named character vector, case-insensitive
-.ua_get <- function(a, keys) {
-  for (k in keys) {
-    i <- match(tolower(k), tolower(names(a)))
-    if (!is.na(i)) return(unname(a[[i]]))
-  }
-  NA_character_
+# value of `key` in a named character vector, case-insensitive
+.ua_get <- function(a, key) {
+  i <- match(tolower(key), tolower(names(a)))
+  if (is.na(i)) NA_character_ else unname(a[[i]])
 }
 
-.ua_has <- function(a, key) tolower(key) %in% tolower(names(a))
+.ua_has <- function(a, key) any(tolower(key) %in% tolower(names(a)))
 
 .ua_drop_keys <- function(a, keys) a[!tolower(names(a)) %in% tolower(keys)]
 
@@ -70,11 +56,6 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
          "); one contig per file: ", fn, call. = FALSE)
   }
   u
-}
-
-.ua_count <- function(x) {
-  tb <- table(x)
-  stats::setNames(as.integer(tb), as.character(names(tb)))
 }
 
 .ua_json <- function(v) {
@@ -151,7 +132,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
     if (n > 1L) {
       grp <<- grp + 1L
       g <- grp
-      mode <- if (f$slip) "frameshift" else "exon"
+      mode <- if (f$slip || grepl("ribosomal slippage|RNA editing", f$exception,
+                                  ignore.case = TRUE)) "frameshift" else "exon"
       exc <- f$exception
       if (!is.na(exc) && grepl("^ribosomal slippage$", exc, ignore.case = TRUE)) exc <- NA
       snote <- .ua_clean_note(c(exc, f$note))
@@ -162,15 +144,10 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
       warn <<- c(warn, paste0(
         "transl_except present but coordinates give a full stop codon: ", f$raw_name))
     }
-    ac <- f$anticodon_raw
-    if (is.na(ac)) {
-      m <- stringr::str_match(f$raw_name, "\\(([acgtuACGTU]{3})\\)$|-([ACGTU]{3})$")
-      ac <- dplyr::coalesce(m[, 2], m[, 3])
-    }
     dplyr::tibble(
       seqid = seqid, feature_type = as.character(f$type), raw_name = f$raw_name,
       raw_product = f$raw_product, pos1 = as.integer(s$pos1), pos2 = as.integer(s$pos2),
-      direction = f$direction, anticodon_raw = ac,
+      direction = f$direction, anticodon_raw = f$anticodon_raw,
       partial_start = as.integer(idx == i5 & (f$p5 || cs > 1L)),
       partial_stop = as.integer(idx == i3 & f$p3),
       codon_start = ifelse(idx == i5, cs, 1L),
@@ -198,6 +175,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   if (length(fa)) ln <- ln[seq_len(fa[1] - 1L), , drop = FALSE]
   ln <- ln[nzchar(ln$text) & !startsWith(ln$text, "#"), , drop = FALSE]
   cols <- .ua_split(ln$text, 9L)
+  bad <- sum(suppressWarnings(as.integer(cols[, 4]) > as.integer(cols[, 5])), na.rm = TRUE)
+  if (bad) stop("Annotation file has ", bad, " row(s) with start after end: ", fn, call. = FALSE)
   seqid <- .ua_one_seqid(cols[, 1], fn)
   lt <- tolower(cols[, 3])
   a <- lapply(cols[, 9], .gff_attr_list)
@@ -226,8 +205,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
   up_child <- ifelse(is_child & is.na(up), span_par, up)
 
   gene <- vapply(a, .ua_get, character(1), "gene")
-  pseudo <- lt == "pseudogene" | vapply(a, function(x) .ua_has(x, "pseudo") ||
-                                          .ua_has(x, "pseudogene"), logical(1))
+  pseudo <- lt == "pseudogene" | vapply(a, .ua_has, logical(1), c("pseudo", "pseudogene"))
   has_child <- logical(length(lt))
   for (i in which(is_child)) {
     j <- up_child[i]
@@ -242,7 +220,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
     }
   }
   exon_abs <- lt == "exon" & !is.na(par)
-  dropped <- .ua_count(c(dropped_raw, cols[exon_abs, 3]))
+  dropped <- c(table(c(dropped_raw, cols[exon_abs, 3])))
   r <- which(!(is_parent & has_child) & !exon_abs)
 
   gkey <- ifelse(!is.na(id), paste0("I:", id),
@@ -260,7 +238,6 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
     minus <- cols[i, 7] %in% "-"
     lo_open <- any(vapply(ga, .ua_has, logical(1), "start_range"))
     hi_open <- any(vapply(ga, .ua_has, logical(1), "end_range"))
-    exc <- get1("exception")
     extra <- c(source = cols[i, 2], score = cols[i, 6])
     extra <- extra[!is.na(extra) & extra != "."]
     .ua_feat(
@@ -276,9 +253,8 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
       p3 = (if (minus) lo_open else hi_open) ||
         any(grepl("3'\\s*partial", txt, ignore.case = TRUE)),
       cs_attr = suppressWarnings(as.integer(get1("codon_start"))),
-      slip = any(vapply(ga, .ua_has, logical(1), "ribosomal_slippage")) ||
-        (!is.na(exc) && grepl("ribosomal slippage|RNA editing", exc, ignore.case = TRUE)),
-      exception = exc,
+      slip = any(vapply(ga, .ua_has, logical(1), "ribosomal_slippage")),
+      exception = get1("exception"),
       note = .ua_clean_note(vapply(ga, .ua_get, character(1), "Note")),
       pseudo = any(pseudo[ix]),
       attrs = c(extra, unlist(lapply(ga, .ua_drop_keys, .ua_gff_consumed))),
@@ -314,7 +290,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
              direction = if (r[6] %in% "-") "-" else "+",
              attrs = ex[!is.na(ex)], feature_id = r[4], source_row = ln$line[i])
   })
-  .ua_finish(feats, seqid, NULL, .ua_count(character(0)), NA)
+  .ua_finish(feats, seqid, NULL, c(table(character(0))), NA)
 }
 
 .ua_tbl_keep <- c("gene", "CDS", "tRNA", "rRNA", "D-loop", "misc_feature", "rep_origin",
@@ -366,7 +342,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
       }
     }
   }
-  dropped <- .ua_count(keys[!keys %in% .ua_tbl_keep])
+  dropped <- c(table(keys[!keys %in% .ua_tbl_keep]))
 
   feats <- lapply(ft[!drop], function(f) {
     q <- f$q
@@ -377,7 +353,6 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
     p5_note <- grepl("5' end not determined", notes, ignore.case = TRUE)
     p3_note <- grepl("3' end not determined", notes, ignore.case = TRUE)
     rest <- notes[!(ac_note | p5_note | p3_note)]
-    exc <- .ua_get(q, "exception")
     .ua_feat(
       type = f$key,
       raw_name = dplyr::coalesce(.ua_get(q, "gene"), .ua_get(q, "product"),
@@ -393,11 +368,10 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
       p5 = grepl("^[<>]", iv[[1]][1]) || any(p5_note),
       p3 = grepl("^[<>]", iv[[length(iv)]][2]) || any(p3_note),
       cs_attr = suppressWarnings(as.integer(.ua_get(q, "codon_start"))),
-      slip = .ua_has(q, "ribosomal_slippage") ||
-        (!is.na(exc) && grepl("ribosomal slippage|RNA editing", exc, ignore.case = TRUE)),
-      exception = exc,
+      slip = .ua_has(q, "ribosomal_slippage"),
+      exception = .ua_get(q, "exception"),
       note = .ua_clean_note(rest),
-      pseudo = .ua_has(q, "pseudo") || .ua_has(q, "pseudogene"),
+      pseudo = .ua_has(q, c("pseudo", "pseudogene")),
       attrs = .ua_drop_keys(q, .ua_tbl_consumed),
       source_row = f$line
     )
@@ -455,9 +429,12 @@ guess_gene <- function(raw_name, feature_type, raw_product = NA, raw_note = NA) 
   ctrl <- dl | (!ol & (cr | hit(cr_re, list(raw_name)) |
                          (is.na(gene) & hit(cr_re, list(raw_product, raw_note)))))
   gene[ctrl] <- "ctrl"
-  type <- vapply(gene, function(g) if (is.na(g)) NA_character_ else if (g == "ctrl") "ctrl" else
-    mito_gene_type(g), character(1), USE.NAMES = FALSE)
-  dplyr::tibble(gene = gene, type = type)
+  dplyr::tibble(gene = gene, type = .ua_gene_type(gene))
+}
+
+.ua_gene_type <- function(g) {
+  vapply(g, function(x) if (is.na(x)) NA_character_ else if (x == "ctrl") "ctrl" else
+    mito_gene_type(x), character(1), USE.NAMES = FALSE)
 }
 
 #' Extract an uppercase DNA anticodon from NCBI, export-note, or name forms.
@@ -466,7 +443,7 @@ parse_anticodon <- function(x) {
   one <- function(s) {
     if (is.na(s)) return(NA_character_)
     pats <- c("seq:([acgtuACGTU]{3})", "anticodon:([acgtuACGTU]{3})",
-              "\\(([acgtuACGTU]{3})\\)\\s*$", "-([ACGTU]{3})$")
+              "\\(([acgtuACGTU]{3})\\)\\s*$", "-([ACGTU]{3})$", "^([acgtuACGTU]{3})$")
     for (p in pats) {
       m <- regmatches(s, regexec(p, s))[[1]]
       if (length(m) == 2) return(chartr("U", "T", toupper(m[2])))
@@ -498,13 +475,10 @@ parse_anticodon <- function(x) {
     stop("user annotations: no features for contig ", paste(names(lens), collapse = ", "),
          " in ", fn, call. = FALSE)
   }
-  for (ctg in unique(ann$contig)) {
-    rows <- ann$contig == ctg
-    n <- sum(pmax(ann$pos1[rows], ann$pos2[rows]) > lens[[ctg]], na.rm = TRUE)
-    if (n > 0) {
-      stop("user annotations: ", n, " feature(s) extend past the end of contig ", ctg,
-           call. = FALSE)
-    }
+  past <- which(pmax(ann$pos1, ann$pos2) > lens[ann$contig])
+  if (length(past)) {
+    stop("user annotations: ", length(past), " feature(s) extend past the end of contig ",
+         paste(unique(ann$contig[past]), collapse = ", "), call. = FALSE)
   }
   add_pcg_codons(ann, assembly, genetic_code) |>
     dplyr::arrange(contig, pos1)
@@ -541,8 +515,7 @@ resolve_user_annotations <- function(con, ID) {
                 paste0("import: ", ua$note), NA)
   parts <- cbind(join, ifelse(ua$pseudo %in% 1L, "import: pseudogene", NA), imp)
   notes <- apply(parts, 1, function(x) Reduce(semicolon_paste, x[!is.na(x)], NA_character_))
-  type <- vapply(ua$gene, function(g) if (g == "ctrl") "ctrl" else mito_gene_type(g),
-                 character(1), USE.NAMES = FALSE)
+  type <- .ua_gene_type(ua$gene)
   aa <- .ua_trn_aa(ua$gene)
   out <- dplyr::tibble(
     contig = ua$contig, type = type, gene = ua$gene,

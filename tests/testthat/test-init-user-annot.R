@@ -8,7 +8,6 @@ ua_fixture <- function(td, lin_gff = NULL, circ_gff = NULL, multi = FALSE,
   lin_fa <- if (multi) "UA_MULTI_ONE.fasta" else "UA_LINEAR.fasta"
   file.copy(file.path(src, c(lin_fa, "UA_CIRCULAR.fasta")), asm_dir)
   sid <- sub("\\s.*$", "", names(Biostrings::readDNAStringSet(file.path(asm_dir, lin_fa))))[1]
-  gff <- function(rows) c("##gff-version 3", paste(sid, "src", rows, sep = "\t"))
   lin_gff <- lin_gff %||% c(
     "CDS\t100\t300\t.\t+\t0\tID=c1;Name=COI",
     "CDS\t400\t600\t.\t+\t0\tID=c2;Name=COI CDS 5' Partial CDS",
@@ -16,10 +15,10 @@ ua_fixture <- function(td, lin_gff = NULL, circ_gff = NULL, multi = FALSE,
     "repeat_region\t800\t850\t.\t+\t.\tID=r1",
     "microsatellite\t900\t950\t.\t+\t.\tID=m1"
   )
-  writeLines(gff(lin_gff), file.path(ann_dir, paste0("lin.", lin_ext)))
+  writeLines(ua_gff(lin_gff, sid), file.path(ann_dir, paste0("lin.", lin_ext)))
   circ_gff <- circ_gff %||% c("region\t1\t17265\t.\t+\t.\tID=reg;Is_circular=true",
                               "CDS\t17000\t17400\t.\t+\t0\tID=c1;Name=COI")
-  writeLines(gff(circ_gff), file.path(ann_dir, "circ.gff"))
+  writeLines(ua_gff(circ_gff, sid), file.path(ann_dir, "circ.gff"))
   m <- data.frame(ID = c("UA_LINEAR", "UA_CIRCULAR"), Taxon = "Danio rerio",
                   Assembly = c(lin_fa, "UA_CIRCULAR.fasta"),
                   Topology = c("linear", "circular"),
@@ -100,9 +99,10 @@ test_that("init errors: multi-contig FASTA, seqid mismatch, wrap on linear, past
   testthat::local_mocked_bindings(check_nextflow_version = function(...) invisible(NULL))
   fx <- ua_fixture(withr::local_tempdir(), multi = TRUE)
   err <- tryCatch(ua_init(fx), error = conditionMessage)
-  expect_match(err, "one sequence")
+  expect_match(err, "UA_MULTI_ONE.fasta.*one sequence")
   expect_no_match(err, "find_mitogenome")
   expect_false(dir.exists(fx$proj))
+  expect_false(file.exists(file.path(fx$proj, ".sqlite")))
   expect_length(gregexpr("holds 101 sequences", err)[[1]], 1L)
 
   fx <- ua_fixture(withr::local_tempdir())
@@ -148,16 +148,6 @@ test_that("init errors: multi-contig FASTA, seqid mismatch, wrap on linear, past
   m$Annotation <- NULL
   utils::write.csv(m, fx$map, row.names = FALSE)
   expect_error(ua_init(fx), "'Annotation' column")
-})
-
-test_that("new_db_userAnnot rejects a multi-contig FASTA", {
-  td <- withr::local_tempdir()
-  fx <- ua_fixture(td, multi = TRUE)
-  db <- file.path(td, ".sqlite")
-  expect_error(suppressMessages(new_db_userAnnot(
-    db_path = db, mapping_fn = fx$map, assembly_path = fx$asm,
-    annotation_path = fx$ann, no_raw_data = TRUE)), "UA_MULTI_ONE.fasta.*one sequence")
-  expect_false(file.exists(db))
 })
 
 test_that("force re-init removes stale per-sample annotation CSVs", {

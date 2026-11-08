@@ -386,9 +386,8 @@ check_user_annotations <- function(mapping, assembly_path, annotation_path, iss,
     len <- tryCatch(Biostrings::fasta.seqlengths(.ua_path(assembly_path, mapping$Assembly[i])),
                     error = function(e) NULL)
     if (length(len) > 1L) {
-      msg <- paste0("assemblies: ", mapping$Assembly[i], " (", lab, ") holds ", length(len),
-                    " sequences; a user-annotation project needs exactly one sequence per FASTA")
-      if (!msg %in% iss$errors) iss$err(msg)
+      iss$err("assemblies: ", mapping$Assembly[i], " (", lab, ") holds ", length(len),
+              " sequences; a user-annotation project needs exactly one sequence per FASTA")
     }
     if (length(len) != 1L) next
     L <- unname(len)
@@ -406,15 +405,6 @@ check_user_annotations <- function(mapping, assembly_path, annotation_path, iss,
     if (!identical(p$seqid[1], sid)) {
       iss$err("annotations: ", where, " uses seqid '", p$seqid[1], "' but FASTA ",
               mapping$Assembly[i], " is named '", sid, "'")
-    }
-    if (grepl("\\.gff3?$", fn, ignore.case = TRUE)) {
-      g <- .ua_split(grep("^[^#>]", .ua_lines(path)$text, value = TRUE), 9L)
-      bad <- suppressWarnings(as.integer(g[, 4]) > as.integer(g[, 5]))
-      if (any(bad, na.rm = TRUE)) {
-        iss$err("annotations: ", where, " has ", sum(bad, na.rm = TRUE),
-                " row(s) with start after end")
-        next
-      }
     }
     past <- pmax(p$pos1, p$pos2) > L
     if (any(past)) {
@@ -485,10 +475,7 @@ check_user_annotations <- function(mapping, assembly_path, annotation_path, iss,
     if (is.na(n)) next
     if (n == 0L) {
       iss$err("assemblies: ", files[i], " (", labels[i], ") holds no sequences")
-    } else if (n > 1L && single_contig) {
-      iss$err("assemblies: ", files[i], " (", labels[i], ") holds ", n, " sequences; ",
-              "a user-annotation project needs exactly one sequence per FASTA")
-    } else if (n > 1L && nzchar(topo[i])) {
+    } else if (n > 1L && nzchar(topo[i]) && !single_contig) {
       iss$warn("assemblies: ", labels[i], " declares Topology '", topo[i], "' but ",
                files[i], " holds ", n, " contigs; a topology only applies to a ",
                "single-sequence mitogenome and will be ignored (recorded as 'multi')")

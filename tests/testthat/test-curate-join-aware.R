@@ -19,17 +19,17 @@ test_that("is_join_member flags rows with a leading JOIN marker", {
   )
 })
 
-test_that("group_refhits_translation splices a plus-strand group", {
+test_that("splice_join_cds splices a plus-strand group", {
   gc <- Biostrings::getGeneticCode("2")
   m <- rbind(jrow(11, 17, "+"), jrow(3, 7, "+"))
-  expect_equal(group_refhits_translation(m, join_seq(), gc), "MKF")
+  expect_equal(splice_join_cds(m, join_seq(), gc)$translation, "MKF")
 })
 
-test_that("group_refhits_translation splices a minus-strand group", {
+test_that("splice_join_cds splices a minus-strand group", {
   gc <- Biostrings::getGeneticCode("2")
   rc <- Biostrings::reverseComplement(join_seq())
   m <- rbind(jrow(4, 10, "-"), jrow(14, 18, "-"))
-  expect_equal(group_refhits_translation(m, rc, gc), "MKF")
+  expect_equal(splice_join_cds(m, rc, gc)$translation, "MKF")
 })
 
 test_that("curate BLASTs a JOIN group once and leaves its members in place", {

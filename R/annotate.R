@@ -85,8 +85,7 @@ annotate <- function(
   user_annotations_fn = NULL,
   run_tools = TRUE
 ) {
-  any_tool <- any(vapply(list(use_mitos, use_trnaScan, use_arwen, use_aragorn, use_mitofinder),
-                         isTRUE, logical(1)))
+  any_tool <- any(vapply(mget(ANNOTATE_TOOL_COLS, envir = environment()), isTRUE, logical(1)))
   tools_on <- is.null(user_annotations_fn) || isTRUE(run_tools)
   if (is.null(user_annotations_fn) && !any_tool) {
     stop("annotate(): no annotation source is active (all use_* are FALSE and no user_annotations_fn)",
@@ -153,6 +152,12 @@ annotate <- function(
   )
 
   if (tools_on) {
+    empty_tool_ann <- data.frame(
+      contig = character(), type = character(), gene = character(),
+      product = character(), pos1 = integer(), pos2 = integer(),
+      length = integer(), direction = character(),
+      tRNA_ID = character(), anticodon = character()
+    )
     # tRNA annotation ----
     if (isTRUE(use_trnaScan)) {
       trnaScan_out <- annotate_trnaScan(
@@ -165,12 +170,7 @@ annotate <- function(
       assembly <- trnaScan_out$assembly
       annotations_trnaScan <- trnaScan_out$annotations
     } else {
-      annotations_trnaScan <- data.frame(
-        contig = character(), type = character(), gene = character(),
-        product = character(), pos1 = integer(), pos2 = integer(),
-        length = integer(), direction = character(),
-        tRNA_ID = character(), anticodon = character()
-      )
+      annotations_trnaScan <- empty_tool_ann
     }
 
     # ARWEN tRNA annotation ----
@@ -182,12 +182,7 @@ annotate <- function(
         circular = all(stringr::str_detect(names(assembly), "circular"))
       )
     } else {
-      data.frame(
-        contig = character(), type = character(), gene = character(),
-        product = character(), pos1 = integer(), pos2 = integer(),
-        length = integer(), direction = character(),
-        tRNA_ID = character(), anticodon = character()
-      )
+      empty_tool_ann
     }
 
     # ARAGORN tRNA annotation ----
@@ -200,78 +195,23 @@ annotate <- function(
         condaenv = aragorn_condaenv
       )
     } else {
-      data.frame(
-        contig = character(), type = character(), gene = character(),
-        product = character(), pos1 = integer(), pos2 = integer(),
-        length = integer(), direction = character(),
-        tRNA_ID = character(), anticodon = character()
-      )
+      empty_tool_ann
     }
-    # Circular-aware overlap helpers (circ_overlap / circ_len / circ_overlap_len)
-    # are defined at package level in annotate_utils.R and shared with orf_finder().
+    # Circular-aware overlap helpers (overlapped / circ_*) live in annotate_utils.R.
 
-    # Drop ARWEN predictions that overlap a tRNAscan prediction of the same gene
-    # (position overlap is more robust than anticodon string matching)
-    annotations_arwen <- annotations_arwen |>
-      dplyr::filter(!purrr::pmap_lgl(
-        list(gene, contig, pos1, pos2),
-        \(g, ctg, p1, p2) any(
-          annotations_trnaScan$gene == g &
-            annotations_trnaScan$contig == ctg &
-            circ_overlap(p1, p2, annotations_trnaScan$pos1, annotations_trnaScan$pos2)
-        )
-      ))
-
-    # Drop ARWEN predictions where total overlap with any tRNAscan predictions
-    # exceeds 10% of the ARWEN prediction length
-    annotations_arwen <- annotations_arwen |>
-      dplyr::filter(!purrr::pmap_lgl(
-        list(contig, pos1, pos2),
-        \(ctg, p1, p2) {
-          L <- contig_lens[ctg]
-          arwen_len <- circ_len(p1, p2, L)
-          hits <- annotations_trnaScan[
-            annotations_trnaScan$contig == ctg &
-              circ_overlap(p1, p2, annotations_trnaScan$pos1, annotations_trnaScan$pos2),
-          ]
-          if (nrow(hits) == 0L) {
-            return(FALSE)
-          }
-          total_overlap <- sum(purrr::map2_int(
-            hits$pos1, hits$pos2, \(q1, q2) circ_overlap_len(p1, p2, q1, q2, L)
-          ))
-          total_overlap / arwen_len > 0.10
-        }
-      ))
+    # Drop ARWEN predictions that overlap a same-gene tRNAscan prediction, or
+    # whose total tRNAscan overlap exceeds 10% of their length
+    annotations_arwen <- dplyr::filter(
+      annotations_arwen,
+      !overlapped(annotations_arwen, annotations_trnaScan, contig_lens, same_gene = TRUE)
+    )
 
     # Filter ARAGORN against tRNAscan + ARWEN combined (same logic as ARWEN filter)
     combined_pre_aragorn <- dplyr::bind_rows(annotations_trnaScan, annotations_arwen)
-    annotations_aragorn <- annotations_aragorn |>
-      dplyr::filter(!purrr::pmap_lgl(
-        list(gene, contig, pos1, pos2),
-        \(g, ctg, p1, p2) any(
-          combined_pre_aragorn$gene == g &
-            combined_pre_aragorn$contig == ctg &
-            circ_overlap(p1, p2, combined_pre_aragorn$pos1, combined_pre_aragorn$pos2)
-        )
-      ))
-    annotations_aragorn <- annotations_aragorn |>
-      dplyr::filter(!purrr::pmap_lgl(
-        list(contig, pos1, pos2),
-        \(ctg, p1, p2) {
-          L <- contig_lens[ctg]
-          aragorn_len <- circ_len(p1, p2, L)
-          hits <- combined_pre_aragorn[
-            combined_pre_aragorn$contig == ctg &
-              circ_overlap(p1, p2, combined_pre_aragorn$pos1, combined_pre_aragorn$pos2),
-          ]
-          if (nrow(hits) == 0L) return(FALSE)
-          total_overlap <- sum(purrr::map2_int(
-            hits$pos1, hits$pos2, \(q1, q2) circ_overlap_len(p1, p2, q1, q2, L)
-          ))
-          total_overlap / aragorn_len > 0.10
-        }
-      ))
+    annotations_aragorn <- dplyr::filter(
+      annotations_aragorn,
+      !overlapped(annotations_aragorn, combined_pre_aragorn, contig_lens, same_gene = TRUE)
+    )
 
     # Mitos2 annotation ----
     if (isTRUE(use_mitos)) {
@@ -290,12 +230,7 @@ annotate <- function(
         rescue_no_trna = rescue_no_trna
       )
     } else {
-      annotations_mitos <- data.frame(
-        contig = character(), type = character(), gene = character(),
-        product = character(), pos1 = integer(), pos2 = integer(),
-        length = integer(), direction = character(),
-        tRNA_ID = character(), anticodon = character()
-      )
+      annotations_mitos <- empty_tool_ann
     }
 
     # Combine annotations ----
@@ -315,29 +250,11 @@ annotate <- function(
       combined_trna <- combined_trna |>
         dplyr::filter(is.na(anticodon) | anticodon != "NNN")
     }
-    annotations_mitos <- annotations_mitos |>
-      dplyr::mutate(gene = normalize_trna_gene(gene)) |>
-      dplyr::filter(
-        type != "tRNA" |
-          !purrr::pmap_lgl(
-            list(contig, pos1, pos2),
-            \(ctg, p1, p2) {
-              L <- contig_lens[ctg]
-              mitos_len <- circ_len(p1, p2, L)
-              hits <- combined_trna[
-                combined_trna$contig == ctg &
-                  circ_overlap(p1, p2, combined_trna$pos1, combined_trna$pos2),
-              ]
-              if (nrow(hits) == 0L) {
-                return(FALSE)
-              }
-              total_overlap <- sum(purrr::map2_int(
-                hits$pos1, hits$pos2, \(q1, q2) circ_overlap_len(p1, p2, q1, q2, L)
-              ))
-              total_overlap / mitos_len > 0.10
-            }
-          )
-      )
+    annotations_mitos <- dplyr::mutate(annotations_mitos, gene = normalize_trna_gene(gene))
+    annotations_mitos <- dplyr::filter(
+      annotations_mitos,
+      type != "tRNA" | !overlapped(annotations_mitos, combined_trna, contig_lens)
+    )
     annotations <- dplyr::bind_rows(
       dplyr::mutate(annotations_trnaScan, tool = "tRNAscan-SE"),
       dplyr::mutate(annotations_arwen,    tool = "ARWEN"),
@@ -374,25 +291,10 @@ annotate <- function(
         dplyr::select(-dplyr::any_of("tRNA_ID"))
 
       if (nrow(annotations_mitofinder) > 0L) {
-        annotations_mitofinder <- annotations_mitofinder |>
-          dplyr::filter(!purrr::pmap_lgl(
-            list(contig, pos1, pos2),
-            \(ctg, p1, p2) {
-              L <- contig_lens[ctg]
-              mf_len <- circ_len(p1, p2, L)
-              hits <- annotations[
-                annotations$contig == ctg &
-                  circ_overlap(p1, p2, annotations$pos1, annotations$pos2),
-              ]
-              if (nrow(hits) == 0L) {
-                return(FALSE)
-              }
-              total_overlap <- sum(purrr::map2_int(
-                hits$pos1, hits$pos2, \(q1, q2) circ_overlap_len(p1, p2, q1, q2, L)
-              ))
-              total_overlap / mf_len > 0.10
-            }
-          ))
+        annotations_mitofinder <- dplyr::filter(
+          annotations_mitofinder,
+          !overlapped(annotations_mitofinder, annotations, contig_lens)
+        )
 
         annotations <- dplyr::bind_rows(
           annotations,

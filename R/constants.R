@@ -13,6 +13,10 @@ MITO_PCG_GENES <- c(
 #' @noRd
 MITO_RRNA_GENES <- c("rrnL", "rrnS")
 
+#' annotate_opts tool switch columns
+#' @noRd
+ANNOTATE_TOOL_COLS <- c("use_mitos", "use_trnaScan", "use_arwen", "use_aragorn", "use_mitofinder")
+
 # Feature-type colours; mirrors --mp-type-* in custom.css
 MITO_TYPE_COLORS <- c(ctrl = "#FAA34A", PCG = "#60BD68", rRNA = "#5DA5DA", tRNA = "#F17CB0", ORF = "#4D4D4D")
 

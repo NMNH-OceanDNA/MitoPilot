@@ -35,10 +35,12 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
       warnings_details = warnings[!is.na(warnings) & warnings != ""] |>
         paste(collapse = "; "),
       ORFCount = sum(type == "ORF"),
-      toolCount = sum(.is_tool_row(tool, type)),
-      toolGenes = paste(gene[.is_tool_row(tool, type)], collapse = "; "),
+      tf = list(tool_feature_summary(dplyr::pick(gene, pos1, tool, type), session$userData$user_annot)),
+      toolCount = tf[[1]]$n,
+      toolGenes = tf[[1]]$genes,
       .groups = "drop"
-    )
+    ) |>
+    dplyr::select(-tf)
 
   # use_orffinder per sample, to blank the ORF count when ORF finding is off
   orf_enabled <- dplyr::tbl(db, "annotate") |>
@@ -125,12 +127,8 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
       )
     ) |>
     dplyr::mutate(
-      toolCount = if (isTRUE(session$userData$user_annot)) {
-        dplyr::coalesce(as.integer(toolCount), 0L)
-      } else 0L,
-      toolGenes = if (isTRUE(session$userData$user_annot)) {
-        dplyr::coalesce(toolGenes, "")
-      } else ""
+      toolCount = dplyr::coalesce(as.integer(toolCount), 0L),
+      toolGenes = dplyr::coalesce(toolGenes, "")
     ) |>
     dplyr::select(-use_orffinder) |>
     dplyr::arrange(ID, path, scaffold) |>

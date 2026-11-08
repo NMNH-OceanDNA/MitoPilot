@@ -24,8 +24,7 @@ Nextflow workflow builds from those columns.}
 list(rotation, sample_rotation), both 0-based offsets.
 }
 \description{
-A circular reference is rotated to the sample's first gene
-([ref_rotation_offset()]). When the reference is linear but the sample is
+A circular reference is rotated to the sample's first gene. When the reference is linear but the sample is
 circular, the sample's alignment copy is rotated to the reference's first gene
 instead (same rule, roles swapped); the stored sample sequence is untouched and
 the synteny viewer maps coordinates back. Two linear sequences: neither moves.

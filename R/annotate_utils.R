@@ -163,6 +163,36 @@ circ_overlap_len <- function(p1, p2, q1, q2, L) {
   total
 }
 
+#' Rows of df that overlap a same-gene row of hits (when same_gene), or have
+#' more than 10% of their length covered by hits
+#'
+#' @param df,hits annotation tables (contig, gene, pos1, pos2)
+#' @param contig_lens named vector of contig lengths
+#' @param same_gene also flag any overlap with a hit of the same gene
+#'
+#' @noRd
+#'
+overlapped <- function(df, hits, contig_lens, same_gene = FALSE) {
+  purrr::pmap_lgl(
+    list(df$gene, df$contig, df$pos1, df$pos2),
+    \(g, ctg, p1, p2) {
+      hit <- hits$contig == ctg & circ_overlap(p1, p2, hits$pos1, hits$pos2)
+      if (same_gene && any(hit & hits$gene == g, na.rm = TRUE)) {
+        return(TRUE)
+      }
+      h <- hits[hit, , drop = FALSE]
+      if (nrow(h) == 0L) {
+        return(FALSE)
+      }
+      L <- contig_lens[ctg]
+      total <- sum(purrr::map2_int(
+        h$pos1, h$pos2, \(q1, q2) circ_overlap_len(p1, p2, q1, q2, L)
+      ))
+      total / circ_len(p1, p2, L) > 0.10
+    }
+  )
+}
+
 #' Extend an OH call to the (putative) full-length control region
 #'
 #' MITOS2 reports the origin of replication (OH) as a short locus; the control
@@ -768,6 +798,51 @@ join_copy_row <- function(annotations) {
   is.na(grp) | !duplicated(paste(annotations$contig, grp))
 }
 
+#' "contig group" key of each JOIN member, NA for non-members
+#'
+#' @param annotations annotations data frame with contig and notes
+#' @noRd
+join_group_key <- function(annotations) {
+  g <- join_group_id(annotations$notes)
+  ifelse(is.na(g), NA_character_, paste(annotations$contig, g))
+}
+
+#' 5'-most (five) and 3'-most (three) member of each JOIN group
+#'
+#' Members are ordered by pos1; when `circ` is TRUE for the group's contig (of
+#' length `len`), the feature starts after the largest gap between members.
+#'
+#' @param annotations annotations data frame
+#' @param circ,len per-row circular flag and contig length
+#' @return list of logical vectors `five`, `three`; TRUE for non-members
+#' @noRd
+join_end_rows <- function(annotations, circ = FALSE, len = NA) {
+  n <- nrow(annotations)
+  circ <- rep_len(circ, n)
+  len <- rep_len(len, n)
+  p1 <- annotations$pos1
+  p2 <- annotations$pos2
+  key <- join_group_key(annotations)
+  five <- three <- rep(TRUE, n)
+  for (k in unique(stats::na.omit(key))) {
+    m <- which(key == k)
+    ord <- m[order(p1[m])]
+    j <- length(ord)
+    if (isTRUE(circ[m[1]]) && j > 1L) {
+      inner <- pmax(p1[ord[-1]] - p2[ord[-j]], 0)
+      closing <- (p1[ord[1]] - p2[ord[j]]) %% len[m[1]]
+      if (max(inner) > closing) {
+        first <- which.max(inner) + 1L
+        ord <- ord[c(first:j, seq_len(first - 1L))]
+      }
+    }
+    if (identical(annotations$direction[m[1]], "-")) ord <- rev(ord)
+    five[ord[-1]] <- FALSE
+    three[ord[-j]] <- FALSE
+  }
+  list(five = five, three = three)
+}
+
 #' Reading-frame offset of a CDS: 2 or 3, else 1 (NA/NULL/out of range)
 #'
 #' @param x `codon_start` value(s)
@@ -785,15 +860,6 @@ codon_offset <- function(x) {
 #' @noRd
 skip_boundary_curation <- function(notes, codon_start) {
   is_join_member(notes) | codon_offset(codon_start) > 1L
-}
-
-#' Spliced translation a JOIN group is BLASTed with in curation
-#'
-#' @inheritParams splice_join_cds
-#' @return character scalar
-#' @noRd
-group_refhits_translation <- function(members, seq, genetic_code) {
-  splice_join_cds(members, seq, genetic_code)$translation
 }
 
 #' Next unused join-group id for a set of annotations

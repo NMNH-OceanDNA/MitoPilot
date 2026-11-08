@@ -101,23 +101,13 @@ validate_mito_core <- function(
   total_warnings <- 0
 
   # JOIN groups: one gene copy; 5'/3' members ordered as splice_join_cds() does
-  join_key <- ifelse(
-    is_join_member(annotations$notes),
-    paste(annotations$contig, join_group_id(annotations$notes)),
-    NA_character_
-  )
   if (!"join_translation" %in% names(annotations)) {
     annotations$join_translation <- rep(NA_character_, nrow(annotations))
   }
-  join_5p <- join_3p <- rep(TRUE, nrow(annotations))
-  for (k in unique(stats::na.omit(join_key))) {
-    m <- which(join_key == k)
-    m <- m[order(annotations$pos1[m])]
-    if (identical(annotations$direction[m[1]], "-")) m <- rev(m)
-    join_5p[m[-1]] <- FALSE
-    join_3p[m[-length(m)]] <- FALSE
-  }
-  copy_row <- is.na(join_key) | !duplicated(join_key)
+  ends <- join_end_rows(annotations)
+  join_5p <- ends$five
+  join_3p <- ends$three
+  copy_row <- join_copy_row(annotations)
 
   # Validate counts ----
   missing <- NA_character_

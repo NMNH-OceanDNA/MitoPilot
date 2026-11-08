@@ -1236,7 +1236,7 @@ annotate_server <- function(id) {
       if (input$edit_annotate_opts) {
         user_annot <- isTRUE(session$userData$user_annot)
         if (user_annot && isTRUE(input$run_tools) &&
-            !any(vapply(c("use_mitos", "use_trnaScan", "use_arwen", "use_aragorn", "use_mitofinder"),
+            !any(vapply(ANNOTATE_TOOL_COLS,
                         function(x) isTRUE(input[[x]]), logical(1)))) {
           mp_alert("No annotation tool selected",
                    "Turn on at least one tool, or switch off Run annotation tools.",

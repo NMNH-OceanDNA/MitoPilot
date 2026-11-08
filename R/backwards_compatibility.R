@@ -890,30 +890,9 @@ backwards_compatibility <- function(
       )
   }
 
-  # if run_tools column doesn't exist, add it (off for user-annotation projects)
   if(!("run_tools" %in% names(annotate_opts_table))){
     message("added 'run_tools' column to annotate_opts table")
-    annotate_opts_table$run_tools <- rep(1L, nrow(annotate_opts_table))
-    if (is_user_annot(con)) {
-      annotate_opts_table$run_tools <- 0L
-      tool_cols <- c("use_mitos", "use_trnaScan", "use_arwen", "use_aragorn", "use_mitofinder")
-      none <- rowSums(as.matrix(annotate_opts_table[tool_cols]), na.rm = TRUE) == 0
-      annotate_opts_table$use_mitos[none] <- 1L
-      annotate_opts_table$use_trnaScan[none] <- 1L
-    }
-    glue::glue_sql(
-      "ALTER TABLE annotate_opts
-       ADD COLUMN run_tools INTEGER",
-      .con = con
-    ) |> DBI::dbExecute(con, statement = _)
-
-    dplyr::tbl(con, "annotate_opts") |>
-      dplyr::rows_upsert(
-        annotate_opts_table,
-        in_place = TRUE,
-        copy = TRUE,
-        by = "annotate_opts"
-      )
+    DBI::dbExecute(con, "ALTER TABLE annotate_opts ADD COLUMN run_tools INTEGER DEFAULT 1")
   }
 
   # if use_mitos column doesn't exist, add it (default on, matching prior behaviour)
@@ -1611,8 +1590,6 @@ backwards_compatibility <- function(
         pos2 INTEGER,
         direction TEXT,
         ref_length INTEGER,
-        partial_start INTEGER,
-        partial_stop INTEGER,
         time_stamp INTEGER,
         PRIMARY KEY (accession, gene, pos1)
       );"
@@ -1630,8 +1607,6 @@ backwards_compatibility <- function(
         pos2 INTEGER,
         direction TEXT,
         ref_length INTEGER,
-        partial_start INTEGER,
-        partial_stop INTEGER,
         time_stamp INTEGER,
         PRIMARY KEY (accession, gene, pos1)
       );"
@@ -1916,7 +1891,6 @@ backwards_compatibility <- function(
           ref_length INTEGER NOT NULL,
           ref_start INTEGER NOT NULL DEFAULT 0,
           strand TEXT NOT NULL DEFAULT '+',
-          sample_rotation INTEGER NOT NULL DEFAULT 0,
           time_stamp INTEGER,
           PRIMARY KEY (ID, path, scaffold, accession)
         );"

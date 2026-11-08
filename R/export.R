@@ -201,6 +201,19 @@ write_tbl_gap <- function(gap, fn) {
     cat(file = fn, sep = "\n", append = TRUE)
 }
 
+#' Write the .tbl codon_start qualifier when the frame is not 1, the start
+#' codon is non-standard, or (partial = TRUE) the 5' end is partial
+#'
+#' @noRd
+write_codon_start <- function(cur, start_codons, fn, partial = FALSE) {
+  cs <- codon_offset(cur$codon_start)
+  if (cs > 1L || !cur$start_codon %in% start_codons ||
+      (partial && isTRUE(as.integer(cur$partial_start) == 1L))) {
+    paste("\t\t\tcodon_start\t", cs) |>
+      cat(file = fn, sep = "\n", append = TRUE)
+  }
+}
+
 #' Write one .tbl feature location block; only the first interval carries the key
 #'
 #' @noRd
@@ -804,11 +817,7 @@ export_files <- function(
             paste0("\t\t\ttransl_except\t", transl_except) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
           }
-          cs <- codon_offset(cur$codon_start)
-          if (cs > 1L || !cur$start_codon %in% start_codons) {
-            paste("\t\t\tcodon_start\t", cs) |>
-              cat(file = tbl_fn, sep = "\n", append = TRUE)
-          }
+          write_codon_start(cur, start_codons, tbl_fn)
           # frameshift/RNA-editing join: INSDC requires the ribosomal_slippage
           # qualifier + exception; note carries no nucleotide locations per
           # GenBank guidance
@@ -914,11 +923,7 @@ export_files <- function(
               paste0("\t\t\ttransl_except\t", gene_transl_except) |>
                 cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
             }
-            cs <- codon_offset(cur$codon_start)
-            if (cs > 1L || !cur$start_codon %in% start_codons || isTRUE(as.integer(cur$partial_start) == 1L)) {
-              paste("\t\t\tcodon_start\t", cs) |>
-                cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
-            }
+            write_codon_start(cur, start_codons, gene_tbl_fn, partial = TRUE)
             note_out <- add_gap_note(note)
             if (length(note_out) > 0) {
               paste0("\t\t\tnote\t", note_out) |>
@@ -990,11 +995,7 @@ export_files <- function(
             paste0("\t\t\ttransl_except\t", transl_except) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
           }
-          cs <- codon_offset(cur$codon_start)
-          if (cs > 1L || !cur$start_codon %in% start_codons) {
-            paste("\t\t\tcodon_start\t", cs) |>
-              cat(file = tbl_fn, sep = "\n", append = TRUE)
-          }
+          write_codon_start(cur, start_codons, tbl_fn)
           if (length(note_out) > 0) {
             paste0("\t\t\tnote\t", note_out) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
@@ -1083,11 +1084,7 @@ export_files <- function(
               paste0("\t\t\ttransl_except\t", gene_transl_except) |>
                 cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
             }
-            cs <- codon_offset(cur$codon_start)
-            if (cs > 1L || !cur$start_codon %in% start_codons || isTRUE(as.integer(cur$partial_start) == 1L)) {
-              paste("\t\t\tcodon_start\t", cs) |>
-                cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
-            }
+            write_codon_start(cur, start_codons, gene_tbl_fn, partial = TRUE)
             note_out <- add_gap_note(note)
             if (length(note_out) > 0) {
               paste0("\t\t\tnote\t", note_out) |>

@@ -1047,6 +1047,7 @@ a.mp-link:focus-visible {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12); }
 .mp-gn-tbl select.form-control { height: 26px; padding: 2px 6px; }
 .modal-body.mp-gn-modal { overflow: visible; max-height: none; }
+.mp-gn-modal .ReactTable { height: calc(100vh - 305px) !important; min-height: 320px; }
 body > .selectize-dropdown.mp-gn-pick { z-index: 1060; font-size: 12px; }
 .mp-gn-tbl .selectize-input { min-height: 26px; padding: 2px 6px; }
 .mp-gn-detail { padding: 6px 8px 8px 32px; background: var(--mp-surface); max-height: 200px; overflow: auto; }

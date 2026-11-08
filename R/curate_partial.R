@@ -48,26 +48,9 @@ assess_partial_ends <- function(annotations, assembly, contig_key, rules) {
   new_s <- as.integer(new_s)
   new_e <- as.integer(new_e)
 
-  grp <- join_group_id(annotations$notes)
-  for (g in unique(stats::na.omit(grp))) {
-    m <- which(grp == g)
-    # order members along the plus strand; on a circular contig the feature
-    # starts after the largest gap between members (ties: no rotation)
-    ord <- m[order(p1[m])]
-    k <- length(ord)
-    if (circ[m[1]] && k > 1L) {
-      inner <- pmax(p1[ord[-1]] - p2[ord[-k]], 0)
-      closing <- (p1[ord[1]] - p2[ord[k]]) %% len[m[1]]
-      if (max(inner) > closing) {
-        first <- which.max(inner) + 1L
-        ord <- ord[c(first:k, seq_len(first - 1L))]
-      }
-    }
-    five <- if (plus[m[1]]) ord[1] else ord[length(ord)]
-    three <- if (plus[m[1]]) ord[length(ord)] else ord[1]
-    new_s[setdiff(m, five)] <- 0L
-    new_e[setdiff(m, three)] <- 0L
-  }
+  ends <- join_end_rows(annotations, circ, len)
+  new_s[!ends$five] <- 0L
+  new_e[!ends$three] <- 0L
 
   note_at <- function(i, msg) {
     annotations$notes[i] <<- semicolon_paste(annotations$notes[i], msg)

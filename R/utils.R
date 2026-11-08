@@ -92,9 +92,8 @@ compute_missing_extra <- function(annotations, rules, default_rules) {
 #' @return named integer: PCG, tRNA, rRNA, ORF
 #' @noRd
 count_feature_types <- function(annotations) {
-  t <- annotations$type[join_copy_row(annotations)]
-  vapply(c(PCG = "PCG", tRNA = "tRNA", rRNA = "rRNA", ORF = "ORF"),
-         function(x) sum(t == x, na.rm = TRUE), integer(1))
+  c(table(factor(annotations$type[join_copy_row(annotations)],
+                 levels = c("PCG", "tRNA", "rRNA", "ORF"))))
 }
 
 #' toJSON wrapper

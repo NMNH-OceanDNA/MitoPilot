@@ -1,47 +1,16 @@
 ua_app_project <- function(td) {
-  src <- app_sys("test_data/assemblies")
-  asm <- file.path(td, "asm")
-  ann <- file.path(td, "ann")
-  dir.create(asm)
-  dir.create(ann)
-  file.copy(file.path(src, "UA_LINEAR.fasta"), asm)
-  writeLines(c("##gff-version 3", paste("mito_contig", "src", c(
+  ua_project(td, list(lin.gff3 = ua_gff(c(
     "CDS\t100\t300\t.\t+\t0\tID=c1;Name=COX1",
     "CDS\t1000\t1200\t.\t+\t0\tID=o1;Name=ORF1"
-  ), sep = "\t")), file.path(ann, "lin.gff3"))
-  m <- data.frame(ID = "UA_LINEAR", Taxon = "Danio rerio", Assembly = "UA_LINEAR.fasta",
-                  Topology = "linear", Annotation = "lin.gff3")
-  utils::write.csv(m, file.path(td, "mapping.csv"), row.names = FALSE)
-  proj <- file.path(td, "proj")
-  suppressMessages(new_project_userAnnot(
-    path = proj, mapping_fn = file.path(td, "mapping.csv"), assembly_path = asm,
-    annotation_path = ann, no_raw_data = TRUE, Rproj = FALSE, executor = "local"))
-  proj
+  ))))
 }
 
 ua_app_project2 <- function(td) {
-  src <- app_sys("test_data/assemblies")
-  asm <- file.path(td, "asm")
-  ann <- file.path(td, "ann")
-  dir.create(asm)
-  dir.create(ann)
-  file.copy(file.path(src, c("UA_LINEAR.fasta", "UA_CIRCULAR.fasta")), asm)
-  writeLines(c("##gff-version 3", paste("mito_contig", "src", c(
+  ua_project(td, list(lin.gff3 = ua_gff(c(
     "CDS\t100\t300\t.\t+\t0\tID=c1;Name=COX1",
     "CDS\t500\t700\t.\t-\t0\tID=c2;Name=COX1",
     "CDS\t1000\t1200\t.\t+\t0\tID=o1;Name=ORF1"
-  ), sep = "\t")), file.path(ann, "lin.gff3"))
-  writeLines(c("mito_contig\t49\t250\tCOX1\t0\t+", "mito_contig\t899\t1100\tmystery\t0\t+"),
-             file.path(ann, "circ.bed"))
-  m <- data.frame(ID = c("UA_LINEAR", "UA_CIRCULAR"), Taxon = "Danio rerio",
-                  Assembly = c("UA_LINEAR.fasta", "UA_CIRCULAR.fasta"),
-                  Topology = c("linear", "circular"), Annotation = c("lin.gff3", "circ.bed"))
-  utils::write.csv(m, file.path(td, "mapping.csv"), row.names = FALSE)
-  proj <- file.path(td, "proj")
-  suppressMessages(new_project_userAnnot(
-    path = proj, mapping_fn = file.path(td, "mapping.csv"), assembly_path = asm,
-    annotation_path = ann, no_raw_data = TRUE, Rproj = FALSE, executor = "local"))
-  proj
+  )), circ.bed = c("mito_contig\t49\t250\tCOX1\t0\t+", "mito_contig\t899\t1100\tmystery\t0\t+")))
 }
 
 ua_app_session <- function(con, td) {

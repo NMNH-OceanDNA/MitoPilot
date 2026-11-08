@@ -392,27 +392,13 @@ window.mpGN = {
       el.value = f[el.dataset.col] || '';
     });
   },
-  fit: function(tbl) {
-    var m = document.getElementById('shiny-modal'), t = m && m.querySelector('#' + tbl + ' .ReactTable');
-    if (!t) return;
-    var other = m.querySelector('.modal-content').offsetHeight - t.offsetHeight;
-    t.style.height = Math.max(320, window.innerHeight - other - 2 * m.querySelector('.modal-dialog').offsetTop - 10) + 'px';
-  },
   open: function(tbl) {
-    var timer, onResize = function() { clearTimeout(timer); timer = setTimeout(function() { mpGN.fit(tbl); }, 100); };
-    window.addEventListener('resize', onResize);
-    $('#shiny-modal').one('shown.bs.modal', function() { mpGN.fit(tbl); })
-      .one('hidden.bs.modal', function() { window.removeEventListener('resize', onResize); mpGN.unsz(true); });
+    $('#shiny-modal').one('hidden.bs.modal', function() { mpGN.unsz(true); });
   },
   // selectize fires the native change, so the inline onchange still sends the pick
   szs: [],
   sz: function(el) {
     if (el.selectize) return;
-    if (!$.fn.selectize) {
-      if (!mpGN.szWarned) console.log('mpGN: selectize not loaded, gene pickers stay native');
-      mpGN.szWarned = true;
-      return;
-    }
     var s = $(el).selectize({
       create: false, maxOptions: 200, dropdownParent: 'body', openOnFocus: true, closeAfterSelect: true,
       score: function(q) {
@@ -451,12 +437,11 @@ window.mpGN = {
       if (mpGN[tbl]) mpGN[tbl]();
       mpGN[tbl] = Reactable.onStateChange(tbl, function() { mpGN.mark(tbl); });
       mpGN.mark(tbl);
-      mpGN.fit(tbl);
     });
   }
 };
 $(document).on('mousedown focusin', '.mp-gn-tbl select[data-raw]', function(e) {
-  if (this.selectize || !$.fn.selectize) return mpGN.sz(this);
+  if (this.selectize) return;
   if (e.type === 'mousedown') {
     e.preventDefault();
     $(this).closest('.rt-td').one('click', function(ev) { ev.stopPropagation(); });
