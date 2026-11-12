@@ -247,6 +247,24 @@ write_tbl_loc <- function(pos, key, fn) {
   }
 }
 
+#' Extra GFF3 CDS attributes mirroring the .tbl `transl_except` and `note`
+#'
+#' `;` and `,` are reserved in GFF3 column 9, so they are percent-encoded.
+#'
+#' @noRd
+gff_cds_extra <- function(transl_except, note, direction = "+") {
+  esc <- function(x) gsub(",", "%2C", gsub(";", "%3B", x, fixed = TRUE), fixed = TRUE)
+  # GFF3 coordinates ascend; the .tbl writes a minus-strand range high..low
+  if (identical(direction, "-") && length(transl_except) > 0) {
+    transl_except <- sub("pos:(\\d+)\\.\\.(\\d+)", "pos:\\2..\\1", transl_except)
+    transl_except <- sub("pos:([0-9.]+)", "pos:complement(\\1)", transl_except)
+  }
+  paste0(
+    if (length(transl_except) > 0) paste0(";transl_except=", esc(transl_except)),
+    if (length(note) > 0) paste0(";Note=", esc(note))
+  )
+}
+
 #' GFF3 end coordinate for a feature that may span the origin
 #'
 #' GFF3 has no join() syntax, so an origin-spanning feature is written as
@@ -854,9 +872,7 @@ export_files <- function(
           phase[o] <- c(off, (3L - (done[-length(done)] - off) %% 3L) %% 3L)
           for (i in seq_len(nrow(exons))) {
             f9 = paste0("ID=cds-",cur$gene,";Parent=gene-",cur$gene,";Name=",cur$gene,";gbkey=CDS;gene=",cur$gene,";product=",cur$product,";transl_table=",dat$genetic_code)
-            if (length(note_out) > 0){
-              f9 = paste0(f9, ";Note=", note_out)
-            }
+            f9 = paste0(f9, gff_cds_extra(transl_except, note_out, cur$direction))
             e_wraps <- isTRUE(dat$topology == "circular") &&
               isTRUE(exons[i, ]$pos1 > exons[i, ]$pos2)
             paste(c(seq_name, "MitoPilot", "CDS", exons[i,]$pos1, gff_end(exons[i,]$pos2, e_wraps, asmb_len), ".", cur$direction, phase[i], f9), collapse = "\t") |>
@@ -1012,9 +1028,7 @@ export_files <- function(
 
           # CDS feature
           f9 = paste0("ID=cds-",cur$gene,";Parent=gene-",cur$gene,";Name=",cur$gene,";gbkey=CDS;gene=",cur$gene,";product=",cur$product,";transl_table=",dat$genetic_code)
-          if (length(note_out) > 0){
-            f9 = paste0(f9, ";Note=", note_out)
-          }
+          f9 = paste0(f9, gff_cds_extra(transl_except, note_out, cur$direction))
           # a feature spanning the origin is written start..(asmb_len + end)
           paste(c(seq_name, "MitoPilot", "CDS", cur$pos1, gff_end(cur$pos2, wraps, asmb_len), ".", cur$direction, codon_offset(cur$codon_start) - 1L, f9), collapse = "\t") |>
             cat(file = gff_fn, sep = "\n", append = TRUE)
