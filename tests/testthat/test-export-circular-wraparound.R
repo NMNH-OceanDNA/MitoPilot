@@ -65,3 +65,18 @@ test_that("transl_except points at the 3' end, not the numerically larger end", 
     "(pos:200,aa:TERM)"
   )
 })
+
+test_that("GFF CDS carries the same transl_except and note as the .tbl, escaped", {
+  expect_equal(
+    gff_cds_extra("(pos:99..100,aa:TERM)", "start codon not determined; TAA stop"),
+    ";transl_except=(pos:99..100%2Caa:TERM);Note=start codon not determined%3B TAA stop"
+  )
+  expect_equal(paste0("ID=x", gff_cds_extra(NULL, NULL)), "ID=x")
+  expect_equal(gff_cds_extra("(pos:101..100,aa:TERM)", NULL, "-"),
+               ";transl_except=(pos:complement(100..101)%2Caa:TERM)")
+  expect_equal(gff_cds_extra("(pos:100,aa:TERM)", NULL, "-"),
+               ";transl_except=(pos:complement(100)%2Caa:TERM)")
+  a <- .gff_attr_list(paste0("ID=cds-ND4", gff_cds_extra("(pos:100,aa:TERM)", "a; b")))
+  expect_equal(a[["transl_except"]], "(pos:100,aa:TERM)")
+  expect_equal(a[["Note"]], "a; b")
+})
