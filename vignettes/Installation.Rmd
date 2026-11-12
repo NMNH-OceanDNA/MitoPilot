@@ -56,8 +56,8 @@ img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
 }
 </style>
 
-Everything on this page happens once per machine. When it is done, go to
-[Get Started](MitoPilot.html) and run the test project.
+Everything on this page happens once per machine. When it is done, go to the
+[Tutorial](MitoPilot.html) and run the test project.
 
 # What you need
 
@@ -167,9 +167,6 @@ Versions outside this range are known to break it:
 - **Versions older than 24.10** silently ignore the pipeline's
   `workflow.failOnIgnore` setting.
 
-If you install Nextflow through conda or mamba, pin it, because the channels
-track the newest release: `mamba install 'bioconda::nextflow<26'`.
-
 # Container cache directory
 
 MitoPilot runs each processing step inside a container (Docker locally, or
@@ -209,7 +206,7 @@ everything also removes images belonging to other people and other pipelines.
 
 # Next steps
 
-- [Get Started](MitoPilot.html) walks the whole pipeline using the built-in test
+- The [Tutorial](MitoPilot.html) walks the whole pipeline using the built-in test
   project.
 - [HPC cluster support](Custom-HPC.html) covers executors, cluster profiles, and
   running the app over an SSH tunnel.

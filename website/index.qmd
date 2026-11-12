@@ -1,0 +1,6 @@
+---
+pagetitle: MitoPilot
+toc: false
+---
+
+{{< include ../README.md >}}

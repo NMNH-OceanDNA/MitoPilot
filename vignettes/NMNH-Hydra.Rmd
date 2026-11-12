@@ -23,7 +23,7 @@ strong { font-weight: bold; }
 
 This page covers what is specific to the Smithsonian Hydra cluster. Once
 you are set up here, the rest of MitoPilot works exactly as in the
-[Get Started](MitoPilot.html) walkthrough, with `executor = "NMNH_Hydra"`.
+[test project](MitoPilot.html) walkthrough, with `executor = "NMNH_Hydra"`.
 
 Smithsonian users
 can also check out the [2025 workshop website](https://smithsonianworkshops.github.io/MitoPilot_workshop_2025/).
@@ -112,8 +112,8 @@ Use the same `executor = "NMNH_Hydra"` with `new_project()` for your own data.
 Work under `/pool` or `/scratch`. Home directories are too small for pipeline
 work directories, and projects cannot be run from `/store`.
 
-The full walkthrough, with Hydra-specific notes at each step, is on the
-[Get Started](MitoPilot.html) page.
+The full walkthrough, with Hydra-specific notes at each step, starts on the
+[Test Project: Initialize](MitoPilot.html) page.
 
 ## Running jobs
 

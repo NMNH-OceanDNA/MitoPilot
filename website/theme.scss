@@ -1,0 +1,10 @@
+/*-- scss:defaults --*/
+// accent taken from the MitoPilot logo
+$link-color: #107080;
+
+/*-- scss:rules --*/
+// Quarto darkens the selected sidebar entry; keep it the same as the outline
+div.sidebar-item-container .active {
+  color: $link-color;
+  font-weight: 600;
+}

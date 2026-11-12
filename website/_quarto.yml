@@ -1,0 +1,109 @@
+# Trial: whole site built by Quarto. Build with: Rscript website/build.R
+# Only _quarto.yml, index.qmd, and build.R are tracked; the rest is generated.
+project:
+  type: website
+  resources:
+    - articles/figures/**
+    - man/figures/**
+    - ruleset-browser.html
+
+metadata-files:
+  - reference/_sidebar.yml
+
+execute:
+  eval: false
+
+website:
+  title: MitoPilot
+  site-url: https://nmnh-oceandna.github.io/MitoPilot/
+  repo-url: https://github.com/NMNH-OceanDNA/MitoPilot
+  favicon: favicon.ico
+  search: true
+  page-navigation: true
+  navbar:
+    background: light
+    logo: man/figures/logo.png
+    left:
+      - text: Installation
+        href: articles/Installation.Rmd
+      - text: Tutorial
+        href: articles/MitoPilot.Rmd
+      - text: User Guide
+        href: articles/Your-Own-Project.Rmd
+      - text: Metadata
+        href: articles/Specimen-Metadata.Rmd
+      - text: HPC
+        href: articles/Custom-HPC.Rmd
+      - text: Help
+        href: articles/FAQ.Rmd
+    right:
+      - text: Reference
+        href: reference/index.qmd
+      - text: News
+        href: news/index.qmd
+      - icon: github
+        href: https://github.com/NMNH-OceanDNA/MitoPilot
+  sidebar:
+    - id: start
+      title: Installation
+      style: docked
+      contents:
+        - articles/Installation.Rmd
+        - articles/Native-Install.Rmd
+    - id: tutorial
+      title: Tutorial
+      contents:
+        - section: Test project walkthrough
+          contents:
+            - text: 1. Initialize
+              href: articles/MitoPilot.Rmd
+            - text: 2. Assemble
+              href: articles/Test-Project-Assemble.Rmd
+            - text: 3. Annotate
+              href: articles/Test-Project-Annotate.Rmd
+            - text: 4. Export
+              href: articles/Test-Project-Export.Rmd
+    - id: guide
+      title: User Guide
+      contents:
+        - section: Your own data
+          contents:
+            - articles/Your-Own-Project.Rmd
+            - articles/Your-Own-Assemblies.Rmd
+            - articles/Your-Own-Annotations.Rmd
+        - section: Assembly
+          contents:
+            - articles/Assembly-Methods.Rmd
+            - articles/Difficult-Assemblies.Rmd
+        - section: Curation
+          contents:
+            - articles/Curation-and-Validation.Rmd
+            - articles/Ruleset-Browser.Rmd
+            - articles/custom_dbs.Rmd
+    - id: metadata
+      title: Metadata
+      contents:
+        - articles/Specimen-Metadata.Rmd
+        - articles/Metadata-Linking.Rmd
+        - articles/NMNH-Vouchers.Rmd
+        - articles/Metadata-Reference.Rmd
+    - id: hpc
+      title: HPC
+      contents:
+        - articles/Custom-HPC.Rmd
+        - section: Site-specific setup
+          contents:
+            - articles/NMNH-Hydra.Rmd
+            - articles/NOAA-SEDNA.Rmd
+    - id: help
+      title: Help
+      contents:
+        - articles/FAQ.Rmd
+        - articles/Troubleshooting.Rmd
+
+format:
+  html:
+    theme: [lux, theme.scss]
+    css: extra.css
+    toc: true
+    toc-depth: 3

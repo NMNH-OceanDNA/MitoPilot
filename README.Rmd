@@ -77,7 +77,7 @@ MitoPilot ships a small pre-filtered test dataset. Running it end to end is the
 recommended way to verify your installation and learn the interface before
 using your own data.
 
-The [Get Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html)
+The [test project](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html)
 tutorial walks the whole pipeline using this test project.
 
 Want to skip straight to using MitoPilot with your own data? Head on over to
@@ -159,7 +159,7 @@ databases. There are three independent kinds of databases:
 
 | Page | What it covers |
 |---|---|
-| [Get Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html) | Full walkthrough, then starting your own project |
+| [Tutorial](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html) | Full walkthrough, then starting your own project |
 | [Installation and Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html) | Prerequisites, installing, updating, container cache |
 | [HPC cluster support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html) | Executors, cluster profiles, SSH tunnel, submitting runs |
 | [Curation ruleset browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.html) | What each clade ruleset enforces |

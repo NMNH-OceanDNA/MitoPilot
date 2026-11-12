@@ -23,7 +23,6 @@ navbar:
   type: default
   structure:
     left:
-    - intro
     - reference
     - articles
     right:
@@ -38,11 +37,13 @@ navbar:
         href: articles/Installation.html
       - text: -------
       - text: Test project
-      - text: "1. Assemble"
+      - text: "1. Initialize"
+        href: articles/MitoPilot.html
+      - text: "2. Assemble"
         href: articles/Test-Project-Assemble.html
-      - text: "2. Annotate"
+      - text: "3. Annotate"
         href: articles/Test-Project-Annotate.html
-      - text: "3. Export"
+      - text: "4. Export"
         href: articles/Test-Project-Export.html
       - text: -------
       - text: Usage
@@ -96,6 +97,7 @@ articles:
 
 - title: "Test project walkthrough"
   contents:
+  - 'MitoPilot'
   - 'Test-Project-Assemble'
   - 'Test-Project-Annotate'
   - 'Test-Project-Export'
@@ -188,6 +190,7 @@ reference:
   - fetch_blast_refs
   - patch_blast_ref_meta
   - compute_blast_ref_alignment
+  - alignment_rotations
   - get_top_hits_local
 
 - title: "Export and quality control"
