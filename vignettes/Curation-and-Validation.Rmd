@@ -284,4 +284,4 @@ metadata. Expect NCBI to run its own screens after you submit.
 - [Curation ruleset browser](Ruleset-Browser.html), every ruleset and parameter
 - [Building custom databases](custom_dbs.html), including custom curation
   references
-- [Get Started](MitoPilot.html), for the annotation and manual editing workflow
+- [Test project tutorial](MitoPilot.html), for the annotation and manual editing workflow

@@ -1,11 +1,11 @@
 ---
-title: "Get Started"
+title: "Test Project: Initialize"
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 3
 vignette: >
-  %\VignetteIndexEntry{Get Started}
+  %\VignetteIndexEntry{Test Project: Initialize}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -132,6 +132,14 @@ table.state-table p {
 }
 </style>
 
+<div class="step-nav">
+<span class="step-label">Test project:</span>
+<span class="current">1. Initialize</span>
+<a href="Test-Project-Assemble.html">2. Assemble</a>
+<a href="Test-Project-Annotate.html">3. Annotate</a>
+<a href="Test-Project-Export.html">4. Export</a>
+</div>
+
 MitoPilot takes you from raw Illumina paired-end reads to polished mitogenome records ready
 for submission to NCBI GenBank. The heavy lifting is a
 [Nextflow](https://www.nextflow.io/) pipeline; you run it from an R Shiny app
@@ -139,7 +147,7 @@ that shows you every sample, assembly, and annotation. MitoPilot automatically
 curates annotations based on clade-specific rulesets and also allows you
 to manually adjust annotations when needed.
 
-Start here. This page gets MitoPilot installed and the built-in test project
+Start here. This page checks your setup and gets the built-in test project
 running, then hands off to a page per pipeline module. Work through them in
 order; the whole test project takes an afternoon at most.
 
@@ -299,9 +307,9 @@ Now you're ready to start running the test project samples
 through each MitoPilot module. Follow the links below to begin.
 
 <div class="step-nav no-rule">
-<a href="Test-Project-Assemble.html">1. Assemble</a>
-<a href="Test-Project-Annotate.html">2. Annotate</a>
-<a href="Test-Project-Export.html">3. Export</a>
+<a href="Test-Project-Assemble.html">2. Assemble</a>
+<a href="Test-Project-Annotate.html">3. Annotate</a>
+<a href="Test-Project-Export.html">4. Export</a>
 </div>
 
 # Where to go next

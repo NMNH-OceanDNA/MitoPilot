@@ -122,9 +122,10 @@ img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
 
 <div class="step-nav">
 <span class="step-label">Test project:</span>
-<a href="Test-Project-Assemble.html">1. Assemble</a>
-<a href="Test-Project-Annotate.html">2. Annotate</a>
-<span class="current">3. Export</span>
+<a href="MitoPilot.html">1. Initialize</a>
+<a href="Test-Project-Assemble.html">2. Assemble</a>
+<a href="Test-Project-Annotate.html">3. Annotate</a>
+<span class="current">4. Export</span>
 </div>
 
 The Export module turns finished annotations into the files GenBank needs for submission: 
