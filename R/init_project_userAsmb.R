@@ -77,7 +77,7 @@
 #'   "lsf", "NMNH_Hydra", "NOAA_SEDNA") or the name of a saved cluster profile
 #'   created with [generate_config()]. See [list_configs()] for available names.
 #' @param Rproj (logical) Initialize and open an RStudio project in the project
-#'   directory (default = TRUE). This option has no effect if not running
+#'   directory (default = FALSE). This option has no effect if not running
 #'   interactively in RStudio.
 #' @param force (logical) Force recreating of existing project database and
 #'   config files (default = FALSE).
@@ -121,7 +121,7 @@ new_project_userAsmb <- function(
     config = NULL,
     profile_dir = mitopilot_config_dir(),
     ncbi_api_key = NULL,
-    Rproj = TRUE,
+    Rproj = FALSE,
     force = FALSE,
     ...) {
 

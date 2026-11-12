@@ -208,6 +208,8 @@ everything also removes images belonging to other people and other pipelines.
 
 - The [Tutorial](MitoPilot.html) walks the whole pipeline using the built-in test
   project.
+- [Starting your own project](Your-Own-Project.html) covers setting up a project
+  with your own samples.
 - [HPC cluster support](Custom-HPC.html) covers executors, cluster profiles, and
   running the app over an SSH tunnel.
 - [Troubleshooting](Troubleshooting.html) and the [FAQ](FAQ.html) cover what to do

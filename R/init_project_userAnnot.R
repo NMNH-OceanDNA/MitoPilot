@@ -47,7 +47,7 @@ new_project_userAnnot <- function(
     config = NULL,
     profile_dir = mitopilot_config_dir(),
     ncbi_api_key = NULL,
-    Rproj = TRUE,
+    Rproj = FALSE,
     force = FALSE,
     ...) {
 
