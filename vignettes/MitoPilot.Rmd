@@ -134,10 +134,10 @@ table.state-table p {
 
 <div class="step-nav">
 <span class="step-label">Test project:</span>
-<span class="current">1. Initialize</span>
-<a href="Test-Project-Assemble.html">2. Assemble</a>
-<a href="Test-Project-Annotate.html">3. Annotate</a>
-<a href="Test-Project-Export.html">4. Export</a>
+<span class="current">0. Initialize</span>
+<a href="Test-Project-Assemble.html">1. Assemble</a>
+<a href="Test-Project-Annotate.html">2. Annotate</a>
+<a href="Test-Project-Export.html">3. Export</a>
 </div>
 
 MitoPilot takes you from raw Illumina paired-end reads to polished mitogenome records ready
@@ -307,9 +307,9 @@ Now you're ready to start running the test project samples
 through each MitoPilot module. Follow the links below to begin.
 
 <div class="step-nav no-rule">
-<a href="Test-Project-Assemble.html">2. Assemble</a>
-<a href="Test-Project-Annotate.html">3. Annotate</a>
-<a href="Test-Project-Export.html">4. Export</a>
+<a href="Test-Project-Assemble.html">1. Assemble</a>
+<a href="Test-Project-Annotate.html">2. Annotate</a>
+<a href="Test-Project-Export.html">3. Export</a>
 </div>
 
 # Where to go next

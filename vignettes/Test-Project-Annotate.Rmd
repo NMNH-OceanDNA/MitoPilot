@@ -122,10 +122,10 @@ img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
 
 <div class="step-nav">
 <span class="step-label">Test project:</span>
-<a href="MitoPilot.html">1. Initialize</a>
-<a href="Test-Project-Assemble.html">2. Assemble</a>
-<span class="current">3. Annotate</span>
-<a href="Test-Project-Export.html">4. Export</a>
+<a href="MitoPilot.html">0. Initialize</a>
+<a href="Test-Project-Assemble.html">1. Assemble</a>
+<span class="current">2. Annotate</span>
+<a href="Test-Project-Export.html">3. Export</a>
 </div>
 
 This module finds the genes, curates the gene models against reference sequences from GenBank,
