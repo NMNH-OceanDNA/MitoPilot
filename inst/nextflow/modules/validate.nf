@@ -14,7 +14,7 @@ process validate {
 
     errorStrategy 'ignore'
 
-    tag "${id}"
+    tag "${id}.${path}.${scaffold}"
 
     input:
     tuple val(id), val(path), val(scaffold), path(annotations), path(coverage), val(opts)
@@ -63,7 +63,7 @@ process write_curated_result {
     executor 'local'
     maxForks 1
     errorStrategy 'ignore'
-    tag "${id}"
+    tag "${id}.${path}.${scaffold}"
 
     input:
     tuple val(id), val(path), val(scaffold), val(coverage_fn), val(annotations_fn), val(summary_fn), val(assembly_fn)

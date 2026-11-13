@@ -88,7 +88,7 @@ run_reports_server <- function(id) {
           uiOutput(ns("detail"))
         )
       }
-      body <- tagList(body, uiOutput(ns("poll")))
+      body <- div(class = "mp-rr-body", body, uiOutput(ns("poll")))
       showModal(modalDialog(
         title = mp_modal_title(paste("Run reports:", panel)),
         size = "l",
@@ -181,11 +181,12 @@ run_reports_server <- function(id) {
           tags$pre(style = "max-height: 40vh; overflow: auto;", run_progress_text(log))
         ))
       }
+      try(backfill_run_tasks(session$userData$dir, df$base[i]), silent = TRUE)
       txt <- tryCatch(paste(readLines(rpt, warn = FALSE), collapse = "\n"),
                       error = function(e) "The report could not be read.")
       div(
         style = "margin-top: 1em;",
-        tags$pre(id = ns("report_text"), style = "max-height: 40vh; overflow: auto;", txt),
+        tags$pre(id = ns("report_text"), style = "max-height: 24vh; overflow: auto;", txt),
         tags$button(
           type = "button", class = "btn btn-default btn-sm",
           onclick = sprintf(
@@ -195,8 +196,91 @@ run_reports_server <- function(id) {
           mp_icon("copy"), " Copy report"
         ),
         actionButton(ns("open_loc"), "Open report location",
-                     icon = mp_icon("folder-open"), class = "btn-sm")
+                     icon = mp_icon("folder-open"), class = "btn-sm"),
+        lapply(names(fail_kinds), function(k) {
+          t <- read_run_tasks(session$userData$dir, df$base[i], k)
+          if (!is.null(t)) div(
+            class = "mp-rr-section",
+            tags$h4(sprintf("%s (%d)", fail_kinds[[k]], nrow(t))),
+            reactable::reactableOutput(ns(k))
+          )
+        })
       )
+    })
+
+    # Failed tasks and failed samples: one expandable table each ----
+    fail_kinds <- c(tasks = "Failed tasks", samples = "Failed samples")
+    fail_table <- function(kind) reactable::renderReactable({
+      i <- reactable::getReactableState("tbl", "selected")
+      df <- runs()
+      req(length(i) == 1, !is.null(df), i <= nrow(df))
+      t <- read_run_tasks(session$userData$dir, df$base[i], kind)
+      req(!is.null(t), nrow(t) > 0)
+      t$tries <- as.integer(t$tries)
+      col <- reactable::colDef
+      reactable::reactable(
+        t[if (kind == "tasks") c("sample", "step", "exit", "cause", "tries") else c("sample", "cause", "step")],
+        onClick = "expand", compact = TRUE, pagination = FALSE, highlight = TRUE,
+        striped = TRUE, wrap = FALSE, class = "mp-tl-tbl",
+        # same loading and cache path as the gene-name review table
+        details = col(html = TRUE, details = htmlwidgets::JS(sprintf(
+          "function(ri) {
+             var id = '%s-%s-' + ri.index, open = '<div class=\"mp-gn-detail mp-tl-detail\" id=\"' + id + '\">';
+             if (mpGN.cache[id]) return open + mpGN.cache[id] + '</div>';
+             setTimeout(function() {
+               Shiny.setInputValue('%s', { base: '%s', kind: '%s', i: ri.index + 1, id: id }, { priority: 'event' });
+             }, 0);
+             return open + '<span class=\"text-muted\">Loading...</span></div>';
+           }", ns(kind), df$base[i], ns("task_open"), df$base[i], kind))),
+        columns = if (kind == "tasks") list(
+          sample = col(name = "Sample", minWidth = 110),
+          step = col(name = "Step", minWidth = 110),
+          exit = col(name = "Exit", width = 60, align = "center"),
+          cause = col(name = "Likely cause", minWidth = 300),
+          tries = col(name = "Tries", width = 60, align = "center")
+        ) else list(
+          sample = col(name = "Sample", minWidth = 110),
+          cause = col(name = "Note", minWidth = 300),
+          step = col(name = "Last step", minWidth = 110)
+        )
+      )
+    })
+    output$tasks <- fail_table("tasks")
+    output$samples <- fail_table("samples")
+
+    observeEvent(input$task_open, {
+      o <- input$task_open
+      req(grepl("^[A-Za-z0-9_-]+$", o$base), o$kind %in% names(fail_kinds))
+      t <- read_run_tasks(session$userData$dir, o$base, o$kind)
+      i <- as.integer(o$i)
+      req(!is.null(t), i >= 1, i <= nrow(t))
+      f <- file.path(run_tasks_dir(session$userData$dir, o$base, o$kind), basename(t$log[i]))
+      has_log <- nzchar(t$log[i]) && file.exists(f)
+      has_dir <- t$workdir[i] != "-"
+      log_id <- paste0(o$id, "-log")
+      copy_btn <- function(label, js, ...) tags$button(
+        type = "button", class = "btn btn-default btn-xs", onclick = js, mp_icon("copy"), label, ...)
+      html <- tagList(
+        div(tags$b(if (o$kind == "tasks") "Likely cause: " else "Note: "),
+            if (nzchar(t$cause[i])) t$cause[i] else "-"),
+        if (o$kind == "samples" && has_dir) div(tags$b("Last step reached: "), t$step[i]),
+        if (has_dir) div(class = "mp-tl-path", tags$b("Work dir: "), tags$code(t$workdir[i])),
+        div(
+          class = "mp-tl-btns",
+          if (has_dir) copy_btn(" Copy work dir path", "navigator.clipboard.writeText(this.dataset.path)",
+                                `data-path` = t$workdir[i]),
+          if (has_log) copy_btn(" Copy output", sprintf(
+            "navigator.clipboard.writeText(document.getElementById('%s').textContent)", log_id))
+        ),
+        if (has_log) {
+          tags$pre(id = log_id, paste(readLines(f, warn = FALSE), collapse = "\n"))
+        } else if (has_dir) {
+          p(class = "text-muted", "No task output was found in the work directory when the report was written.")
+        } else {
+          p(class = "text-muted", "No task was recorded for this sample in the run's log.")
+        }
+      )
+      session$sendCustomMessage("mp-gn-detail", list(id = o$id, html = as.character(html)))
     })
 
     observeEvent(input$open_loc, {

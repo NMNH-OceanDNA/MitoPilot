@@ -1054,6 +1054,17 @@ body > .selectize-dropdown.mp-gn-pick { z-index: 1060; font-size: 12px; }
 .mp-gn-detail .table { margin: 0; font-size: 0.92em; }
 .mp-gn-detail th { position: sticky; top: 0; background: var(--mp-surface); white-space: nowrap; }
 
+/* Run reports: failed-task output */
+/* the window scrolls inside itself so its title and Close stay on screen */
+.mp-rr-body { max-height: calc(100vh - 210px); overflow-y: auto; padding-right: 4px; }
+.mp-rr-section { margin-top: var(--mp-space-4); padding-top: var(--mp-space-3); border-top: 1px solid var(--mp-border); }
+.mp-rr-section h4 { margin: 0 0 var(--mp-space-2); font-weight: 600; }
+.mp-tl-detail { max-height: none; white-space: normal; }
+.mp-tl-detail .mp-tl-path { word-break: break-all; }
+.mp-tl-detail .mp-tl-btns { margin: 6px 0; }
+.mp-tl-detail .mp-tl-btns .btn { margin-right: 6px; }
+.mp-tl-detail pre { max-height: 32vh; overflow: auto; margin: 0; font-size: 0.85em; white-space: pre; }
+
 /* negative margins keep the logo from growing the line, which shifts the box */
 .nmnh-logo {
   height: 1.2em;
