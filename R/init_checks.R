@@ -524,8 +524,9 @@ check_user_annotations <- function(mapping, assembly_path, annotation_path, iss,
     iss$err(label, ": file is not readable: ", x)
     return(invisible(NULL))
   }
-  first <- tryCatch(readLines(x, n = 1L, warn = FALSE)[1], error = function(e) NA)
-  if (is.na(first)) first <- ""
+  # first non-blank line
+  first <- tryCatch(readLines(x, n = 50L, warn = FALSE), error = function(e) character())
+  first <- c(first[nzchar(trimws(first))], "")[1]
   if (kind == "fasta" && !startsWith(first, ">")) {
     iss$err(label, ": not a FASTA file (no '>' header): ", x)
   }

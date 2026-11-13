@@ -146,3 +146,29 @@ test_that("mapping file format problems get one clear message each", {
   expect_true(is.na(ok$err))
   expect_equal(ok$m$Taxon, "Danio, rerio")
 })
+
+test_that("a GenBank file with leading blank lines passes the LOCUS check", {
+  d <- withr::local_tempdir()
+  gb <- file.path(d, "db.gb")
+  writeLines(c("", "LOCUS       X 10 bp DNA", "//"), gb)
+  errs <- character()
+  iss <- list(err = function(...) errs <<- c(errs, paste0(...)), warn = function(...) NULL)
+  .check_resource(gb, "mitofinder_db", kind = "genbank", iss = iss)
+  expect_length(errs, 0L)
+  writeLines(c("", ">not genbank"), gb)
+  .check_resource(gb, "mitofinder_db", kind = "genbank", iss = iss)
+  expect_match(errs, "LOCUS")
+})
+
+test_that("MitoFinder db writer drops blank lines between records", {
+  d <- withr::local_tempdir()
+  rec <- function(acc, def) c(paste("LOCUS      ", acc), paste("DEFINITION ", def),
+                              '     /organelle="mitochondrion"', "//", "")
+  writeLines(c(rec("A1", "partial cds."), rec("A2", "complete genome."),
+               rec("A3", "complete genome.")), file.path(d, "in.gb"))
+  out <- file.path(d, "out.gb")
+  expect_equal(.cadb_write_mitofinder_db(file.path(d, "in.gb"), out), 2L)
+  got <- readLines(out)
+  expect_match(got[1], "^LOCUS ")
+  expect_true(all(nzchar(got)))
+})
