@@ -719,7 +719,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             choices = local({
               tg <- names(RULESET_MAP)
               labs <- vapply(tg, function(k)
-                paste0(RULESET_MAP[[k]]$ncbi, " (", RULESET_MAP[[k]]$label, ")"),
+                paste0(RULESET_MAP[[k]]$ncbi, " (", RULESET_MAP[[k]]$label, ") v", ruleset_version(k)),
                 character(1))
               ord <- order(labs)
               stats::setNames(tg[ord], labs[ord])
@@ -763,7 +763,11 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           ) |> shinyjs::disabled()
         ),
         tags$details(
-          tags$summary("Curation rules for this ruleset"),
+          tags$summary(
+            "Curation rules saved in this project: ",
+            tryCatch(ruleset_version_label(current$target, current$params),
+                     error = function(e) "unknown version")
+          ),
           div(
             style = "margin-bottom: 14px; height: 300px; overflow: auto;",
             listviewer::reactjsonOutput(ns("params"))
