@@ -106,6 +106,62 @@ test_that("a generic exit cause is refined from the task log", {
   expect_match(nf_log_facts(log)$tasks$cause, "out of memory")
 })
 
+test_that("failed tasks and their output are saved with the report", {
+  d <- withr::local_tempdir()
+  wd <- file.path(d, "work", "ab")
+  dir.create(wd, recursive = TRUE)
+  writeLines(c("line 1", "say \"hi\"\tthere"), file.path(wd, ".command.log"))
+  tasks <- data.frame(sample = c("s1", "s2"), step = "assemble", exit = c("2", "140"),
+    cause = c("a \"quoted\" cause", "killed"), tries = c(1L, 2L),
+    workdir = c(wd, file.path(d, "gone")), stderr = "", stringsAsFactors = FALSE)
+  expect_null(read_run_tasks(d, "assemble_x"))
+  write_run_tasks(d, "assemble_x", tasks[0, ])
+  expect_null(read_run_tasks(d, "assemble_x"))
+  write_run_tasks(d, "assemble_x", tasks)
+  t <- read_run_tasks(d, "assemble_x")
+  expect_equal(t$sample, c("s1", "s2"))
+  expect_equal(t$cause, tasks$cause)
+  expect_equal(t$log, c("1.log", ""))
+  expect_equal(readLines(file.path(run_tasks_dir(d, "assemble_x"), "1.log")),
+    c("line 1", "say \"hi\"\tthere"))
+  write_run_tasks(d, "assemble_x", tasks[1, ], kind = "samples")
+  expect_equal(read_run_tasks(d, "assemble_x", "samples")$log, "1.log")
+  expect_equal(nrow(read_run_tasks(d, "assemble_x")), 2L)
+})
+
+test_that("tables are backfilled for a report written before they existed", {
+  d <- withr::local_tempdir()
+  wd <- file.path(d, "work", "d2", "72503c")
+  dir.create(wd, recursive = TRUE)
+  dir.create(run_dir(d, "nextflow"), recursive = TRUE)
+  dir.create(run_dir(d, "reports"))
+  writeLines("assembler output", file.path(wd, ".command.log"))
+  writeLines(sub("/proj/work/d2/72503c679596dd6924b430de3fc501", wd, readLines(fx("failures")),
+    fixed = TRUE), file.path(run_dir(d, "nextflow"), "assemble_x.nextflow.log"))
+  writeLines(c("MitoPilot run report", "",
+    "Failed tasks (sample | step | exit | likely cause | last error | work dir):",
+    paste("s9 | assemble | 140 | killed; tried 2 times | a | b |", wd), "",
+    "Failed samples (sample | note):", "t2_MG676469_1 | failed assembly", "none | -"),
+    run_report_paths(d, "assemble_x")[["txt"]])
+  backfill_run_tasks(d, "assemble_x")
+  t <- read_run_tasks(d, "assemble_x")
+  expect_equal(unlist(t[1, ], use.names = FALSE), c("s9", "assemble", "140", "killed", "2", wd, "1.log"))
+  s <- read_run_tasks(d, "assemble_x", "samples")
+  expect_equal(s$step, c("assemble", "-"))
+  expect_equal(s$cause, c("failed assembly", ""))
+  expect_equal(s$log, c("1.log", ""))
+})
+
+test_that("a failed sample is matched to the last task it reached", {
+  att <- data.frame(name = c("WF1:A:assemble (S1)", "WF1:C:coverage (S10)", "WF2:curate (S1.1.1)",
+    "WF2:validate (S1)", "WF2:blast (S1.1.2.NC_1)"), exit = "0", workdir = paste0("/w/", 1:5),
+    stringsAsFactors = FALSE)
+  expect_equal(sample_last_task(att[1:2, ], c("S1", "S10", "S2"), "")$step, c("assemble", "coverage", "-"))
+  u <- sample_last_task(att, c("S1.1.1", "S1.1.2"), "", units = TRUE)
+  expect_equal(u$step, c("validate", "blast"))
+  expect_equal(u$workdir, c("/w/4", "/w/5"))
+})
+
 test_that("exit codes map to a likely cause", {
   expect_match(nf_exit_cause(137L), "out of memory")
   expect_match(nf_exit_cause(140L), "scheduler")
