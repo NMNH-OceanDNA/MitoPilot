@@ -1,5 +1,7 @@
 # MitoPilot (development version)
 
+- **Curation rulesets are now versioned.** Each clade ruleset carries its own version (all start at v1.0), separate from the package version, and changes only when that clade's settings change. The version shows in the Ruleset Browser, in the ruleset picker of the curation options, and is saved with the project. The curation options also say when a project's saved rules differ from the package ruleset or when a newer version is available; editing and saving the options moves the project to the newer version.
+
 - **Fix: `custom_assembly_db()` MitoFinder database rejected at project setup.** The database file could start with a blank line, and the project checks then reported "not a GenBank flat file (no LOCUS line)". The file is now written without blank lines, and the check accepts databases built by earlier versions.
 
 - **Run Reports: output of failed tasks and failed samples.** Under each report, tables now list the run's failed tasks and failed samples. Click a row to read the full command output (for a failed sample, the output of the last step it reached), with buttons to copy the output or the work directory path. The output is saved with the report when it is written, so it stays readable after the work directory is cleaned up. Older reports get their tables the first time they are opened, as far as their work directories still exist.
