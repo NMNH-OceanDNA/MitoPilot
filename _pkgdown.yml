@@ -37,13 +37,13 @@ navbar:
         href: articles/Installation.html
       - text: -------
       - text: Test project
-      - text: "1. Initialize"
+      - text: "0. Initialize"
         href: articles/MitoPilot.html
-      - text: "2. Assemble"
+      - text: "1. Assemble"
         href: articles/Test-Project-Assemble.html
-      - text: "3. Annotate"
+      - text: "2. Annotate"
         href: articles/Test-Project-Annotate.html
-      - text: "4. Export"
+      - text: "3. Export"
         href: articles/Test-Project-Export.html
       - text: -------
       - text: Usage

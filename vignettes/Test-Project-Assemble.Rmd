@@ -122,10 +122,10 @@ img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
 
 <div class="step-nav">
 <span class="step-label">Test project:</span>
-<a href="MitoPilot.html">1. Initialize</a>
-<span class="current">2. Assemble</span>
-<a href="Test-Project-Annotate.html">3. Annotate</a>
-<a href="Test-Project-Export.html">4. Export</a>
+<a href="MitoPilot.html">0. Initialize</a>
+<span class="current">1. Assemble</span>
+<a href="Test-Project-Annotate.html">2. Annotate</a>
+<a href="Test-Project-Export.html">3. Export</a>
 </div>
 
 The Assemble module cleans the reads, builds mitogenome assemblies, maps the

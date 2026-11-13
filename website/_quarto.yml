@@ -55,13 +55,13 @@ website:
       contents:
         - section: Test project walkthrough
           contents:
-            - text: 1. Initialize
+            - text: 0. Initialize
               href: articles/MitoPilot.Rmd
-            - text: 2. Assemble
+            - text: 1. Assemble
               href: articles/Test-Project-Assemble.Rmd
-            - text: 3. Annotate
+            - text: 2. Annotate
               href: articles/Test-Project-Annotate.Rmd
-            - text: 4. Export
+            - text: 3. Export
               href: articles/Test-Project-Export.Rmd
     - id: guide
       title: User Guide
