@@ -1,5 +1,7 @@
 # MitoPilot (development version)
 
+- **Fix: `custom_assembly_db()` MitoFinder database rejected at project setup.** The database file could start with a blank line, and the project checks then reported "not a GenBank flat file (no LOCUS line)". The file is now written without blank lines, and the check accepts databases built by earlier versions.
+
 - **Run Reports: output of failed tasks and failed samples.** Under each report, tables now list the run's failed tasks and failed samples. Click a row to read the full command output (for a failed sample, the output of the last step it reached), with buttons to copy the output or the work directory path. The output is saved with the report when it is written, so it stays readable after the work directory is cleaned up. Older reports get their tables the first time they are opened, as far as their work directories still exist.
 - **Assemble: one killed sample no longer stops the run.** A sample whose assembly is killed by the scheduler (over its time or memory limit) more times than `maxRetries` allows is now skipped and listed under failed tasks, instead of aborting the run and leaving the other samples stuck "In progress".
 - **Run reports name out-of-memory and out-of-disk crashes.** When a failed task's exit status says nothing specific, the report now checks the task's own log for memory and disk-space errors (for example a GetOrganelle `MemoryError`) before falling back to "the tool stopped with an error".
