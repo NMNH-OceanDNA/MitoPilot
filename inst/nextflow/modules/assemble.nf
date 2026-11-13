@@ -7,7 +7,8 @@ process assemble {
 
     publishDir "${launchDir}/${params.publishDir}", overwrite: true, mode: 'copy'
 
-    errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'ignore' }
+    // past maxRetries Nextflow turns 'retry' into a run abort; skip the sample instead
+    errorStrategy { task.exitStatus in 137..140 && task.attempt <= params.assemble.maxRetries ? 'retry' : 'ignore' }
     maxRetries { params.assemble.maxRetries }
 
     tag "${id}"
