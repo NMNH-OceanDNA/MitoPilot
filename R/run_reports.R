@@ -85,6 +85,27 @@ task_err_tail <- function(dir, n = 1L) {
   if (length(y) == 0) "" else paste(utils::tail(y, n), collapse = " ")
 }
 
+#' Known failure messages in a task's own output, "" when none
+#'
+#' Tool-agnostic: only messages that mean the same thing whichever tool
+#' printed them.
+#' @noRd
+task_log_cause <- function(dir) {
+  f <- file.path(dir, c(".command.log", ".command.err"))
+  f <- f[file.exists(f)]
+  if (length(f) == 0) return("")
+  y <- tryCatch(read_tail(f[1], 2e5), error = function(e) character(0))
+  y <- iconv(y, "UTF-8", "UTF-8", sub = "byte")
+  hit <- function(p) any(grepl(p, y, ignore.case = TRUE))
+  if (hit("MemoryError|out of memory|cannot allocate memory|bad_alloc|oom[-_ ]kill")) {
+    "out of memory: give the step more memory"
+  } else if (hit("no space left on device|disk quota exceeded")) {
+    "out of disk space or over quota"
+  } else {
+    ""
+  }
+}
+
 #' Sample ID a task tag belongs to
 #'
 #' Tags are `<ID>`, `<ID>.<n>`, `<ID>.<path>.<scaffold>` or
@@ -160,6 +181,9 @@ nf_log_facts <- function(log, ids = NULL) {
     cause = ifelse(is.na(lst$exit) | lst$exit %in% c("0", "-"), msg, nf_exit_cause(lst$exit)),
     stringsAsFactors = FALSE)
   tasks$stderr <- vapply(tasks$workdir, task_err_tail, "", USE.NAMES = FALSE)
+  generic <- tasks$cause == nf_exit_cause(1L)
+  found <- vapply(tasks$workdir[generic], task_log_cause, "", USE.NAMES = FALSE)
+  tasks$cause[generic] <- ifelse(nzchar(found), found, tasks$cause[generic])
 
   names_all <- c(grab("(?:Submitted|Cached) process > (.*)$", has("process > ")), att$name)
   tags <- unique(stats::na.omit(grab("\\(([^()]+)\\)$", names_all)))

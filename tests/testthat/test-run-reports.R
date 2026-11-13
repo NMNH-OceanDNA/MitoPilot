@@ -88,6 +88,24 @@ test_that("tag_sample strips path, scaffold, and accession suffixes", {
   expect_equal(tag_sample(c("S.1.1", "S.1.1.1"), ids = c("S", "S.1")), c("S.1", "S.1"))
 })
 
+test_that("a generic exit cause is refined from the task log", {
+  d <- withr::local_tempdir()
+  expect_equal(task_log_cause(d), "")
+  writeLines(c("Traceback (most recent call last):", "MemoryError", "tar: Exiting with failure status"),
+    file.path(d, ".command.log"))
+  expect_match(task_log_cause(d), "out of memory")
+  writeLines("write error: No space left on device", file.path(d, ".command.log"))
+  expect_match(task_log_cause(d), "disk space")
+  writeLines("Error: no seed reads found", file.path(d, ".command.log"))
+  expect_equal(task_log_cause(d), "")
+
+  log <- file.path(d, "x.nextflow.log")
+  writeLines("MemoryError", file.path(d, ".command.log"))
+  writeLines(sub("/proj/work/d2/72503c679596dd6924b430de3fc501", d, readLines(fx("failures")),
+    fixed = TRUE), log)
+  expect_match(nf_log_facts(log)$tasks$cause, "out of memory")
+})
+
 test_that("exit codes map to a likely cause", {
   expect_match(nf_exit_cause(137L), "out of memory")
   expect_match(nf_exit_cause(140L), "scheduler")
