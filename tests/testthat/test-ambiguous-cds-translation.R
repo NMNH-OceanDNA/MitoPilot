@@ -44,6 +44,7 @@ test_that("no translate call in the package can crash on an ambiguous base", {
   unguarded <- unlist(lapply(files, function(f) {
     lines <- readLines(f, warn = FALSE)
     hits <- grep("Biostrings::translate(", lines, fixed = TRUE)
+    hits <- hits[!grepl("^\\s*#", lines[hits])]
     hits <- hits[vapply(hits, function(i) {
       !any(grepl("if.fuzzy.codon", lines[i:min(i + 5L, length(lines))], fixed = TRUE))
     }, logical(1))]
