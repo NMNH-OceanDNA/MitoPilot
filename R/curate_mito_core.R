@@ -100,6 +100,12 @@ curate_mito_core <- function(
     as.integer(circ_len(p1, p2, ctg_len(seqid)))
   }
 
+  # Gene each contig starts on (the annotate-step rotation anchor)
+  start_anchor <- annotations |>
+    dplyr::filter(pos1 == 1, direction == "+") |>
+    dplyr::distinct(contig, .keep_all = TRUE) |>
+    {\(x) stats::setNames(x$gene, x$contig)}()
+
   ## load coverage ----
   if (!is.null(coverage_fn)) {
     coverage <- tryCatch(
@@ -985,6 +991,12 @@ curate_mito_core <- function(
 
   }
 
+  # Curation may have moved the start gene's start; put it back at position 1
+  reanchored <- .reanchor_start_gene(assembly, annotations, coverage, contig_key, start_anchor)
+  assembly <- reanchored$assembly
+  annotations <- reanchored$annotations
+  coverage <- reanchored$coverage
+
   # Outputs ----
   readr::write_csv(
     annotations,
@@ -1075,6 +1087,42 @@ curate_mito_core <- function(
       coverage |> dplyr::filter(SeqId != seqid),
       coverage_flip
     )
+  }
+  list(assembly = assembly, annotations = annotations, coverage = coverage)
+}
+
+# Re-rotate circular contigs whose start gene no longer begins at position 1.
+# `anchor` is a named vector, seqid -> gene that started the contig before
+# curation. Contigs flipped during curation (anchor now on "-") are left alone.
+.reanchor_start_gene <- function(assembly, annotations, coverage, contig_key, anchor) {
+  for (seqid in names(anchor)) {
+    if (!stringr::str_detect(contig_key[[seqid]], "circular")) next
+    rows <- which(annotations$contig == seqid & annotations$gene == anchor[[seqid]] &
+                    annotations$direction == "+")
+    if (length(rows) == 0L) next
+    # the anchor copy: the one now spanning the origin, else the first on the contig
+    wraps <- rows[annotations$pos1[rows] > annotations$pos2[rows]]
+    row <- if (length(wraps) > 0L) wraps[1] else rows[which.min(annotations$pos1[rows])]
+    s <- as.integer(annotations$pos1[row])
+    if (s == 1L) next
+    ctg <- assembly[contig_key[seqid]]
+    L <- Biostrings::width(ctg)[[1]]
+    assembly[contig_key[seqid]] <- Biostrings::xscat(
+      Biostrings::subseq(ctg, s, L), Biostrings::subseq(ctg, 1, s - 1L)
+    )
+    on_ctg <- annotations$contig == seqid
+    annotations$pos1[on_ctg] <- wrap_pos(annotations$pos1[on_ctg] - s + 1L, L)
+    annotations$pos2[on_ctg] <- wrap_pos(annotations$pos2[on_ctg] - s + 1L, L)
+    if (!is.null(coverage)) {
+      cov <- coverage[coverage$SeqId == seqid, ]
+      cov <- cov[order(cov$Position), ]
+      cut <- cov$Position >= s
+      cov <- rbind(cov[cut, ], cov[!cut, ])
+      cov$Position <- seq_len(nrow(cov))
+      coverage <- rbind(coverage[coverage$SeqId != seqid, ], cov)
+    }
+    annotations <- dplyr::arrange(annotations, contig, pos1)
+    message("curate: re-rotated ", seqid, " to the start of ", anchor[[seqid]])
   }
   list(assembly = assembly, annotations = annotations, coverage = coverage)
 }
