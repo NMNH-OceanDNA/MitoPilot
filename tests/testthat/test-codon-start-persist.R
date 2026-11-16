@@ -104,7 +104,7 @@ cs_export <- function(annotations) {
     ID = "s1", path = 1L, scaffold = 1L, export_group = "g1",
     export_time_stamp = NA_integer_, stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "annotate", data.frame(
-    ID = "s1", path = 1L, scaffold = 1L, topology = "circular", partial = "no",
+    annotate_lock = 1L, ID = "s1", path = 1L, scaffold = 1L, topology = "circular", partial = "no",
     curate_opts = "default", stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "curate_opts", data.frame(
     curate_opts = "default",
@@ -114,7 +114,7 @@ cs_export <- function(annotations) {
   DBI::dbWriteTable(con, "samples", data.frame(
     ID = "s1", Taxon = "Testus testus", genetic_code = 2L, stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "assemble", data.frame(
-    ID = "s1", blast_accession = "NC_000001", blast_accession_auto = 0L,
+    assemble_lock = 1L, ID = "s1", blast_accession = "NC_000001", blast_accession_auto = 0L,
     poor_blast_ref = "ok", stringsAsFactors = FALSE))
   DBI::dbDisconnect(con)
 

@@ -956,6 +956,7 @@ export_server <- function(id) {
       group <- input$export_group
       req(group)
       n <- sum(rv$data$export_group == group, na.rm = TRUE)
+      out <- export_left_out(session$userData$con, group)
       path <- file.path(session$userData$dir_out, "export", group)
       files <- c(
         paste0(group, ".fasta"), paste0(group, ".tbl"), "GFFs/",
@@ -968,6 +969,14 @@ export_server <- function(id) {
       div(
         class = "mp-card mp-card-summary",
         div(class = "mp-card-title", sprintf("%s in group \"%s\"", mp_n(n, "record"), group)),
+        if (nrow(out)) {
+          div(
+            class = "mp-fg-warning", icon("triangle-exclamation"), " ",
+            sprintf("%s left out: %s.", mp_n(nrow(out), "assembly", "assemblies"), paste(
+              sprintf("%s p%s.s%s (%s)", out$ID, out$path, out$scaffold, out$why),
+              collapse = ", "))
+          )
+        },
         div("Written to ", tags$code(class = "mp-path", path), " as: ",
             paste(files, collapse = ", ")),
         if (dir.exists(path)) {

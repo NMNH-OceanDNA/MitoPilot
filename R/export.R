@@ -27,6 +27,38 @@ check_single_path <- function(units) {
   invisible(TRUE)
 }
 
+# Join shared by export_group_units() and export_left_out(): the Export table's
+# own gate (kept contig, assembly and annotation both locked).
+EXPORT_GROUP_FROM <- "FROM export e
+  LEFT JOIN assemblies asm ON asm.ID = e.ID AND asm.path = e.path AND asm.scaffold = e.scaffold
+  LEFT JOIN assemble a ON a.ID = e.ID
+  LEFT JOIN annotate an ON an.ID = e.ID AND an.path = e.path AND an.scaffold = e.scaffold
+  WHERE e.export_group = ? AND"
+# A user-assembly contig with no annotate row of its own follows the sample's.
+EXPORT_GROUP_OK <- "(asm.ignore = 0 AND COALESCE(a.assemble_lock, 0) = 1
+  AND COALESCE(an.annotate_lock,
+    (SELECT MAX(x.annotate_lock) FROM annotate x WHERE x.ID = e.ID), 0) = 1)"
+
+#' Units of an export group that its export writes
+#' @return data.frame(ID, path, scaffold)
+#' @noRd
+export_group_units <- function(con, group) {
+  DBI::dbGetQuery(con, paste("SELECT e.ID, e.path, e.scaffold", EXPORT_GROUP_FROM,
+    EXPORT_GROUP_OK, "ORDER BY e.ID, e.path, e.scaffold"), params = list(group))
+}
+
+#' Units of an export group that its export leaves out, and why
+#' @return data.frame(ID, path, scaffold, why)
+#' @noRd
+export_left_out <- function(con, group) {
+  DBI::dbGetQuery(con, paste(
+    "SELECT e.ID, e.path, e.scaffold,
+       CASE WHEN asm.ignore IS NOT 0 THEN 'assembly ignored'
+            WHEN COALESCE(a.assemble_lock, 0) != 1 THEN 'assembly not locked'
+            ELSE 'annotation not locked' END AS why", EXPORT_GROUP_FROM,
+    "NOT", EXPORT_GROUP_OK, "ORDER BY e.ID, e.path, e.scaffold"), params = list(group))
+}
+
 #' Curation-options profile for one export unit
 #'
 #' A user-supplied assembly is annotated as one genome, so a single `annotate`
@@ -364,14 +396,7 @@ export_files <- function(
     dplyr::select(ID, path, scaffold)
 
   if (length(group) == 1) {
-    units <- unit_src |>
-      dplyr::inner_join(
-        dplyr::tbl(con, "export") |>
-          dplyr::filter(export_group == !!group) |>
-          dplyr::select(ID, path, scaffold),
-        by = c("ID", "path", "scaffold")
-      ) |>
-      dplyr::collect()
+    units <- export_group_units(con, group)
     group_pth <- file.path(out_dir, "export", group)
     unlink(group_pth, recursive = TRUE)
     group_gff_pth <- file.path(group_pth, "GFFs")
@@ -1376,8 +1401,8 @@ export_files <- function(
   if (length(group) == 1) {
     DBI::dbExecute(
       con,
-      "UPDATE export SET export_time_stamp = ? WHERE export_group = ?",
-      params = list(as.integer(Sys.time()), group)
+      "UPDATE export SET export_time_stamp = ? WHERE ID = ? AND path = ? AND scaffold = ?",
+      params = list(rep(as.integer(Sys.time()), nrow(units)), units$ID, units$path, units$scaffold)
     )
   }
 
@@ -1468,16 +1493,7 @@ make_PCG_alignments <- function(
 #' @noRd
 get_export_PCG_annotations <- function(con, group) {
   # Units in the group, with the SeqID that labels each record downstream.
-  units <- dplyr::tbl(con, "assemblies") |>
-    dplyr::filter(ignore == 0) |>
-    dplyr::select(ID, path, scaffold) |>
-    dplyr::inner_join(
-      dplyr::tbl(con, "export") |>
-        dplyr::filter(export_group == !!group) |>
-        dplyr::select(ID, path, scaffold),
-      by = c("ID", "path", "scaffold")
-    ) |>
-    dplyr::collect() |>
+  units <- export_group_units(con, group) |>
     dplyr::arrange(ID, path, scaffold) |>
     dplyr::group_by(ID) |>
     dplyr::mutate(n_units = dplyr::n()) |>
