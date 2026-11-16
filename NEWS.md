@@ -1,5 +1,7 @@
 # MitoPilot (development version)
 
+- **Annotate details: Rotate.** A new "Rotate" button next to "Linearize" rotates a circular assembly so it starts on a feature you pick from a list. Picking a feature on the minus strand also reverse-complements the assembly, after a warning, so the chosen feature always starts at position 1 reading forward. Annotations, coverage, the sequence and synteny views, and exports all follow, and "Restore assembly" undoes it.
+
 - **Fix: circular assemblies stay on their start gene after curation.** When curation moved the start of the start gene (for example, extending it to an earlier start codon), the gene ended up spanning the origin and the assembly no longer began on it. The assembly is now rotated again at the end of curation so the start gene begins at position 1.
 
 - **Export: a group export writes only locked assemblies.** An assembly that was put in an export group and later unlocked or ignored used to be written anyway, without appearing in the Export table. It is now left out, and the Export Data window lists each assembly left out and why. Only assemblies that were written are marked as exported. Exporting by sample ID from R (`export_files(IDs = )`) is unchanged.

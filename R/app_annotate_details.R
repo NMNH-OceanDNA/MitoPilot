@@ -1954,6 +1954,153 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       load_blast_ref(active_ref_acc())
     }) # END LINEARIZE
 
+    # Reorient ----
+    # Rotate a circular assembly to start on a chosen feature. The picker
+    # replaces the details window; Cancel and the header X reopen it.
+    reorient_genes <- reactiveVal(NULL)
+    reorient_target <- NULL
+    observeEvent(input$reorient, {
+      if (lock_blocked()) req(F)
+      if (!unit_is_circ()) {
+        mp_toast("Only circular assemblies can be rotated.", type = "warning")
+        req(F)
+      }
+      if (!is.null(rv$editing) && editing_unsaved(rv$editing$idx)) {
+        mp_toast("Save or discard your annotation edits first.", type = "warning")
+        req(F)
+      }
+      genes <- rv$annotations |>
+        dplyr::filter(!is.na(pos1), pos1 > 0) |>
+        dplyr::arrange(pos1) |>
+        dplyr::select(type, gene, pos1, pos2, length, direction)
+      if (nrow(genes) == 0) {
+        mp_toast("This assembly has no annotations to start on.", type = "warning")
+        req(F)
+      }
+      reorient_genes(genes)
+      showModal(modalDialog(
+        title = mp_modal_title(
+          "Rotate assembly",
+          subtitle = paste(
+            "Pick the feature the assembly should start on. A feature on the",
+            "minus strand also flips the assembly, so it reads forward."
+          )
+        ),
+        reactable::reactableOutput(ns("reorient_table")),
+        footer = mp_footer(
+          primary = actionButton(ns("reorient_go"), "Rotate"),
+          dismiss = NULL,
+          extra = actionButton(ns("reorient_cancel"), "Cancel")
+        ),
+        easyClose = FALSE
+      ))
+      shinyjs::runjs(sprintf(
+        "setTimeout(function(){
+           var b = document.querySelector('#shiny-modal .modal-header .close');
+           if (b) { b.removeAttribute('data-dismiss');
+             b.addEventListener('click', function() {
+               Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
+             }); }
+         }, 0);",
+        ns("reorient_cancel")
+      ))
+    })
+    output$reorient_table <- reactable::renderReactable({
+      reactable(
+        req(reorient_genes()),
+        compact = TRUE, striped = TRUE, wrap = FALSE,
+        onClick = "select", selection = "single",
+        pagination = FALSE, height = 420,
+        rowStyle = rt_highlight_row(),
+        columns = list(
+          type = colDef(name = "Type", maxWidth = 90, filterable = TRUE),
+          gene = colDef(name = "Gene", filterable = TRUE),
+          pos1 = colDef(name = "Start"),
+          pos2 = colDef(name = "End"),
+          length = colDef(name = "Length"),
+          direction = colDef(name = "Direction", align = "center")
+        )
+      )
+    })
+    observeEvent(input$reorient_cancel, {
+      reopen_details()
+    })
+    observeEvent(input$reorient_go, {
+      sel <- reactable::getReactableState("reorient_table", "selected")
+      if (length(sel) != 1) {
+        mp_toast("Select the feature to start on.", type = "warning")
+        req(F)
+      }
+      reorient_target <<- reorient_genes()[sel, ]
+      if (identical(reorient_target$direction, "-")) {
+        mp_confirm(
+          ns("reorient_flip_confirm"),
+          title = "This will flip the strand",
+          text = stringr::str_glue(
+            "{reorient_target$gene} is on the minus strand. The whole assembly ",
+            "will be reverse-complemented so it starts on {reorient_target$gene} ",
+            "reading forward, and every feature will change strand. ",
+            "Use \"Restore assembly\" to undo."
+          ),
+          action_label = "Flip and rotate",
+          danger = TRUE
+        )
+      } else {
+        run_reorient()
+      }
+    })
+    observeEvent(input$reorient_flip_confirm, ignoreNULL = TRUE, {
+      req(isTRUE(input$reorient_flip_confirm))
+      run_reorient()
+    })
+    run_reorient <- function() {
+      tgt <- reorient_target
+      show_edit_waiter("Rotating assembly, hold tight...")
+      # one tick later, so the overlay paints before the blocking work starts
+      shinyjs::delay(100, {
+        tryCatch({
+          u <- rv$updating
+          res <- reorient_assembly_unit(
+            session$userData$con, u$ID, u$path, u$scaffold,
+            session$userData$dir_out, tgt$gene, tgt$pos1
+          )
+          note <- stringr::str_glue(
+            "EDITED: rotated {res$rotated} bp to start on {res$gene}",
+            "{if (res$flipped) ' and flipped strand' else ''}"
+          )
+          cur_notes <- (input$notes %||% rv$updating$annotate_notes) %|NA|% ""
+          rv$updating$annotate_notes <- stringr::str_remove(
+            paste(note, cur_notes, sep = "; "), "; $"
+          )
+          rv$updating$structure <- DBI::dbGetQuery(
+            session$userData$con,
+            "SELECT structure FROM annotate WHERE ID = ? AND path = ? AND scaffold = ?",
+            params = list(u$ID, u$path, u$scaffold)
+          )$structure[1]
+          update_annotate_unit("annotate_notes")
+          rv$data <- rv$data |>
+            dplyr::rows_update(
+              rv$updating[, c("ID", "path", "scaffold", "structure", "annotate_notes")],
+              by = c("ID", "path", "scaffold")
+            )
+          bump_asmb_edit()
+          trigger("update_annotate_table")
+          trigger("refresh_export")
+          # Full reload off the reoriented record; reopens the details window.
+          trigger("annotations_modal")
+          mp_toast(
+            stringr::str_glue(
+              "Assembly now starts on {res$gene}",
+              "{if (res$flipped) ' (strand flipped)' else ''}."
+            ),
+            type = "message"
+          )
+        }, error = function(e) {
+          mp_alert(title = "Rotate failed", text = conditionMessage(e), type = "error")
+        }, finally = waiter::waiter_hide())
+      })
+    }
+
     # Assembly edits: trim unannotated ends / restore ----
     # Trimming is fixed to the outermost annotated feature, so no feature is ever
     # dropped or cut and the counts, spans and gene order all stay valid. Export
@@ -2078,18 +2225,34 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         "Trim unannotated ends"
       }
       tagList(
-        if (is.na(reason)) {
-          actionButton(ns("trim_ends"), lbl, icon = icon("scissors"))
-        } else {
-          tags$span(
-            title = reason,
-            actionButton(ns("trim_ends"), lbl, icon = icon("scissors")) |>
-              shinyjs::disabled()
+        div(
+          if (is.na(reason)) {
+            actionButton(ns("trim_ends"), lbl, icon = icon("scissors"))
+          } else {
+            tags$span(
+              title = reason,
+              actionButton(ns("trim_ends"), lbl, icon = icon("scissors")) |>
+                shinyjs::disabled()
+            )
+          },
+          mp_help_tip(
+            "Removes sequence before the first and after the last annotation.",
+            label = "Trim unannotated ends"
           )
-        },
+        ),
         if (isTRUE(st$edited)) {
           b <- actionButton(ns("restore_asmb"), "Restore assembly", icon = icon("rotate-left"))
-          if (locked()) shinyjs::disabled(b) else b
+          div(
+            if (locked()) shinyjs::disabled(b) else b,
+            mp_help_tip(
+              paste(
+                "Puts the assembly and its annotations back to how they were",
+                "before the first Linearize, Rotate, or Trim. Annotation edits",
+                "made since then are lost."
+              ),
+              label = "Restore assembly"
+            )
+          )
         }
       )
     })
@@ -4260,7 +4423,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     },
     uiOutput(ns("outlier_flag_banner")),
     # Assembly-level sequence edits: above the table they rewrite, each with a
-    # one-line caption saying what it does (theme T16, C10).
+    # help icon saying what it does (theme T16, C10).
     div(
       style = paste(
         "display: flex; flex-wrap: wrap; align-items: flex-start;",
@@ -4269,18 +4432,19 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
       div(
         off(actionButton(ns("linearize"), "Linearize",
                          icon = icon("arrows-left-right-to-line"))),
-        div(
-          class = "mp-table-status", style = "margin: 2px 0 0 0;",
-          "Breaks a circular assembly before or after the selected feature."
+        mp_help_tip(
+          "Breaks a circular assembly before or after the selected feature.",
+          label = "Linearize"
         )
       ),
       div(
-        uiOutput(ns("asmb_edit_controls"), inline = TRUE, style = "display: contents;"),
-        div(
-          class = "mp-table-status", style = "margin: 2px 0 0 0;",
-          "Removes sequence before the first and after the last annotation."
+        off(actionButton(ns("reorient"), "Rotate", icon = icon("rotate"))),
+        mp_help_tip(
+          "Rotates a circular assembly to start on a chosen feature.",
+          label = "Rotate"
         )
-      )
+      ),
+      uiOutput(ns("asmb_edit_controls"), inline = TRUE, style = "display: contents;")
     ),
     tags$details(
       id = ns("annotation_table_details"),
