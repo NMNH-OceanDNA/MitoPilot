@@ -1,5 +1,7 @@
 # MitoPilot (development version)
 
+- **Fix: circular assemblies stay on their start gene after curation.** When curation moved the start of the start gene (for example, extending it to an earlier start codon), the gene ended up spanning the origin and the assembly no longer began on it. The assembly is now rotated again at the end of curation so the start gene begins at position 1.
+
 - **Export: a group export writes only locked assemblies.** An assembly that was put in an export group and later unlocked or ignored used to be written anyway, without appearing in the Export table. It is now left out, and the Export Data window lists each assembly left out and why. Only assemblies that were written are marked as exported. Exporting by sample ID from R (`export_files(IDs = )`) is unchanged.
 
 - **Curation rulesets are now versioned.** Each clade ruleset carries its own version (all start at v1.0), separate from the package version, and changes only when that clade's settings change. The version shows in the Ruleset Browser, in the ruleset picker of the curation options, and is saved with the project. The curation options also say when a project's saved rules differ from the package ruleset or when a newer version is available; editing and saving the options moves the project to the newer version.
