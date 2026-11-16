@@ -373,51 +373,32 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       }
     })
 
-    # Header status pill. One component, one casing, and a value nobody has set
-    # reads "not set" rather than NA (theme T11).
-    status_badge <- function(label, state, yes_tone = "success") {
-      val <- if (is.na(state)) "not set" else tolower(as.character(state))
-      tone <- if (identical(val, "yes")) yes_tone else "neutral"
-      span(class = paste0("mp-pill mp-pill-", tone), paste0(label, ": ", val))
-    }
-
-    # Title-area passive badges, mirrored by the toggle group beside them.
-    output$status_badges <- shiny::renderUI({
-      tagList(
-        status_badge("Species ID verified", rv$updating$ID_verified),
-        status_badge("Reviewed", rv$updating$reviewed),
-        status_badge("Problematic", rv$updating$problematic, yes_tone = "warning"),
-        status_badge("Partial", rv$updating$partial, yes_tone = "warning")
-      )
-    })
-
-    # Header toggle button. mp_flag_next() picks the value the click will write
-    # and the label that names it, so the two can never disagree (theme T02).
-    # Tone mirrors the pill beside it: coloured while the flag is set, plain
-    # otherwise, so the button reads as the flag's current state.
+    # Header flag chip: one control per flag that both shows and flips it.
+    # Filled with a check while the flag is set, plain otherwise, and still
+    # readable when a lock disables it. mp_flag_next() picks the value the
+    # click will write (theme T02).
     toggle_btn <- function(id, label, state, title, off = "no", tone = "success") {
-      nxt <- mp_flag_next(state, off = off)
-      set <- identical(nxt, "yes")
+      on <- !identical(mp_flag_next(state, off = off), "yes")
       btn <- actionButton(
-        id,
-        paste(if (set) "Mark" else "Clear", label),
-        icon = icon(if (set) "check" else "minus"),
-        class = paste("btn-sm btn-default", if (!set) paste0("mp-btn-", tone)),
-        title = title
+        id, label,
+        icon = if (on) icon("check"),
+        class = paste("btn-sm btn-default mp-flag-chip", if (on) paste0("mp-btn-", tone)),
+        title = paste0(title, ". Click to ", if (on) "clear" else "set", "."),
+        `aria-pressed` = if (on) "true" else "false"
       )
       if (locked()) shinyjs::disabled(btn) else btn
     }
 
     output$status_toggles <- shiny::renderUI({
       tagList(
-        toggle_btn(ns("ID_verified"), "ID Verified", rv$updating$ID_verified,
-                   "Record whether the species identification has been checked"),
+        toggle_btn(ns("ID_verified"), "ID verified", rv$updating$ID_verified,
+                   "The species identification has been checked"),
         toggle_btn(ns("reviewed"), "Reviewed", rv$updating$reviewed,
-                   "Record whether this assembly has been reviewed"),
+                   "This assembly has been reviewed"),
         toggle_btn(ns("problematic"), "Problematic", rv$updating$problematic,
-                   "Flag this assembly for another look", off = NA_character_, tone = "warning"),
+                   "This assembly needs another look", off = NA_character_, tone = "warning"),
         toggle_btn(ns("partial"), "Partial", rv$updating$partial,
-                   "Flag this assembly as an incomplete mitogenome", tone = "warning")
+                   "This assembly is an incomplete mitogenome", tone = "warning")
       )
     })
 
@@ -4372,7 +4353,6 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
           "display: flex; align-items: center; gap: 8px;",
           "flex-wrap: wrap; margin-top: 8px;"
         ),
-        uiOutput(ns("status_badges"), inline = TRUE, style = "display: contents;"),
         uiOutput(ns("status_toggles"), inline = TRUE, style = "display: contents;")
       )
     )),

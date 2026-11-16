@@ -112,7 +112,11 @@ p.mp-help-text {
   color: var(--mp-primary);
 }
 
-/* Flag toggle buttons carry the tone of the pill they set. */
+/* Header flag chips: filled while the flag is set, and still legible when a
+   lock disables them. */
+.mp-flag-chip { border-radius: 999px; }
+.mp-flag-chip[disabled] { opacity: 0.8; }
+
 .mp-btn-success, .mp-btn-success:hover, .mp-btn-success:focus {
   background-color: var(--mp-success-soft);
   border-color: var(--mp-success);
