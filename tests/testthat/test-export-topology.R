@@ -44,7 +44,7 @@ run_topology_export <- function(scaffold_topology,
     ID = "s1", path = 1L, scaffold = as.integer(scafs), export_group = "g1",
     export_time_stamp = NA_integer_, stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "annotate", data.frame(
-    ID = "s1", path = 1L, scaffold = as.integer(annotate_scaffolds),
+    annotate_lock = 1L, ID = "s1", path = 1L, scaffold = as.integer(annotate_scaffolds),
     topology = annotate_topology, partial = "no", curate_opts = "default",
     stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "curate_opts", data.frame(
@@ -53,7 +53,7 @@ run_topology_export <- function(scaffold_topology,
   DBI::dbWriteTable(con, "samples", data.frame(
     ID = "s1", Taxon = "Testus testus", genetic_code = 2L, stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "assemble", data.frame(
-    ID = "s1", blast_accession = "NC_000001", blast_accession_auto = 0L,
+    assemble_lock = 1L, ID = "s1", blast_accession = "NC_000001", blast_accession_auto = 0L,
     poor_blast_ref = "ok", stringsAsFactors = FALSE))
   DBI::dbDisconnect(con)
 
@@ -228,8 +228,9 @@ userasmb_db <- function() {
   DBI::dbWriteTable(con, "export", data.frame(
     ID = "s1", path = 1L, scaffold = 1:2, export_group = "g1",
     export_time_stamp = NA_integer_, stringsAsFactors = FALSE))
+  DBI::dbWriteTable(con, "assemble", data.frame(ID = c("s1", "s2"), assemble_lock = 1L))
   DBI::dbWriteTable(con, "annotate", data.frame(
-    ID = "s1", path = 1L, scaffold = 1L, topology = "fragmented",
+    annotate_lock = 1L, ID = "s1", path = 1L, scaffold = 1L, topology = "fragmented",
     partial = "no", curate_opts = "default", stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "curate_opts", data.frame(
     curate_opts = "default",
@@ -280,8 +281,9 @@ join_db <- function() {
   DBI::dbWriteTable(con, "export", data.frame(
     ID = "s1", path = 1L, scaffold = 1L, export_group = "g1",
     export_time_stamp = NA_integer_, stringsAsFactors = FALSE))
+  DBI::dbWriteTable(con, "assemble", data.frame(ID = c("s1", "s2"), assemble_lock = 1L))
   DBI::dbWriteTable(con, "annotate", data.frame(
-    ID = "s1", path = 1L, scaffold = 1L, topology = "circular",
+    annotate_lock = 1L, ID = "s1", path = 1L, scaffold = 1L, topology = "circular",
     partial = "no", curate_opts = "default", stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "curate_opts", data.frame(
     curate_opts = "default",
@@ -339,8 +341,9 @@ test_that("an internal stop codon is always flagged in the outlier review", {
   DBI::dbWriteTable(con, "export", data.frame(
     ID = c("s1", "s2"), path = 1L, scaffold = 1L, export_group = "g1",
     export_time_stamp = NA_integer_, stringsAsFactors = FALSE))
+  DBI::dbWriteTable(con, "assemble", data.frame(ID = c("s1", "s2"), assemble_lock = 1L))
   DBI::dbWriteTable(con, "annotate", data.frame(
-    ID = c("s1", "s2"), path = 1L, scaffold = 1L, topology = "circular",
+    annotate_lock = 1L, ID = c("s1", "s2"), path = 1L, scaffold = 1L, topology = "circular",
     partial = "no", curate_opts = "default", stringsAsFactors = FALSE))
   DBI::dbWriteTable(con, "curate_opts", data.frame(
     curate_opts = "default", params = '{"default_rules":{"PCG":{"intron":false}}}',
@@ -360,4 +363,19 @@ test_that("an internal stop codon is always flagged in the outlier review", {
   # the other tests (offsets, identity) did not fire on this pair
   expect_false(res$flags$start_flag)
   expect_false(res$flags$stop_flag)
+})
+
+test_that("a group export leaves out a unit that is no longer locked", {
+  d <- withr::local_tempdir()
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(d, ".sqlite"))
+  withr::defer(DBI::dbDisconnect(con))
+  u <- data.frame(ID = c("s1", "s2", "s3"), path = 1L, scaffold = 1L)
+  DBI::dbWriteTable(con, "export", cbind(u, export_group = "g1"))
+  DBI::dbWriteTable(con, "assemblies", cbind(u, ignore = c(0L, 0L, 1L)))
+  DBI::dbWriteTable(con, "assemble", data.frame(ID = u$ID, assemble_lock = 1L))
+  DBI::dbWriteTable(con, "annotate", cbind(u, annotate_lock = c(1L, 0L, 1L)))
+  expect_equal(export_group_units(con, "g1")$ID, "s1")
+  out <- export_left_out(con, "g1")
+  expect_equal(out$ID, c("s2", "s3"))
+  expect_equal(out$why, c("annotation not locked", "assembly ignored"))
 })

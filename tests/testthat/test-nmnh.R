@@ -211,12 +211,12 @@ test_that("export writes NMNH values and drops the empty modifier", {
                                                   topology = "circular", sequence = sq))
   DBI::dbWriteTable(con, "export", data.frame(ID = "s1", path = 1L, scaffold = 1L,
                                               export_group = "g1", export_time_stamp = NA_integer_))
-  DBI::dbWriteTable(con, "annotate", data.frame(ID = "s1", path = 1L, scaffold = 1L, topology = "circular",
+  DBI::dbWriteTable(con, "annotate", data.frame(annotate_lock = 1L, ID = "s1", path = 1L, scaffold = 1L, topology = "circular",
                                                 partial = "no", curate_opts = "default"))
   DBI::dbWriteTable(con, "curate_opts", data.frame(curate_opts = "default", params = "{}", linear_complete = 0L))
   DBI::dbWriteTable(con, "samples", data.frame(ID = "s1", Taxon = "Testus testus", genetic_code = 2L,
                                                specimen_voucher = "usnm:fish:1"))
-  DBI::dbWriteTable(con, "assemble", data.frame(ID = "s1", blast_accession = "NC_000001",
+  DBI::dbWriteTable(con, "assemble", data.frame(assemble_lock = 1L, ID = "s1", blast_accession = "NC_000001",
                                                 blast_accession_auto = 0L, poor_blast_ref = "ok"))
   DBI::dbDisconnect(con)
   local_mocked_bindings(.gbif_get = function(path) stop("offline"))
