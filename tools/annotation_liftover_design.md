@@ -323,3 +323,24 @@ Behavior:
   curated coordinates/codons, reference hits, validation warnings.
 - Scratch files for a lift are removed after success; kept after a failure
   and named in the error text.
+
+## Addendum 2026-11-17 (3): validate the lifted gene against its neighbors
+
+Decision (user): the lifted gene must get the neighbor-based validation
+warnings a pipeline run would give it (overlaps, tRNA within a PCG or rRNA,
+duplicates), instead of being validated alone.
+
+- Validation of the new row runs against the unit's full live annotation
+  table (existing non-deleted rows plus the new row), for both the in-app
+  (tRNA) and the Nextflow (PCG, rRNA) paths. Curation still runs on the new
+  row alone.
+- The new row takes all warnings validation gives it.
+- Existing rows are changed in one way only: a warning that validation
+  raises on an existing row with the new gene present, and does not raise
+  without it, is appended to that row. Nothing is removed from existing
+  rows, and no other field of an existing row changes.
+- Whole-table summaries (missing and extra genes, counts) keep coming from
+  the modal's existing count refresh.
+- Unchanged: the overlap confirm (more than a quarter of either gene), the
+  same-position refusal, and the rule that uncurated rows do not get
+  reference-comparison warnings.

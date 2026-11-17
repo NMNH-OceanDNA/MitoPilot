@@ -2305,7 +2305,11 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       row$faa <- if (row$type == "PCG") "aa" else NA_character_
       row <- row[, intersect(names(rv$annotations), names(row)), drop = FALSE]
       old <- rv$annotations
-      rv$annotations <- dplyr::bind_rows(old, row) |> dplyr::arrange(pos1)
+      ann <- old
+      nb <- r$neighbors
+      i <- match(paste(nb$gene, nb$pos1), paste(ann$gene, ann$pos1))
+      ann$warnings[i] <- nb$warnings
+      rv$annotations <- dplyr::bind_rows(ann, row) |> dplyr::arrange(pos1)
       tryCatch(persist_annotations(), error = function(e) {
         rv$annotations <- old
         stop(e)
@@ -2338,7 +2342,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       shinyjs::delay(100, {
         res <- tryCatch({
           a <- lift_inputs(st, k, u)
-          lift_commit(do.call(liftover_annotate, a$args))
+          lift_commit(do.call(liftover_annotate, c(a$args, list(existing = rv$annotations))))
         }, error = function(e) e, finally = waiter::waiter_hide())
         lift_report(res)
       })
@@ -2439,7 +2443,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         } else {
           lift_tok <<- NULL
           waiter::waiter_hide()
-          res <- tryCatch(lift_commit(liftover_finish(j$st, j$st$dir)), error = function(e) {
+          res <- tryCatch(lift_commit(liftover_finish(j$st, j$st$dir, existing = rv$annotations)), error = function(e) {
             simpleError(paste0(conditionMessage(e), " Files from this attempt are kept in ", j$st$dir, "."))
           })
           if (!inherits(res, "error")) unlink(j$st$dir, recursive = TRUE)
@@ -2482,7 +2486,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       f <- lift_fail
       lift_fail <<- NULL
       req(f, isTRUE(input$liftover_nf_skip))
-      lift_report(tryCatch(lift_commit(liftover_finish(f$st, NULL, f$reason)), error = function(e) e))
+      lift_report(tryCatch(lift_commit(liftover_finish(f$st, NULL, f$reason, existing = rv$annotations)), error = function(e) e))
     })
     session$onSessionEnded(function() {
       for (j in c(list(isolate(lift_job())), lift_dying)) {

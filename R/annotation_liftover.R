@@ -223,14 +223,16 @@ liftover_curate_local <- function(state) {
   NULL
 }
 
-#' Finish a lift: guard, validate, strip the pad row
+#' Finish a lift: guard, validate against the unit's live rows, strip the pad row
 #'
-#' `curated_dir` holds `curate/` (and optionally `validate/`) outputs for the
-#' prepared files; NULL adds the row uncurated with `skip_reason`. Returns
-#' list(row = 1-row data.frame with the annotations table columns, curated).
-#' Stops with a user-readable message on failure.
+#' `curated_dir` holds the `curate/` outputs for the prepared files; NULL adds
+#' the row uncurated with `skip_reason`. `existing` is the unit's stored
+#' annotations. Returns list(row = 1-row data.frame with the annotations table
+#' columns, curated, neighbors = existing rows (gene, pos1, warnings) whose
+#' warnings gain what the new row causes). Stops with a user-readable message
+#' on failure.
 #' @noRd
-liftover_finish <- function(state, curated_dir, skip_reason = NULL) {
+liftover_finish <- function(state, curated_dir, skip_reason = NULL, existing = NULL) {
   st <- state
   curated <- !is.null(curated_dir)
   if (curated) {
@@ -249,21 +251,49 @@ liftover_finish <- function(state, curated_dir, skip_reason = NULL) {
   if (length(keep) != 1L || is.na(cur$pos1[keep]) || is.na(cur$pos2[keep])) {
     stop("Liftover failed: curation removed the annotation.", call. = FALSE)
   }
-  tsv <- file.path(curated_dir %||% "", "validate", sub("\\.csv$", ".tsv", basename(st$ann_fn)))
-  if (curated && file.exists(tsv)) {
-    val <- utils::read.delim(tsv, quote = "", na.strings = "", colClasses = "character")
-  } else {
-    vdir <- file.path(st$dir, "validate")
-    dir.create(vdir, showWarnings = FALSE)
-    val_fn <- file.path(vdir, basename(st$ann_fn))
-    utils::write.csv(cur, val_fn, row.names = FALSE)
-    val <- validate_mito_core(
-      annotations_fn = val_fn, coverage_fn = st$coverage_fn,
-      params = st$curate_params, out_dir = vdir
-    )$annotations
-  }
   out <- cur[keep, , drop = FALSE]
-  out$warnings <- val$warnings[val$gene != ".liftover_pad"]
+  ex <- if (NROW(existing)) existing[!grepl("_DELETED_", existing$gene, fixed = TRUE), , drop = FALSE]
+  blank <- if (NROW(ex)) {
+    b <- ex[, intersect(names(cur), names(ex)), drop = FALSE]
+    b$contig <- st$row$contig
+    b$warnings <- NA_character_
+    b
+  }
+  vdir <- file.path(st$dir, "validate")
+  dir.create(vdir, showWarnings = FALSE)
+  chr <- function(d) if (!is.null(d)) dplyr::mutate(d, dplyr::across(dplyr::everything(), as.character))
+  # Warnings per row of `tab`, validated sorted by position with the pad second
+  # so the first and last genes stay first and last
+  validate_rows <- function(tab, tag) {
+    o <- order(as.numeric(tab$pos1))
+    tab <- tab[o, , drop = FALSE]
+    tab <- dplyr::bind_rows(tab[1, ], chr(st$pad), tab[-1, ])
+    fn <- file.path(vdir, paste0("liftover_annotations_", tag, ".csv"))
+    utils::write.csv(tab, fn, row.names = FALSE)
+    w <- validate_mito_core(
+      annotations_fn = fn, coverage_fn = st$coverage_fn,
+      params = st$curate_params, out_dir = vdir
+    )$annotations$warnings[-2]
+    w[order(o)]
+  }
+  w_with <- validate_rows(dplyr::bind_rows(chr(blank), chr(out)), "with")
+  out$warnings <- w_with[length(w_with)]
+  neighbors <- data.frame(gene = character(), pos1 = numeric(), warnings = character())
+  if (NROW(ex)) {
+    w_without <- validate_rows(chr(blank), "without")
+    split_w <- function(x) {
+      x <- trimws(strsplit(x %|NA|% "", ";", fixed = TRUE)[[1]])
+      x[nzchar(x)]
+    }
+    add <- lapply(seq_len(nrow(ex)), function(j) {
+      setdiff(split_w(w_with[j]), c(split_w(w_without[j]), split_w(ex$warnings[j])))
+    })
+    i <- which(lengths(add) > 0)
+    neighbors <- data.frame(
+      gene = ex$gene[i], pos1 = ex$pos1[i],
+      warnings = vapply(i, function(j) semicolon_paste(ex$warnings[j], paste(add[[j]], collapse = "; ")), character(1))
+    )
+  }
   if (!curated) {
     # no reference hits were fetched, so these checks cannot be judged
     w <- trimws(strsplit(out$warnings %|NA|% "", ";", fixed = TRUE)[[1]])
@@ -277,21 +307,22 @@ liftover_finish <- function(state, curated_dir, skip_reason = NULL) {
   out$time_stamp <- as.numeric(Sys.time())
   out <- out[, LIFTOVER_ANN_COLS]
   rownames(out) <- NULL
-  list(row = out, curated = curated)
+  list(row = out, curated = curated, neighbors = neighbors)
 }
 
-#' Build a lifted annotation row, curate and validate it alone in this process
+#' Build a lifted annotation row, curate it alone and validate it with `existing`
+#' in this process
 #'
-#' Returns list(row = 1-row data.frame with the annotations table columns,
-#' curated = TRUE/FALSE). Stops with a user-readable message on failure.
+#' Returns what liftover_finish() returns. Stops with a user-readable message
+#' on failure.
 #' @noRd
 liftover_annotate <- function(hit, ref_feature, accession, unit, assembly, coverage_fn,
-                              curate_params, genetic_code, ref_dir, template) {
+                              curate_params, genetic_code, ref_dir, template, existing = NULL) {
   st <- liftover_prepare(hit, ref_feature, accession, unit, assembly, coverage_fn,
                          curate_params, genetic_code, ref_dir, template)
   on.exit(unlink(st$dir, recursive = TRUE), add = TRUE)
   reason <- liftover_curate_local(st)
-  liftover_finish(st, if (is.null(reason)) st$dir, reason)
+  liftover_finish(st, if (is.null(reason)) st$dir, reason, existing)
 }
 
 #' Candidate-reference BLAST JSONs a pipeline run gives curation for a sample

@@ -1,8 +1,8 @@
 nextflow.enable.dsl=2
 
-// Curate and validate one lifted annotation (plus its inert pad row) with the
-// released MitoPilot core functions. Launched by the app from a scratch folder
-// under <project>/.liftover/; never part of a pipeline run.
+// Curate one lifted annotation (plus its inert pad row) with the released
+// MitoPilot core function; the app validates it. Launched by the app from a
+// scratch folder under <project>/.liftover/; never part of a pipeline run.
 
 params.lift_annotations = null
 params.lift_assembly = null
@@ -25,16 +25,15 @@ process liftover_curate {
 
     output:
     path "curate"
-    path "validate"
 
     shell:
     cov = coverage.name == 'NO_FILE' ? 'NULL' : "'${coverage}'"
     refs = (blast_ref_files instanceof List ? blast_ref_files : [blast_ref_files]).join(' ')
     '''
     export OMP_NUM_THREADS=1
-    mkdir -p curate validate
+    mkdir -p curate
     # container engines may write as root; keep the scratch folder removable
-    trap 'chmod -R a+rwX curate validate 2>/dev/null || true' EXIT
+    trap 'chmod -R a+rwX curate 2>/dev/null || true' EXIT
     Rscript -e "withCallingHandlers( \
         MitoPilot:::curate_mito_core( \
             annotations_fn = '!{annotations}', \
@@ -51,12 +50,6 @@ process liftover_curate {
             ref_based_rc = FALSE \
         ), \
         warning = function(w) if (grepl('had status', conditionMessage(w))) stop(conditionMessage(w), call. = FALSE) \
-    )"
-    Rscript -e "MitoPilot:::validate_mito_core( \
-        annotations_fn = 'curate/!{annotations}', \
-        coverage_fn = !{cov}, \
-        params = '!{params.lift_params}', \
-        out_dir = 'validate' \
     )"
     '''
 }
