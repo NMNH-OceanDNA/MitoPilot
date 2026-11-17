@@ -480,3 +480,10 @@ document.addEventListener('click', function(e) {
   var m = Math.max.apply(null, twins.map(function() { return $(this).data('val') || 0; }).get());
   twins.data('val', m);
 }, true);
+
+// A "hold tight" overlay would otherwise spin forever once the app is gone
+$(document).on('shiny:disconnected', function() {
+  $('.waiter-overlay-content').html(
+    '<h4 style="color:white;">Connection to MitoPilot was lost.</h4>' +
+    '<p style="color:white;">Work in progress was not saved. Refresh the page to continue.</p>');
+});

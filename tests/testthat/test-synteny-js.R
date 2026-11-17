@@ -201,3 +201,96 @@ test_that("original track sits above the sample lanes, toggles off, and is not c
   expect_match(x$tip, "boundaries changed by curation"); expect_match(x$tip, "ND1")
   expect_equal(x$o2, 0); expect_true(x$shorter)
 })
+
+test_that("a reference click posts the feature to refInput; a sample click does not", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ var p = %s; p.refInput = 'sy-ref';
+    window.__handlers.mpsyn(p); window.mpsyn.whole('sy-canvas');
+    var v = window.mpsyn.state('sy-canvas');
+    var xs = 60 + (150 - v.viewStart) * v.ppc, xr = 60 + (60 - v.viewStart) * v.ppc;
+    window.mpsyn.click('sy-canvas', xs, 22 + 4 + 8); var n0 = window.__inputs.length;
+    window.mpsyn.click('sy-canvas', xr, v.height - 22 - 4 - 8);
+    var i = window.__inputs[window.__inputs.length - 1];
+    return JSON.stringify({n0:n0, n1:window.__inputs.length, name:i.name, v:i.value});})()", sy_payload()))
+  x <- L(r)
+  expect_equal(x$n0, 1); expect_equal(x$n1, 2); expect_equal(x$name, "sy-ref")
+  expect_equal(x$v[c("gene", "type", "pos1", "pos2", "dir")],
+               list(gene = "nad1", type = "PCG", pos1 = 14, pos2 = 124, dir = "+"))
+  expect_true(is.numeric(x$v$nonce))
+})
+
+# Colour just above a feature's top edge, where only a highlight border reaches.
+sy_hl_probe <- "(function(){
+  var id = 'sy-canvas', v = window.mpsyn.state(id), cv = document.getElementById(id);
+  var dpr = window.devicePixelRatio || 1, cx = cv.getContext('2d');
+  function probe(col, pred) {
+    var x = 60 + (col - v.viewStart) * v.ppc;
+    for (var y = 0; y < v.height; y++) {
+      var h = window.mpsyn.hitTest(id, x, y);
+      if (h && pred(h.f)) {
+        var d = cx.getImageData(Math.round(x * dpr), Math.floor((h.y0 - 1) * dpr), 1, 1).data;
+        return [d[0], d[1], d[2], d[3]];
+      }
+    }
+    return null;
+  }
+  return JSON.stringify({
+    lift: probe(265, function (f) { return f.row === 'lift1'; }),
+    plain: probe(160, function (f) { return f.row === 1; }),
+    ref: probe(60, function (f) { return f.track === 'ref'; })
+  });
+})()"
+sy_hl_payload <- function() sub(
+  "{row:1,gene:'nad1'",
+  "{row:'lift1',gene:'trnL',type:'tRNA',pos1:150,pos2:180,dir:'+',hl:true},{row:1,gene:'nad1'",
+  sub("refFeatures:[{gene:'nad1',type:'PCG',pos1:14,pos2:124,dir:'+'",
+      "refFeatures:[{gene:'nad1',type:'PCG',pos1:14,pos2:124,dir:'+',hl:true", sy_payload(), fixed = TRUE),
+  fixed = TRUE)
+hl_green <- function(px) length(px) == 4 && px[[2]] > 150 && px[[2]] - px[[1]] > 60 && px[[2]] - px[[3]] > 60
+
+test_that("highlighted features get a green border; plain ones do not", {
+  b <- sy_page()
+  js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); window.mpsyn.whole('sy-canvas'); })()", sy_hl_payload()))
+  x <- L(js(b, sy_hl_probe))
+  expect_true(hl_green(x$lift)); expect_true(hl_green(x$ref))
+  expect_false(hl_green(x$plain))
+  js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); window.mpsyn.whole('sy-canvas'); })()", sy_payload()))
+  x <- L(js(b, sy_hl_probe))
+  expect_null(x$lift); expect_false(hl_green(x$ref))
+})
+
+test_that("fit zooms to an extra placement by its row id", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); window.mpsyn.whole('sy-canvas');
+    var a = window.mpsyn.state('sy-canvas'); window.mpsyn.fit('sy-canvas', 'lift1');
+    var s = window.mpsyn.state('sy-canvas');
+    return JSON.stringify({ppc0: a.ppc, ppc: s.ppc, vs: s.viewStart, sel: s.selected,
+                           ve: s.viewStart + 940 / s.ppc}); })()", sy_hl_payload()))
+  x <- L(r)
+  expect_equal(x$sel, "lift1"); expect_gt(x$ppc, x$ppc0)
+  expect_true(x$vs <= 250 && x$vs > 200 && x$ve >= 281)
+})
+
+test_that("a viewer without input keeps its selected feature on sample and empty clicks", {
+  b <- sy_page()
+  r <- js(b, sprintf("(function(){ var p = %s; delete p.input;
+    window.__handlers.mpsyn(p); window.mpsyn.whole('sy-canvas'); window.mpsyn.fit('sy-canvas', 'lift1');
+    var v = window.mpsyn.state('sy-canvas'), s0 = v.selected;
+    window.mpsyn.click('sy-canvas', 60 + (150 - v.viewStart) * v.ppc, 22 + 4 + 8);
+    window.mpsyn.click('sy-canvas', 5, 5);
+    return JSON.stringify({s0:s0, s1:window.mpsyn.state('sy-canvas').selected});})()", sy_hl_payload()))
+  x <- L(r)
+  expect_equal(x$s0, "lift1"); expect_equal(x$s1, "lift1")
+})
+
+test_that("a fit asked for before the viewer has a width runs once it is laid out", {
+  b <- sy_page()
+  js(b, sprintf("(function(){ window.__handlers.mpsyn(%s); window.mpsyn.fit('sy-canvas', 'lift1');
+    window.__fitted = window.mpsyn.state('sy-canvas').ppc; window.mpsyn.whole('sy-canvas');
+    var w = document.getElementById('sy-canvas').parentElement; w.style.display = 'none';
+    window.mpsyn.fit('sy-canvas', 'lift1'); setTimeout(function(){ w.style.display = ''; }, 100); })()", sy_hl_payload()))
+  Sys.sleep(1)
+  x <- L(js(b, "JSON.stringify({s: window.mpsyn.state('sy-canvas'), want: window.__fitted})"))
+  expect_equal(x$s$selected, "lift1")
+  expect_equal(x$s$ppc, x$want)
+})
