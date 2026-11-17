@@ -368,3 +368,10 @@ $(document).ready(function() {
     '<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Continue anyway</button></div>' +
     '</div></div></div>').appendTo('body').modal().on('hidden.bs.modal', function() { $(this).remove(); });
 });
+
+// A "hold tight" overlay would otherwise spin forever once the app is gone
+$(document).on('shiny:disconnected', function() {
+  $('.waiter-overlay-content').html(
+    '<h4 style="color:white;">Connection to MitoPilot was lost.</h4>' +
+    '<p style="color:white;">Work in progress was not saved. Refresh the page to continue.</p>');
+});

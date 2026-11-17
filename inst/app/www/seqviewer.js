@@ -583,7 +583,7 @@
       if (pan) { self.viewStart += pan / self.ppb; self.clamp(); self.draw(); return; }
       self.zoom(Math.pow(1.15, -e.deltaY / 100), self.viewStart + (px - GUTTER) / self.ppb);
     }, { passive: false });
-    cv.addEventListener('mousedown', function (e) { dragging = { x: e.clientX, start: self.viewStart, moved: false }; });
+    cv.addEventListener('mousedown', function (e) { cv.style.cursor = ''; dragging = { x: e.clientX, start: self.viewStart, moved: false }; });
     window.addEventListener('mousemove', function (e) {
       if (!dragging) return;
       var dx = e.clientX - dragging.x; if (Math.abs(dx) > 2) dragging.moved = true;
@@ -598,6 +598,7 @@
     var hover = function (e, cv, hits) {
       var rect = cv.getBoundingClientRect(), px = e.clientX - rect.left, py = e.clientY - rect.top;
       var h = self.hitTest(px, py, hits), b = self.baseAt(self.viewStart + (px - GUTTER) / self.ppb);
+      if (!dragging) cv.style.cursor = h && h.f && self.input ? 'pointer' : '';
       if (!self.tip) return;
       if (!b) { self.tip.hidden = true; return; }
       var t = 'Position ' + b.pos.toLocaleString() + ', ' + b.base;

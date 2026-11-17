@@ -85,6 +85,7 @@
   // Same base shades as seqviewer.js; class colours as the old zoom panel.
   var BASE = { A: '#4faf45', C: '#e0a53f', G: '#e0555a', T: '#4a90d9', N: '#666666' };
   var CLS = ['#60BD68', '#E55330', '#CCCCCC'], CLS_NAME = ['match', 'mismatch', 'gap'];
+  var HL = '#19E019';
   var viewers = {};
   function ui() { return window.mpseq.ui; }
   function cssVar(n, f) { return ui().cssVar(n, f); }
@@ -99,7 +100,11 @@
     this.sFeats = []; this.rFeats = []; this.sLanes = 0; this.rLanes = 0; this.hits = [];
     this.bindControls();
     var self = this;
-    if (window.ResizeObserver) new ResizeObserver(function () { self.draw(); }).observe(this.wrap);
+    if (window.ResizeObserver) new ResizeObserver(function () {
+      if (self.pendingFit !== undefined && self.wrap.clientWidth) {
+        var row = self.pendingFit; delete self.pendingFit; self.fit(row);
+      } else self.draw();
+    }).observe(this.wrap);
     if (this.section) this.section.addEventListener('toggle', function () { self.draw(); });
   }
 
@@ -112,7 +117,7 @@
 
   Viewer.prototype.load = function (p) {
     var same = this.version === p.version && this.L === p.s.length;
-    this.input = p.input; this.version = p.version;
+    this.input = p.input; this.refInput = p.refInput; this.version = p.version;
     if (!same) {
       this.s = p.s; this.r = p.r; this.L = p.s.length;
       this.refLength = p.refLength; this.rotation = p.rotation; this.rc = !!p.refRc;
@@ -124,12 +129,13 @@
     var self = this;
     this.sFeats = (p.sampleFeatures || []).map(function (f) {
       return { row: f.row, gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: f.dir, track: 'sample',
-               c1: G.sampleCol(f.pos1, self.sNongap), c2: G.sampleCol(f.pos2, self.sNongap) };
+               hl: !!f.hl, c1: G.sampleCol(f.pos1, self.sNongap), c2: G.sampleCol(f.pos2, self.sNongap) };
     });
     var ctx = { rNongap: this.rNongap, refLength: this.refLength, rotation: this.rotation, rc: this.rc };
     this.rFeats = (p.refFeatures || []).map(function (f) {
       var m = G.refFeature(f, ctx);
-      return { gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: m.dir, track: 'ref', c1: m.c1, c2: m.c2 };
+      return { gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: m.dir, sdir: f.dir, track: 'ref',
+               hl: !!f.hl, c1: m.c1, c2: m.c2 };
     });
     this.sLanes = packLanes(this.sFeats, this.L); this.rLanes = packLanes(this.rFeats, this.L);
     this.selected = (p.selected === undefined || p.selected === null) ? null : p.selected;
@@ -169,6 +175,9 @@
   };
   Viewer.prototype.fit = function (row) {
     this.selected = (row === null || row === undefined) ? null : row;
+    // A dialog still opening has no width yet; fit once it is laid out.
+    if (!this.wrap.clientWidth) { this.pendingFit = row; return; }
+    delete this.pendingFit;
     var f = this.sFeats.find(function (x) { return x.row === row; });
     if (f) this.fitFeature(f); else this.draw();
   };
@@ -263,7 +272,9 @@
         c.closePath();
         c.fillStyle = col + '55'; c.fill();
         var sel = f.track === 'sample' && f.row === self.selected;
-        c.lineWidth = sel ? 2 : 1; c.strokeStyle = sel ? cssVar('--mp-primary', '#337ab7') : col; c.stroke();
+        if (f.hl) { c.lineWidth = sel ? 6 : 3; c.strokeStyle = HL; c.stroke(); }
+        var blue = sel && !f.hl;
+        c.lineWidth = blue ? 2 : 1; c.strokeStyle = blue ? cssVar('--mp-primary', '#337ab7') : col; c.stroke();
         if (x1 - x0 > c.measureText(f.gene).width + 8) {
           c.fillStyle = cssVar('--mp-text', '#333'); c.fillText(f.gene, (x0 + x1) / 2, y + h / 2);
         }
@@ -334,7 +345,15 @@
   };
   Viewer.prototype.click = function (px, py) {
     var h = this.hitTest(px, py);
-    if (h && h.f.track === 'ref') { this.fitFeature(h.f); return; }
+    if (h && h.f.track === 'ref') {
+      this.fitFeature(h.f);
+      if (this.refInput && window.Shiny) {
+        window.Shiny.setInputValue(this.refInput, { gene: h.f.gene, type: h.f.type, pos1: h.f.pos1,
+          pos2: h.f.pos2, dir: h.f.sdir, nonce: Date.now() }, { priority: 'event' });
+      }
+      return;
+    }
+    if (!this.input) return;
     this.selected = h ? h.f.row : null;
     if (h && this.input && window.Shiny) {
       window.Shiny.setInputValue(this.input, { row: h.f.row, nonce: Date.now() }, { priority: 'event' });
@@ -350,7 +369,7 @@
       if (pan) { self.viewStart += pan / self.ppc; self.clamp(); self.draw(); return; }
       self.zoom(Math.pow(1.15, -e.deltaY / 100), self.colF(px));
     }, { passive: false });
-    cv.addEventListener('mousedown', function (e) { dragging = { x: e.clientX, start: self.viewStart, moved: false }; });
+    cv.addEventListener('mousedown', function (e) { cv.style.cursor = ''; dragging = { x: e.clientX, start: self.viewStart, moved: false }; });
     window.addEventListener('mousemove', function (e) {
       if (!dragging) return;
       var dx = e.clientX - dragging.x; if (Math.abs(dx) > 2) dragging.moved = true;
@@ -363,9 +382,11 @@
       dragging = null;
     });
     cv.addEventListener('mousemove', function (e) {
-      if (!self.tip) return;
       var rect = cv.getBoundingClientRect(), px = e.clientX - rect.left, py = e.clientY - rect.top;
-      var t = px < GUTTER ? '' : self.tipText(self.colAt(px), self.hitTest(px, py));
+      var h = px < GUTTER ? null : self.hitTest(px, py);
+      if (!dragging) cv.style.cursor = h && (h.f.track === 'ref' || self.input) ? 'pointer' : '';
+      if (!self.tip) return;
+      var t = px < GUTTER ? '' : self.tipText(self.colAt(px), h);
       if (!t) { self.tip.hidden = true; return; }
       self.tip.textContent = t; self.tip.hidden = false;
       var tw = self.tip.offsetWidth, th = self.tip.offsetHeight;
