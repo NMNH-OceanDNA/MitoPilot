@@ -143,6 +143,12 @@ To rerun specific samples:
 - lock all other samples
 - make sure your Nextflow command contains the `-resume` flag
 
+## How do I add a gene the annotator missed?
+
+In the Annotate details window, open **BLAST Reference Synteny**, click the missing gene in the reference track, and press **Lift over**.
+MitoPilot finds where that gene sits in your assembly and adds it as a new annotation once you pick a placement.
+See ["Add a missing gene from the reference"](Test-Project-Annotate.html#add-a-missing-gene-from-the-reference).
+
 ## Why does it take so long to edit a start/stop codon position?
 
 Every time you make a manual edit to the start or stop codon position, MitoPilot has to re-do the sequence alignment.

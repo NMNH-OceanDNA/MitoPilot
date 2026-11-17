@@ -230,7 +230,8 @@ orange above 5%, a sign of possible sequencing or assembly errors.
 mitogenome, with a percent-identity bar between them. Drag or scroll sideways to pan and
 scroll or pinch to zoom; zoomed in far enough, the bases of your sample and the reference
 appear with mismatches and gaps coloured. Click a gene in the sample track to select it in
-the table.
+the table. Click a gene in the reference track to zoom to it, then use **Lift over** to copy it to
+your assembly; see [Add a missing gene from the reference](#add-a-missing-gene-from-the-reference).
 
 The reference mitogenome shown in this plot is recorded in the export's
 `sample_info.csv` in the `ref_accession` column, as its GenBank accession
@@ -292,6 +293,43 @@ Other useful editing tools:
   region assembled poorly. 
 - **Align fewer refs** in the Alignment panel speeds up editing by restricting the alignment to the top
   five hits, which matters because the alignment is recomputed on every start/stop codon nudge.
+
+### Add a missing gene from the reference
+
+If the annotator missed a gene that the closest reference has, you can copy it over.
+Open **BLAST Reference Synteny** and click the gene in the reference track. The plot zooms to it
+and the blue **Lift over** button next to the zoom buttons takes on the gene's name. Click it to
+find where that gene sits in your assembly.
+
+![Lift over dialog with placements, alignment, and synteny view](figures/get-started/annotate-liftover-dialog.png)
+
+The table lists up to three placements, best first, with position, strand, identity, gaps, and any
+existing genes the placement overlaps. Pick one to see the reference gene aligned to it. tRNAs and
+rRNAs are shown as nucleotides; protein-coding genes are shown as protein when the placement
+starts with a valid start codon. The synteny view outlines the reference gene and every placement
+in bright green, with the selected placement drawn thicker.
+
+Two boxes set the quality cut-offs: **Min identity %** (default 85, never below 80) and
+**Max gaps %** (default 5, never above 10). Placements that miss the cut-offs are greyed out and
+cannot be chosen.
+
+Click **Add annotation** to add the placement as a new row. The tool is recorded as
+the reference accession plus `_liftover`, and the notes record the identity and gaps. If the
+placement overlaps an existing gene by more than a quarter of either gene's length, or your sample
+already has a gene with that name, you are asked to confirm first.
+
+Some limits to keep in mind:
+
+- tRNAs are curated in the app right away. Protein-coding genes and rRNAs are curated through a
+  short Nextflow run on your own computer, using the container (or no-container install) set in your
+  project's `.config`. It usually takes under a minute; the first time also downloads the curation
+  database into a `.liftover` folder in your project. You can cancel while it runs, and nothing is
+  added. If curation fails, you are told why and can add the gene with a "curation skipped" warning.
+- The new gene copies the strand of the reference gene, so a strand error in the reference record
+  carries over. Check the strand against the neighboring genes in the synteny view.
+- Deleting a lifted-over gene removes it for good; there is no **Restore**. Lift it over again to
+  bring it back.
+- Control regions and genes split into several pieces in the reference cannot be lifted over.
 
 You can record what you did in the **Notes** section; it saves automatically and is retained
 with the assembly.
