@@ -1,5 +1,9 @@
 # MitoPilot (development version)
 
+- **Curation uses one bundled reference database, with a checkbox for a custom one.** The curation options no longer have "reference folder" and "reference database" dropdowns. Curation uses the bundled `Metazoa_RefSeq235` database unless you tick "Use custom curation database" and enter the path to your database folder. `Metazoa_RefSeq89`, `Metazoa_RefSeq231`, and `Chordata` are no longer offered for curation (the first and last are still used for MITOS2 annotation). Existing projects set to one of those are moved to `Metazoa_RefSeq235` when the project is updated; re-run curation to apply, and expect small differences from earlier curation. `custom_curation_db()` now always builds on `Metazoa_RefSeq235`.
+
+- **Fix: no reference sequences in the Alignment view when curating with `Metazoa_RefSeq89` or `Chordata`.** These older databases could not be searched together with a sample's own BLAST references, so every gene was saved with no reference hits and gene boundaries were left uncurated. Curation now also stops with an error if a reference search fails, instead of saving empty results.
+
 - **Annotate details: Rotate.** A new "Rotate" button next to "Linearize" rotates a circular assembly so it starts on a feature you pick from a list. Picking a feature on the minus strand also reverse-complements the assembly, after a warning, so the chosen feature always starts at position 1 reading forward. Annotations, coverage, the sequence and synteny views, and exports all follow, and "Restore assembly" undoes it.
 
 - **Fix: circular assemblies stay on their start gene after curation.** When curation moved the start of the start gene (for example, extending it to an earlier start codon), the gene ended up spanning the origin and the assembly no longer began on it. The assembly is now rotated again at the end of curation so the start gene begins at position 1.

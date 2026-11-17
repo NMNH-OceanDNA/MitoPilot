@@ -44,7 +44,7 @@
 #' @param curate_memory Default memory (GB) for curation
 #' @param curate_target Default target database for curation
 #' @param curate_ref_db Default curation reference database (default =
-#'   "Metazoa_RefSeq235", the only bundled DB with rRNA BLAST references)
+#'   "Metazoa_RefSeq235", the only bundled curation database)
 #' @param max_blast_hits Maximum number of top BLAST hits to retain (default = 10)
 #' @param linear_complete Treat linear assemblies as complete genomes for the
 #'   export "completeness" field? By default only circular assemblies are

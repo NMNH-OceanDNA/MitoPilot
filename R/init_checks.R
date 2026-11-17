@@ -594,10 +594,10 @@ check_user_annotations <- function(mapping, assembly_path, annotation_path, iss,
     iss$warn("parameters: annotate_ref_db '", get("annotate_ref_db"),
              "' is not a bundled MITOS2 database (Metazoa_RefSeq89, Chordata)")
   }
-  if (ok1("curate_ref_db") && !grepl("^(Metazoa_RefSeq(89|231|235)|Chordata)(_custom)?$",
+  if (ok1("curate_ref_db") && !grepl("^Metazoa_RefSeq235(_custom)?$",
                                      get("curate_ref_db"))) {
     iss$warn("parameters: curate_ref_db '", get("curate_ref_db"),
-             "' is not a bundled curation database")
+             "' is not the bundled curation database (Metazoa_RefSeq235)")
   }
 
   # Resources: only what the user supplied; the shipped defaults are trusted ----

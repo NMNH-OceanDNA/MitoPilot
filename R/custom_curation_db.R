@@ -4,7 +4,7 @@
 #' Requires a CSV file containing three columns: "SeqID" = unique name to be used for sequence,
 #' "Gene" = name of gene,
 #' and "FASTA" = name of fasta file containing the protein sequence.
-#' Combines your sequences with Metazoa or Chordata NCBI RefSeq data.
+#' Combines your sequences with the bundled Metazoa NCBI RefSeq data (Metazoa_RefSeq235).
 #' Make sure to carefully consider what you are adding to the custom database.
 #' You should only use high-confidence sequences.
 #' Poor quality reference data will result in poorly curated gene models.
@@ -34,7 +34,7 @@
 #' @param genes_to_add Full path to CSV file containing three columns: SeqID = unique name to be used for sequence, Gene = name of gene, FASTA = name of fasta file containing the sequence
 #' @param gene_fasta_dir Full path to directory containing your gene FASTA files, one file per sequence
 #' @param path_to_makeblastdb Full path to makeblastdb, only necessary if not already in your PATH
-#' @param base_db Which base NCBI RefSeq database to use, "Metazoa" or "Chordata"? Default = "Metazoa"
+#' @param base_db Base NCBI RefSeq database. Only "Metazoa" (Metazoa_RefSeq235) is supported.
 #'
 #' @export
 #'
@@ -44,6 +44,10 @@ custom_curation_db <- function(path = ".",
                                gene_fasta_dir = NULL,
                                path_to_makeblastdb = NULL,
                                base_db = "Metazoa") {
+  if (base_db != "Metazoa") {
+    stop("base_db must be \"Metazoa\": custom curation databases are built on ",
+         "Metazoa_RefSeq235 (the Chordata base is no longer supported)")
+  }
   # read in user data
   setwd(path)
   data <- read.csv(genes_to_add, header = TRUE)
@@ -144,39 +148,21 @@ custom_curation_db <- function(path = ".",
   dir.create(file.path(path, "custom_curation_dbs", cur_dir),
              showWarnings = FALSE)
   # download the base curation database
-  if (base_db == "Metazoa") {
-    # Metazoa_RefSeq235 is the current base (includes the rRNA featureNuc BLAST
-    # DBs, which carry through to the custom database).
-    URL <- "https://raw.githubusercontent.com/Smithsonian/MitoPilot/refs/heads/main/ref_dbs/Mitos2/Metazoa_RefSeq235.tar.gz"
-    download.file(
-      url = URL,
-      destfile = file.path('./custom_curation_dbs/Metazoa_RefSeq235.tar.gz'),
-      method = 'curl'
-    )
-    untar(
-      file.path('./custom_curation_dbs/Metazoa_RefSeq235.tar.gz'),
-      exdir = file.path(path, "custom_curation_dbs", cur_dir)
-    )
-    file.remove(file.path('./custom_curation_dbs/Metazoa_RefSeq235.tar.gz'))
-    orig_db_dir_base <- "Metazoa_RefSeq235"
-    orig_db_dir <- file.path(path, "custom_curation_dbs", cur_dir, "Metazoa_RefSeq235")
-  } else if (base_db == "Chordata") {
-    URL <- "https://raw.githubusercontent.com/Smithsonian/MitoPilot/refs/heads/main/ref_dbs/Mitos2/Chordata.tar.gz"
-    download.file(
-      url = URL,
-      destfile = file.path('./custom_curation_dbs/Chordata.tar.gz'),
-      method = 'curl'
-    )
-    untar(
-      file.path('./custom_curation_dbs/Chordata.tar.gz'),
-      exdir = file.path(path, "custom_curation_dbs", cur_dir)
-    )
-    file.remove(file.path('./custom_curation_dbs/Chordata.tar.gz'))
-    orig_db_dir_base <- "Chordata"
-    orig_db_dir <- file.path(path, "custom_curation_dbs", cur_dir, "Chordata")
-  } else {
-    stop("base_db must be either Metazoa or Chordata")
-  }
+  # Metazoa_RefSeq235 base (includes the rRNA featureNuc BLAST DBs, which carry
+  # through to the custom database).
+  URL <- "https://raw.githubusercontent.com/Smithsonian/MitoPilot/refs/heads/main/ref_dbs/Mitos2/Metazoa_RefSeq235.tar.gz"
+  download.file(
+    url = URL,
+    destfile = file.path('./custom_curation_dbs/Metazoa_RefSeq235.tar.gz'),
+    method = 'curl'
+  )
+  untar(
+    file.path('./custom_curation_dbs/Metazoa_RefSeq235.tar.gz'),
+    exdir = file.path(path, "custom_curation_dbs", cur_dir)
+  )
+  file.remove(file.path('./custom_curation_dbs/Metazoa_RefSeq235.tar.gz'))
+  orig_db_dir_base <- "Metazoa_RefSeq235"
+  orig_db_dir <- file.path(path, "custom_curation_dbs", cur_dir, "Metazoa_RefSeq235")
 
   # append sequences to existing FASTAs in the curation directory
   setwd(file.path(orig_db_dir, "featureProt"))
@@ -238,11 +224,6 @@ custom_curation_db <- function(path = ".",
   #unlink(file.path(paste0(orig_db_dir, "_custom")), recursive = TRUE)
 
   message("FINISHED creating custom curation database")
-  message("In the curation options, specify the following directory as the \'ref_dif\':")
-  message(file.path(path, "custom_curation_dbs", cur_dir))
-  message(paste0(
-    "and select \'",
-    orig_db_dir_base,
-    "_custom\' as the \'ref_db\'."
-  ))
+  message("In the curation options, tick 'Use custom curation database' and enter this folder:")
+  message(paste0(orig_db_dir, "_custom"))
 }

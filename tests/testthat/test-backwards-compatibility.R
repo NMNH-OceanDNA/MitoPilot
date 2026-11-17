@@ -836,8 +836,18 @@ test_that("backwards_compatibility migrates the old Mitos2 ref path (and is idem
   expect_match(ao$ref_dir, "githubusercontent")
   # curate_opts gained ref_dir/ref_db and the old path was stripped from params
   expect_true(all(c("ref_dir", "ref_db") %in% names(co)))
-  expect_equal(co$ref_db, "Metazoa_RefSeq89")
+  expect_equal(co$ref_db, "Metazoa_RefSeq235")
   expect_false(grepl("/ref_dbs/Mitos2/Metazoa", co$params))
+
+  # retired curation databases move to Metazoa_RefSeq235; custom ones are kept
+  for (db in c("Metazoa_RefSeq89", "Metazoa_RefSeq231", "Chordata", "Chordata_custom")) {
+    DBI::dbExecute(con, "UPDATE curate_opts SET ref_db = ?", params = list(db))
+    suppressMessages(MitoPilot::backwards_compatibility(path = td, executor = "local"))
+    expect_equal(
+      DBI::dbReadTable(con, "curate_opts")$ref_db,
+      if (db == "Chordata_custom") db else "Metazoa_RefSeq235"
+    )
+  }
   DBI::dbDisconnect(con)
 
   # Re-run must not re-fire the block (no duplicate-column ALTER crash)
