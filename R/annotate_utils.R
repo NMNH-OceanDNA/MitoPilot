@@ -358,6 +358,13 @@ get_top_hits <- function(
       system2("blastp", args = _, input = query, stdout = TRUE)
   }
 
+  # A failed search must not be saved as "no hits"
+  if (!is.null(attr(hits_refSeq, "status")) && isTRUE(nzchar(query))) {
+    stop("get_top_hits: blastp failed (exit ", attr(hits_refSeq, "status"),
+         ") against ", db_arg, ". See the BLAST error above; a custom curation ",
+         "database may need rebuilding with custom_curation_db().", call. = FALSE)
+  }
+
   if(length(hits_refSeq) == 0) {
     return({
       data.frame(

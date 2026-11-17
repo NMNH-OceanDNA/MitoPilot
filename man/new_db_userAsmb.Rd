@@ -130,7 +130,7 @@ default curate_opts set. https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cg
 \item{curate_target}{Default target database for curation}
 
 \item{curate_ref_db}{Default curation reference database (default =
-"Metazoa_RefSeq235", the only bundled DB with rRNA BLAST references)}
+"Metazoa_RefSeq235", the only bundled curation database)}
 
 \item{max_blast_hits}{Maximum number of top BLAST hits to retain (default = 10)}
 

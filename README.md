@@ -189,10 +189,10 @@ databases:
   - **Annotation** references for MITOS2. MitoPilot includes Chordata
     and Metazoa databases, selectable in the `Annotate Opts.` window.
   - **Curation** references, chosen independently of the annotation
-    database. Bundled options are `Metazoa_RefSeq235` (the default),
-    `Metazoa_RefSeq231`, `Metazoa_RefSeq89`, and `Chordata`. MitoPilot
-    also folds each sample’s assembly BLAST results into the curation
-    references automatically.
+    database. The bundled database is `Metazoa_RefSeq235`; a custom database
+    can be chosen in the `Curate Opts.` window. MitoPilot also folds
+    each sample’s assembly BLAST results into the curation references
+    automatically.
 
 # Documentation
 

@@ -672,42 +672,29 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
         opts_help("Maximum number of reference BLAST hits per gene used when ",
                   "validating and curating annotations."),
         div(
-          style = "display: flex; align-items: center; gap: 2em",
-          div(
-            style = "flex: 1; min-width: 0; word-wrap : break-word; word-break: break-word;",
-            selectizeInput(
-              ns("curate_ref_dir"),
-              label = "Curation reference folder:",
-              choices = unique(rv$curate_opts$ref_dir),
-              selected = current$ref_dir %||% character(0),
-              width = "100%",
-              options = list(
-                create = TRUE,
-                maxItems = 1
-              ),
-            ) |> shinyjs::disabled()
-          ),
-          div(
-            style = "flex: 1",
-            selectizeInput(
-              ns("curate_ref_db"),
-              label = "Curation reference database:",
-              # choices = unique(rv$annotate_opts$ref_db),
-              choices = c("Metazoa_RefSeq235", "Metazoa_RefSeq235_custom", "Metazoa_RefSeq231", "Metazoa_RefSeq231_custom", "Metazoa_RefSeq89", "Chordata", "Chordata_custom"),
-              selected = current$ref_db %||% character(0),
-              width = "100%",
-              options = list(
-                create = TRUE,
-                maxItems = 1
-              )
-            ) |> shinyjs::disabled()
-          )
+          class = "form-group shiny-input-container",
+          mp_checkbox(
+            ns("curate_custom_db"),
+            label = "Use custom curation database",
+            value = curate_db_is_custom(current$ref_db)
+          ) |> shinyjs::disabled()
         ),
-        opts_help("Folder holding the curation reference databases, and the database ",
-                  "used to validate gene boundaries. rRNA reference ",
-                  "data is only included in Metazoa_RefSeq235 (and custom databases ",
-                  "built from it); with other databases the annotation editor's rRNA ",
-                  "alignment falls back to the per-sample BLAST reference genome.",
+        conditionalPanel(
+          "input.curate_custom_db", ns = ns,
+          textInput(
+            ns("curate_custom_db_path"),
+            label = "Custom curation database folder:",
+            value = if (curate_db_is_custom(current$ref_db)) {
+              file.path(current$ref_dir, current$ref_db)
+            } else {
+              ""
+            },
+            width = "100%"
+          ) |> shinyjs::disabled()
+        ),
+        opts_help("Reference database used to validate gene boundaries. The bundled ",
+                  CURATE_BUNDLED_DB, " database is used unless you tick the custom ",
+                  "database and give the full path to its folder.",
                   href = "https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html"),
         div(
           style = "flex: 1",
@@ -945,4 +932,34 @@ annotate_unlock_text <- function(n) {
     "Any assembly whose state is Ready to run will be re-annotated by ",
     "the next update, replacing your curated results."
   )
+}
+
+# The one bundled curation database. Any other ref_db is a custom database.
+CURATE_BUNDLED_DB <- "Metazoa_RefSeq235"
+
+#' Is a curate_opts ref_db a custom (non-bundled) database?
+#' @noRd
+curate_db_is_custom <- function(ref_db) {
+  length(ref_db) == 1 && !is.na(ref_db) && nzchar(ref_db) && ref_db != CURATE_BUNDLED_DB
+}
+
+#' Resolve the curation options form to the stored ref_dir / ref_db pair
+#'
+#' @param custom is the custom database switch on?
+#' @param path custom database folder (or tarball) entered by the user
+#' @param bundled_dir folder holding the bundled databases
+#' @return list(ref_dir, ref_db), or list(error) when the custom path is unusable
+#' @noRd
+curate_db_fields <- function(custom, path, bundled_dir) {
+  if (!isTRUE(custom)) {
+    return(list(ref_dir = bundled_dir, ref_db = CURATE_BUNDLED_DB))
+  }
+  path <- sub("/+$", "", trimws(path %||% ""))
+  if (!dir.exists(file.path(path, "featureProt")) &&
+      !(grepl("\\.tar\\.gz$", path) && file.exists(path))) {
+    return(list(error = paste0(
+      "'", path, "' is not a curation database folder (no featureProt folder found)."
+    )))
+  }
+  list(ref_dir = dirname(path), ref_db = basename(path))
 }

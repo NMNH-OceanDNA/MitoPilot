@@ -1346,23 +1346,13 @@ annotate_server <- function(id) {
             maxItems = 1
           )
         )
-        updateSelectizeInput(
-          inputId = "curate_ref_dir",
-          selected = cur$ref_dir,
-          choices = unique(rv$curate_opts$ref_dir),
-          options = list(
-            create = TRUE,
-            maxItems = 1
-          )
+        shinyWidgets::updatePrettyCheckbox(
+          inputId = "curate_custom_db",
+          value = curate_db_is_custom(cur$ref_db)
         )
-        updateSelectizeInput(
-          inputId = "curate_ref_db",
-          selected = cur$ref_db,
-          choices = c("Metazoa_RefSeq235", "Metazoa_RefSeq235_custom", "Metazoa_RefSeq231", "Metazoa_RefSeq231_custom", "Metazoa_RefSeq89", "Chordata", "Chordata_custom"),
-          options = list(
-            create = TRUE,
-            maxItems = 1
-          )
+        updateTextInput(
+          inputId = "curate_custom_db_path",
+          value = if (curate_db_is_custom(cur$ref_db)) file.path(cur$ref_dir, cur$ref_db) else ""
         )
         shinyWidgets::updatePrettyCheckbox(
           inputId = "linear_complete",
@@ -1391,8 +1381,8 @@ annotate_server <- function(id) {
       shinyjs::toggleState("curate_opts_cpus", condition = input$edit_curate_opts)
       shinyjs::toggleState("curate_opts_memory", condition = input$edit_curate_opts)
       shinyjs::toggleState("max_blast_hits", condition = input$edit_curate_opts)
-      shinyjs::toggleState("curate_ref_dir", condition = input$edit_curate_opts)
-      shinyjs::toggleState("curate_ref_db", condition = input$edit_curate_opts)
+      shinyjs::toggleState("curate_custom_db", condition = input$edit_curate_opts)
+      shinyjs::toggleState("curate_custom_db_path", condition = input$edit_curate_opts)
       shinyjs::toggleState("target", condition = input$edit_curate_opts)
       shinyjs::toggleState("genetic_code", condition = input$edit_curate_opts)
       shinyjs::toggleState("start_gene", condition = input$edit_curate_opts)
@@ -1493,6 +1483,21 @@ annotate_server <- function(id) {
           )
           return()
         }
+        # Bundled database: keep this set's folder if it is already bundled,
+        # else use the folder the project's MITOS2 databases come from.
+        cur <- rv$curate_opts[rv$curate_opts$curate_opts == input$curate_opts, ]
+        ref <- curate_db_fields(
+          input$curate_custom_db, input$curate_custom_db_path,
+          bundled_dir = if (nrow(cur) == 1 && !curate_db_is_custom(cur$ref_db)) {
+            cur$ref_dir
+          } else {
+            rv$annotate_opts$ref_dir[1]
+          }
+        )
+        if (!is.null(ref$error)) {
+          mp_alert(title = "Custom curation database not found", text = ref$error, type = "error")
+          return()
+        }
         params <- do.call(paste0("params_", input$target), list()) |>
           jsonlite::toJSON(auto_unbox = TRUE)
         dplyr::tbl(session$userData$con, "curate_opts") |>
@@ -1502,8 +1507,8 @@ annotate_server <- function(id) {
               cpus = req(input$curate_opts_cpus),
               memory = req(input$curate_opts_memory),
               max_blast_hits = req(input$max_blast_hits),
-              ref_dir = req(input$curate_ref_dir),
-              ref_db = req(input$curate_ref_db),
+              ref_dir = ref$ref_dir,
+              ref_db = ref$ref_db,
               target = req(input$target),
               linear_complete = as.integer(isTRUE(input$linear_complete)),
               # "auto" (or empty) = auto-from-ruleset (NA); a number is an override.

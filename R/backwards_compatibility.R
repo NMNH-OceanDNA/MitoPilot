@@ -146,6 +146,10 @@ backwards_compatibility <- function(
   # on already-migrated projects.)
   old_ref_str <- any(grepl("/ref_dbs/Mitos2", curate_opts_table$params))
 
+  # Curation now uses Metazoa_RefSeq235 only (or a custom database)
+  old_curate_dbs <- c("Metazoa_RefSeq89", "Metazoa_RefSeq231", "Chordata")
+  old_curate_db <- any(curate_opts_table$ref_db %in% old_curate_dbs)
+
   # A Smithsonian/MitoPilot MITOS2 ref_dir pointing at any branch other than main
   # is stale: feature/deleted branches 404 at prepare_ref_db (WF2). Only our own
   # repo URLs are considered; custom hosts or local paths are left untouched.
@@ -184,6 +188,7 @@ backwards_compatibility <- function(
   if ((!update_config || containerVer) &&
       genetic_code_numeric &&
       !old_ref_str &&
+      !old_curate_db &&
       !set_refs_pending &&
       "arwen_opts" %in% names(annotate_opts_table) &&
       "use_arwen" %in% names(annotate_opts_table) &&
@@ -367,11 +372,11 @@ backwards_compatibility <- function(
 
     for(i in 1:nrow(curate_opts_table)){
       if(any(grep("Metazoa", curate_opts_table[i,]$params))){
-        curate_opts_table[i,]$ref_db <- "Metazoa_RefSeq89"
+        curate_opts_table[i,]$ref_db <- "Metazoa_RefSeq235"
         curate_opts_table[i,]$params <- stringr::str_remove(curate_opts_table[i,]$params,
                                                             stringr::fixed("\"ref_dbs\":{\"default\":[\"/ref_dbs/Mitos2/Metazoa/featureProt/{gene}.fas\"]},"))
       } else {
-        curate_opts_table[i,]$ref_db <- "Chordata"
+        curate_opts_table[i,]$ref_db <- "Metazoa_RefSeq235"
         curate_opts_table[i,]$params <- stringr::str_remove(curate_opts_table[i,]$params,
                                                             stringr::fixed("\"ref_dbs\":{\"default\":[\"/ref_dbs/Mitos2/Chordata/featureProt/{gene}.fas\"]},"))
       }
@@ -1278,7 +1283,7 @@ backwards_compatibility <- function(
   # if ref_db column doesn't exist, add it
   if(!("ref_db" %in% names(curate_opts_table))){
     message("added 'ref_db' column to curate_opts table")
-    curate_opts_table$ref_db <- rep("Chordata", nrow(curate_opts_table))
+    curate_opts_table$ref_db <- rep("Metazoa_RefSeq235", nrow(curate_opts_table))
     # add new columns to database
     glue::glue_sql(
       "ALTER TABLE curate_opts
@@ -1293,6 +1298,16 @@ backwards_compatibility <- function(
         copy = TRUE,
         by = "curate_opts"
       )
+  }
+
+  if (old_curate_db) {
+    message("switched curation reference database(s) ",
+            paste(intersect(old_curate_dbs, curate_opts_table$ref_db), collapse = ", "),
+            " to Metazoa_RefSeq235; re-run curation to apply")
+    DBI::dbExecute(con, paste0(
+      "UPDATE curate_opts SET ref_db = 'Metazoa_RefSeq235' WHERE ref_db IN ('",
+      paste(old_curate_dbs, collapse = "','"), "')"
+    ))
   }
 
   # if assembler column doesn't exist, add it
