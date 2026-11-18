@@ -80,7 +80,7 @@ synteny_viewer_ui <- function(ns, user_annot = FALSE, prefix = "synteny") {
     div(class = "mp-coverage-caption",
         if (main) {
           paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a sample gene to select its row,",
-                "or a reference gene, then Lift over, to copy it to this assembly.",
+                "or a reference gene, then Liftover, to copy it to this assembly.",
                 "Bases appear when zoomed in.")
         } else {
           "Drag or scroll sideways to pan, scroll or pinch to zoom. Bases appear when zoomed in."
