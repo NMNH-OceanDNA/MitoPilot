@@ -1,10 +1,12 @@
-# MitoPilot (development version)
+# MitoPilot 1.6.0
+
+Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`
 
 - **Fix: "Also use ARAGORN for tRNA prediction" found nothing.** ARAGORN ran with options that search for tmRNA only, and its results were read in the wrong layout, so it never added a tRNA. The default options are now `-mtx` (metazoan mitochondrial tRNAs, low-scoring hits left out) and the results are read correctly. Existing parameter sets keep their saved ARAGORN options: change them to `-mtx` in the Annotation options to get the fix.
 
 - **Curation rules: CGA start codon for COX1.** The Diptera, Malacostraca, Thecostraca, and Pycnogonida rulesets now accept CGA as a start codon for COX1 only. It is annotated as the COX1 start in a minority of RefSeq mitogenomes in these groups.
 
-- **Annotate details: flag chips.** The header of the annotation details window now shows each flag (ID verified, Reviewed, Problematic, Partial) once, as a chip that is filled when the flag is set and flips it on click. The separate status pills and "Mark"/"Clear" buttons are gone.
+- **Annotate details: flag buttons.** The header of the annotation details window now shows each flag (ID verified, Reviewed, Problematic, Partial) once, as a button that is filled when the flag is set and flips it on click. The separate status pills and "Mark"/"Clear" buttons are gone.
 
 - **Shorter help text behind "?" icons.** Across the options windows, the details windows, and Export Data, long explanations under fields now sit behind a "?" beside the label, as short bullet lists; click the icon to read them. One-line notes and anything that warns about a consequence stay visible. Where a field already had a "?" for a tool's own help, the short note is at the top of that panel. The Annotations window no longer repeats the lock explanation under its buttons, and the ORF finder checkbox is now just "Run ORF finder step".
 
