@@ -121,7 +121,11 @@ p.mp-help-text {
 .mp-check-help .pretty { margin-right: 0; }
 .mp-tool-help-intro { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--mp-border); }
 
-/* Flag toggle buttons carry the tone of the pill they set. */
+/* Header flag chips: filled while the flag is set, and still legible when a
+   lock disables them. */
+.mp-flag-chip { border-radius: 999px; }
+.mp-flag-chip[disabled] { opacity: 0.8; }
+
 .mp-btn-success, .mp-btn-success:hover, .mp-btn-success:focus {
   background-color: var(--mp-success-soft);
   border-color: var(--mp-success);
