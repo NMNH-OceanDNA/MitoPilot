@@ -71,3 +71,51 @@ table.clade-table code {
 .navbar .dropdown-menu .dropdown-item:focus {
   background-color: rgba(0, 0, 0, 0.06);
 }
+
+/* Phones: wide tables scroll inside the page, long inline code wraps. */
+@media (max-width: 576px) {
+  main table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+main :not(pre) > code {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.nav-page {
+  min-width: 0;
+}
+.nav-page .pagination-link {
+  overflow-wrap: anywhere;
+}
+
+/* Navbar: keep items on one line; dropdown buttons match the plain links. */
+.navbar .nav-link {
+  white-space: nowrap;
+}
+.navbar button.nav-link {
+  text-transform: uppercase;
+  font-size: inherit;
+  letter-spacing: inherit;
+}
+/* The logo never shrinks; the site name gives way to the menus on narrower
+   windows instead of being cut off. */
+.navbar .navbar-brand-container {
+  flex: none;
+  max-width: none;
+}
+@media (max-width: 1499.98px) {
+  .navbar .navbar-title {
+    display: none;
+  }
+}
+/* Mid-width windows: tighter menu spacing so every entry stays on screen. */
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+  .navbar .nav-link,
+  .navbar button.nav-link {
+    letter-spacing: 0;
+    padding-left: 0.3rem !important;
+    padding-right: 0.3rem !important;
+  }
+}
