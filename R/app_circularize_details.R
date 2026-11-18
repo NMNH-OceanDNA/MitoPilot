@@ -312,11 +312,7 @@ circularize_details_body <- function(ov, depth, ns) {
     circularize_aln_html(ov),
     if (nrow(depth) > 0L) {
       tagList(
-        circ_caption(paste(
-          "Assembly depth either side of the seam, the 3' end to the left and",
-          "the 5' end to the right, and how much of it comes from reads that",
-          "cross the seam. A real junction carries depth straight across:"
-        ), top = 14),
+        circ_caption("Depth either side of the seam (3' end left, 5' end right).", top = 14),
         plotOutput(ns("circ_depth"), height = "200px")
       )
     } else {
@@ -377,14 +373,18 @@ circularize_details_modal <- function(rv, id, session = getDefaultReactiveDomain
   circularize_load_evidence(rv, session = session)
 
   showModal(modalDialog(
-    title = mp_modal_title(stringr::str_glue("Circularization: {id}")),
+    title = mp_modal_title(tagList(
+      stringr::str_glue("Circularization: {id}"),
+      mp_help_tip(mp_help_bullets(
+        "Top: the overlap found between the contig ends.",
+        "Bottom: read depth across the junction made by trimming that overlap.",
+        "The plot also shows how much depth comes from reads that cross the seam.",
+        "A real junction carries depth straight across."
+      ), label = "the circularization evidence")
+    )),
     size = "l",
     easyClose = TRUE,
-    opts_help(
-      "The redundant overlap the search found between the contig ends, and the ",
-      "read depth across the junction trimming it produced. Use it to judge ",
-      "whether the overlap is a real circular junction or a repeat."
-    ),
+    opts_help("Use this to judge whether the end overlap is a real circular junction or a repeat."),
     selectInput(
       ns("circ_contig"), "Contig",
       choices = circ_contig_choices(ov_all),

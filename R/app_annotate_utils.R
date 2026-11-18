@@ -289,7 +289,7 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("annotate_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label("assemblies"),
             choices = rv$annotate_opts$annotate_opts,
             selected = current$annotate_opts,
             options = list(
@@ -306,9 +306,6 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             )
           )
         ),
-        opts_help("Reusable named set of options applied to the selected assemblies; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected assemblies: their state becomes Ready to run."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -351,15 +348,17 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
         if (user_annot) {
           div(
             id = ns("run_tools_box"),
-            mp_checkbox(
-              ns("run_tools"),
-              label = "Run annotation tools",
-              value = run_tools_on
-            ) |> shinyjs::disabled(),
-            opts_help("Run MitoPilot's annotation tools and add any features they find that ",
-                      "your annotation does not have. The tools never replace or trim your features; a tool ",
-                      "feature is dropped where it overlaps one of yours. Curation still checks ",
-                      "every feature, yours included.")
+            mp_check_help(
+              mp_checkbox(
+                ns("run_tools"),
+                label = "Run annotation tools",
+                value = run_tools_on
+              ) |> shinyjs::disabled(),
+              "Adds features the tools find that your annotation lacks.",
+              "Never replaces or trims your features. A tool feature that overlaps one of yours is dropped.",
+              "Curation still checks every feature, yours included.",
+              label = "Run annotation tools"
+            )
           )
         },
         # Annotation tools section, boxed off from the surrounding options.
@@ -372,11 +371,11 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           ),
         tags$div(
           style = "font-weight: bold; margin-bottom: 8px;",
-          "Annotation tools"
+          mp_help_label("Annotation tools", mp_help_bullets(
+            "Tool priority: when tools disagree, the higher-priority tool wins and the others only fill gaps.",
+            "Genes and rRNAs: MITOS2 > MitoFinder. tRNAs: tRNAscan-SE > ARWEN > ARAGORN > MITOS2."
+          ))
         ),
-        opts_help("When merging results from multiple annotators, higher-priority ",
-                  "tools win and lower-priority tools only fill gaps. Genes and rRNAs: ",
-                  "MITOS2 > MitoFinder. tRNAs: tRNAscan-SE > ARWEN > ARAGORN > MITOS2."),
         mp_checkbox(
           ns("use_mitos"),
           label = "Use MITOS2",
@@ -386,7 +385,11 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           id = ns("mitos_opts_box"),
           textInput(
             ns("mitos_opts"),
-            label = tagList("MITOS2 options:", tool_help_icon("mitos")),
+            label = tagList("MITOS2 options:", tool_help_icon("mitos", intro = tagList(
+              "Main annotator for genes, tRNAs, and rRNAs. The options box takes extra MITOS2 flags. ",
+              "--best keeps only the top-scoring of overlapping predictions. ",
+              tags$a(href = "http://mitos2.bioinf.uni-leipzig.de/index.py",
+                     target = "_blank", rel = "noopener", "Learn more")))),
             value = current$mitos_opts %||% character(0),
             width = "100%"
           ) |> shinyjs::disabled()
@@ -400,22 +403,19 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             value = isTRUE(as.logical(current$use_mitos_best %||% 1L))
           ) |> shinyjs::disabled()
         ),
-        opts_help("MITOS2 is the primary annotator (genes, tRNAs, rRNAs). The ",
-                  "options box takes extra MITOS2 flags; '--best' keeps only the ",
-                  "top-scoring of overlapping predictions.",
-                  href = "http://mitos2.bioinf.uni-leipzig.de/index.py"),
         div(
           id = ns("rescue_no_trna_box"),
-          style = "display: flex; flex-flow: row nowrap; align-items: center; margin-bottom: 8px;",
-          mp_checkbox(
-            ns("rescue_no_trna"),
-            label = "Rescue rRNAs/PCGs lost to tRNA overlap",
-            value = isTRUE(as.logical(current$rescue_no_trna %||% 1L))
-          ) |> shinyjs::disabled()
+          mp_check_help(
+            mp_checkbox(
+              ns("rescue_no_trna"),
+              label = "Rescue rRNAs/PCGs lost to tRNA overlap",
+              value = isTRUE(as.logical(current$rescue_no_trna %||% 1L))
+            ) |> shinyjs::disabled(),
+            "Runs MITOS2 a second time without tRNA prediction, to recover rRNAs and PCGs it drops when a tRNA overlaps them.",
+            "Adds some runtime.",
+            label = "Rescue rRNAs/PCGs"
+          )
         ),
-        opts_help("Runs MITOS2 a second time without tRNA prediction to recover ",
-                  "rRNAs or PCGs that MITOS2 drops when a tRNA overlaps them. ",
-                  "Adds some runtime."),
         div(
           id = ns("mitos_ref_box"),
           div(
@@ -557,15 +557,17 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
         ) |> shinyjs::disabled(),
         opts_help("Trim linear contig ends that extend past the outermost annotated ",
                   "gene features."),
-        mp_checkbox(
-          ns("ref_based_rc"),
-          label = "Reverse-complement assembly to match reference orientation",
-          value = isTRUE(as.logical(current$ref_based_rc %||% 0L))
-        ) |> shinyjs::disabled(),
-        opts_help("Reverse-complement each contig when it aligns better to the top ",
-                  "BLAST reference reversed. Off by default; the rRNA and start-gene ",
-                  "heuristics usually orient correctly. Enable for taxa they cannot ",
-                  "resolve, e.g. scyphozoan jellyfish with rRNAs on opposite strands."),
+        mp_check_help(
+          mp_checkbox(
+            ns("ref_based_rc"),
+            label = "Reverse-complement assembly to match reference orientation",
+            value = isTRUE(as.logical(current$ref_based_rc %||% 0L))
+          ) |> shinyjs::disabled(),
+          "Flips a contig when it matches the top BLAST reference better reversed.",
+          "Usually not needed: the rRNAs and the starting gene already set the direction.",
+          "Turn on for taxa where that fails, for example scyphozoan jellyfish with rRNAs on opposite strands.",
+          label = "Reverse-complement"
+        ),
         mp_checkbox(
           ns("retain_low_conf_trna"),
           label = "Retain low-confidence (NNN anticodon) tRNAs",
@@ -616,7 +618,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("curate_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label("assemblies"),
             choices = rv$curate_opts$curate_opts,
             selected = current$curate_opts,
             options = list(
@@ -633,9 +635,6 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             )
           )
         ),
-        opts_help("Reusable named set of options applied to the selected assemblies; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected assemblies: their state becomes Ready to run."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -738,8 +737,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             options = list(maxItems = 1)
           ) |> shinyjs::disabled()
         ),
-        opts_help("NCBI translation table used for protein-coding genes. 'Auto' sets the genetic code based on selected ",
-                  "ruleset. Or pick a specific table to override it for these samples.",
+        opts_help("NCBI translation table for protein-coding genes. Auto takes it from the ruleset.",
                   href = "https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi"),
         div(
           class = "form-group shiny-input-container",
@@ -840,14 +838,14 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
                 "than only the longest one per region."),
       textInput(
         ns("orffinder_opts"),
-        label = tagList("ORFfinder options:", tool_help_icon("orffinder")),
+        label = tagList("ORFfinder options:", tool_help_icon("orffinder", intro = tagList(HTML(mp_help_bullets(
+          "Extra flags passed to NCBI ORFfinder.",
+          "Genetic code (-g) and minimum length (-ml) are set for you, from the curation ruleset and the minimum ORF length above."
+        )), tags$a(href = "https://www.ncbi.nlm.nih.gov/orffinder/",
+                   target = "_blank", rel = "noopener", "Learn more")))),
         value = current$orffinder_opts %||% character(0),
         width = "100%"
-      ) |> shinyjs::disabled(),
-      opts_help("Extra command-line flags passed to NCBI ORFfinder. The genetic ",
-                "code (-g) and minimum length (-ml) are set for you, from the ",
-                "sample's curation ruleset and the minimum ORF length above.",
-                href = "https://www.ncbi.nlm.nih.gov/orffinder/")
+      ) |> shinyjs::disabled()
     )
     if (!orf_on) orf_param_opts <- shinyjs::hidden(orf_param_opts)
 
@@ -860,7 +858,7 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("orf_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label("assemblies"),
             choices = rv$orf_opts$orf_opts,
             selected = current$orf_opts,
             options = list(
@@ -877,9 +875,6 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             )
           )
         ),
-        opts_help("Reusable named set of options applied to the selected assemblies; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected assemblies: their state becomes Ready to run."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -899,15 +894,16 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             ) |> shinyjs::disabled()
           )
         ),
-        mp_checkbox(
-          ns("use_orffinder"),
-          label = "Run ORF finder step (after curation; finds ORFs in unannotated regions)",
-          value = isTRUE(as.logical(current$use_orffinder %||% 0L))
-        ) |> shinyjs::disabled(),
-        opts_help("Optional step that scans unannotated regions for open ",
-                  "reading frames using NCBI ORFfinder. When it is on, consider ",
-                  "turning off un-annotated end trimming in the annotation options.",
-                  href = "https://www.ncbi.nlm.nih.gov/orffinder/"),
+        mp_check_help(
+          mp_checkbox(
+            ns("use_orffinder"),
+            label = "Run ORF finder step",
+            value = isTRUE(as.logical(current$use_orffinder %||% 0L))
+          ) |> shinyjs::disabled(),
+          "Optional. Scans unannotated regions for open reading frames with NCBI ORFfinder.",
+          "When on, consider turning off trimming of unannotated ends in the annotation options.",
+          label = "Run ORF finder step"
+        ),
         orf_param_opts,
         size = "m",
         footer = mp_footer(

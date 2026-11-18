@@ -165,13 +165,15 @@ annot_import_server <- function(id) {
         SELECT (SELECT COUNT(*) FROM samples) AS s, (SELECT COUNT(*) FROM user_annotations) AS f")
       bump()
       modalDialog(
-        title = mp_modal_title("Imported gene names", sprintf("%d samples, %d features", n$s, n$f)),
-        size = "l", class = "mp-gn-modal",
-        opts_help(
-          "Pick the gene each imported name stands for, or (drop) to leave those features out. ",
-          "Confirm writes the annotations and queues changed samples for annotation; ",
-          "pipeline runs stay blocked until you confirm."
+        title = mp_modal_title(
+          tagList("Imported gene names", mp_help_tip(mp_help_bullets(
+            "Pick the gene each imported name stands for, or (drop) to leave those features out.",
+            "Confirm writes the annotations and queues changed samples for annotation."
+          ), label = "Imported gene names")),
+          sprintf("%d samples, %d features", n$s, n$f)
         ),
+        size = "l", class = "mp-gn-modal",
+        opts_help("Pipeline runs stay blocked until you confirm."),
         uiOutput(ns("chips")),
         reactable::reactableOutput(ns("tbl")),
         htmltools::attachDependencies(tags$span(), htmltools::findDependencies(selectizeInput(ns("sz"), NULL, NULL))),

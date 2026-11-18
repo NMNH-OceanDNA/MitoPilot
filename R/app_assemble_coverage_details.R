@@ -144,14 +144,18 @@ assembly_coverage_details_server <- function(id, rv) {
         if (locked()) {
           div(
             class = "alert alert-warning mp-lock-banner", role = "status",
-            icon("lock"), tags$b(" This sample is locked."), " ",
-            MP_LOCK_DEF("assemble"), " Editing controls below are disabled.",
+            icon("lock"), tags$b(" This sample is locked"),
+            mp_help_tip(mp_help_bullets(
+              "Locked samples are finished with this step.",
+              "Their options cannot be changed, and the next update will not re-run them.",
+              "They move on to Annotate.",
+              "You can unlock at any time."
+            ), label = "locking"),
+            ", so editing is off. Unlock it in the Assemble table",
             if (any(rv$focal_assembly$path == 0, na.rm = TRUE)) {
-              tagList(" Use ", tags$b("Delete consensus (Path 0)"),
-                      " to remove the edited consensus and unlock, or unlock",
-                      " from the Assemble table.")
+              tagList(", or use ", tags$b("Delete consensus (Path 0)"), ".")
             } else {
-              " Unlock this sample in the Assemble table to edit it."
+              "."
             }
           )
         },
@@ -878,9 +882,11 @@ assembly_coverage_details_server <- function(id, rv) {
           plotOutput(ns("minimap_plot"), height = "70px"),
           plotOutput(ns("minimap_error"), height = "70px"),
           div(style = "font-size: 11px; color: #555; margin: 10px 0 4px 0;",
-              paste("Zoomed, column-aligned: nucleotide alignment, per-path depth, error rate,",
-                    "and read support (green = matches called base, black = mismatch).",
-                    "Black lines bracket the current conflict:")),
+              "Zoomed view of the current conflict (between the black lines).",
+              mp_help_tip(mp_help_bullets(
+                "Rows: alignment, depth per path, error rate, and read support.",
+                "Read support: green matches the called base, black is a mismatch."
+              ), label = "the zoomed view")),
           plotOutput(ns("zoom_plot"), height = paste0(zoom_plot_height(), "px")),
           div(style = "font-size: 11px; color: #555; margin: 14px 0 4px 0;",
               "Conflict block summary (click a row to jump to that block):"),
@@ -1744,9 +1750,9 @@ assembly_coverage_details_server <- function(id, rv) {
         class = "mp-panel-info",
         tags$b("Join scaffolds into one assembly"),
         div(class = "mp-coverage-caption",
-            paste("This path is fragmented into multiple scaffolds. Reference-guided",
-                  "layout orders and orients them; you can override order/orientation",
-                  "below, then build the joined Path 0.")),
+            paste("This path is split into several scaffolds, ordered here against the",
+                  "reference. Change the order or direction below, then build the",
+                  "joined Path 0.")),
         if (disagree) div(
           class = "mp-panel-danger",
           tags$b("Warning: scaffolds map to different references."),
@@ -1800,8 +1806,8 @@ assembly_coverage_details_server <- function(id, rv) {
                })()
           ),
           div(class = "mp-coverage-caption",
-              paste("Builds Path 0 now from the layout above, replacing any existing",
-                    "Path 0. The original paths are kept, and the sample is locked."))
+              paste("Builds Path 0 from the layout above, replacing any existing",
+                    "Path 0. Original paths are kept; the sample is locked."))
         ),
         uiOutput(ns("join_redo_ui"))
       )
@@ -1851,9 +1857,8 @@ assembly_coverage_details_server <- function(id, rv) {
         if (ready) btn else shinyjs::disabled(btn),
         note(
           if (ready) {
-            paste("Queues the join. It runs on the next pipeline update, using",
-                  "the reference and options on record rather than the layout",
-                  "above.")
+            paste("Queues the join for the next pipeline update. Uses the",
+                  "reference and options on record, not the layout above.")
           } else if (locked()) {
             paste("This sample is locked, so the pipeline will not run a join",
                   "for it. Unlock it first.")

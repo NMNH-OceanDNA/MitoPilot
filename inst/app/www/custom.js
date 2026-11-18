@@ -35,6 +35,9 @@ $( document ).ready(function(){
   $(document).on('keydown', function(e) {
     if (e.key === 'Escape' && open) mpHidePopovers();
   });
+  $(document).on('keydown', 'span.mp-help-icon', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+  });
   document.addEventListener('scroll', function(e) {
     var t = e.target;
     if (open && !(t.closest && t.closest('.popover'))) mpHidePopovers();

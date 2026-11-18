@@ -150,7 +150,7 @@ pre_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("pre_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label(),
             choices = rv$pre_opts$pre_opts,
             selected = current$pre_opts,
             options = list(
@@ -163,9 +163,6 @@ pre_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             mp_checkbox(ns("edit_pre_opts"), label = "Edit", value = FALSE)
           )
         ),
-        opts_help("Reusable named set of options applied to the selected samples; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected samples: their state becomes Ready to run."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -194,14 +191,16 @@ pre_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
         opts_help("Command-line flags passed to fastp, which trims adapters and ",
                   "filters low-quality reads.",
                   href = "https://github.com/OpenGene/fastp"),
-        mp_checkbox(
-          ns("dedup"),
-          label = "Remove duplicate reads (fastp --dedup)",
-          value = grepl("--dedup", current$fastp %||% "", fixed = TRUE)
-        ) |> shinyjs::disabled(),
-        opts_help("Drops PCR and optical duplicates before assembly. Lowers ",
-                  "depth; in the shipped test data it removed about a fifth of ",
-                  "the reads and changed almost no calls."),
+        mp_check_help(
+          mp_checkbox(
+            ns("dedup"),
+            label = "Remove duplicate reads (fastp --dedup)",
+            value = grepl("--dedup", current$fastp %||% "", fixed = TRUE)
+          ) |> shinyjs::disabled(),
+          "Drops PCR and optical duplicate reads before assembly.",
+          "Lowers depth. In the test data it removed about a fifth of the reads and changed almost no base calls.",
+          label = "Remove duplicate reads"
+        ),
         size = "m",
         footer = mp_footer(primary = actionButton(ns("update_pre_opts"), "Save"))
       )
@@ -241,7 +240,7 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("assemble_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label(),
             choices = rv$assemble_opts$assemble_opts,
             selected = current$assemble_opts,
             options = list(
@@ -254,9 +253,6 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             mp_checkbox(ns("edit_assemble_opts"), label = "Edit", value = FALSE)
           )
         ),
-        opts_help("Reusable named set of options applied to the selected samples; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected samples: their state becomes Ready to run."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -284,7 +280,17 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           ),
         tags$div(
           style = "font-weight: bold; margin-bottom: 8px;",
-          "Assembler"
+          mp_help_label("Assembler", mp_help_bullets(
+            tagList(
+              tags$a(href = "https://github.com/Kinggerm/GetOrganelle",
+                     target = "_blank", rel = "noopener", "GetOrganelle"),
+              " and ",
+              tags$a(href = "https://github.com/RemiAllio/MitoFinder",
+                     target = "_blank", rel = "noopener", "MitoFinder"),
+              " build the mitogenome from reads."),
+            "MapToRef maps reads to a reference mitogenome you supply.",
+            "Options for the chosen tool appear below."
+          ))
         ),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
@@ -303,16 +309,6 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             ) |> shinyjs::disabled()
           )
         ),
-        opts_help("Tool used to assemble the mitogenome from reads: ",
-                  tags$a(href = "https://github.com/Kinggerm/GetOrganelle",
-                         target = "_blank", rel = "noopener", "GetOrganelle",
-                         .noWS = "outside"),
-                  ", ",
-                  tags$a(href = "https://github.com/RemiAllio/MitoFinder",
-                         target = "_blank", rel = "noopener", "MitoFinder",
-                         .noWS = "outside"),
-                  ", or MapToRef, which maps your reads to a reference ",
-                  "mitogenome you supply; the relevant tool options appear below."),
         # Each tool's help line is appended INSIDE its input's container (not as a
         # standalone <p>), so it shows/hides together with the field: shinyjs::hide
         # on the input hides its .shiny-input-container, and the help with it.
@@ -371,19 +367,16 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             id = ns("help_labels_db"), nested = TRUE)),
         selectInput(
           ns("maptoref_mapper"),
-          label = "MapToRef mapper:",
+          label = mp_help_label("MapToRef mapper:", mp_help_bullets(
+            "bowtie2 and bwa-mem: modern reads.",
+            "bwa-aln: short or damaged reads (ancient DNA, degraded museum tissue).",
+            "First pass maps to your reference with relaxed seeding, so a distant reference still recruits reads.",
+            "Later passes map to the sample's own consensus, with the options as given."
+          )),
           choices = c("bowtie2", "bwa-mem", "bwa-aln"),
           selected = current$maptoref_mapper %||% "bowtie2",
           width = "100%"
-        ) |> shinyjs::disabled() |>
-          tagAppendChild(opts_help(
-            "Read mapper for every pass. bowtie2 and bwa-mem suit modern ",
-            "reads; bwa-aln suits short or damaged reads (ancient DNA, ",
-            "degraded museum tissue). The first pass, against your ",
-            "reference, runs with relaxed seeding added to the options below ",
-            "so a distant reference still recruits reads; later passes map to ",
-            "the sample's own consensus with the options as given.",
-            id = ns("help_maptoref_mapper"), nested = TRUE)),
+        ) |> shinyjs::disabled(),
         textInput(
           ns("maptoref"),
           label = tagList(
@@ -397,28 +390,26 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
         textInput(
           ns("maptoref_consensus"),
           label = tagList("MapToRef samtools consensus options:",
-                          tool_help_icon("samtools-consensus")),
+                          tool_help_icon("samtools-consensus", intro = tagList(HTML(mp_help_bullets(
+                            "Flags passed to samtools consensus.",
+                            "-d: depth below which a site is called N. --min-BQ: lowest base quality counted.",
+                            "Options MitoPilot sets itself are refused."
+                          )), tags$a(href = "https://www.htslib.org/doc/samtools-consensus.html",
+                                     target = "_blank", rel = "noopener", "Learn more")))),
           value = current$maptoref_consensus %||% character(0),
           width = "100%"
-        ) |> shinyjs::disabled() |>
-          tagAppendChild(opts_help(
-            "Flags passed to samtools consensus. -d sets the depth below which ",
-            "a site is called N, --min-BQ the base-quality floor. Options ",
-            "MitoPilot sets itself are refused.",
-            href = "https://www.htslib.org/doc/samtools-consensus.html",
-            id = ns("help_maptoref_consensus"), nested = TRUE)),
+        ) |> shinyjs::disabled(),
         numericInput(
           ns("maptoref_iter"),
-          label = "Maximum passes:",
+          label = mp_help_label("Maximum passes:", mp_help_bullets(
+            "How many times reads are re-mapped to the new consensus.",
+            "Stops early when the sequence stops changing.",
+            "Distant reference: try 10 to 25."
+          )),
           value = current$maptoref_iter %||% 5,
           min = 1, step = 1,
           width = "100%"
-        ) |> shinyjs::disabled() |>
-          tagAppendChild(opts_help(
-            "Maximum passes of consensus-back-into-reference. The loop stops ",
-            "early when the sequence stops changing. Try 10 to 25 for a ",
-            "distant reference.",
-            id = ns("help_maptoref_iter"), nested = TRUE))
+        ) |> shinyjs::disabled()
         ),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
@@ -460,19 +451,16 @@ assemble_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
         ),
         opts_help("Scaffolds shorter than this threshold are stored, but left ",
                   "out of any further processing."),
-        div(
-          class = "form-group shiny-input-container",
+        mp_check_help(
           mp_checkbox(
             ns("join_scaffolds"),
             label = "Automatically join multi-scaffold assemblies (Path 0)",
             value = as.logical(current$join_scaffolds %||% 0)
-          ) |> shinyjs::disabled()
-        ),
-        opts_help(
-          "Off by default. When on, single-path fragmented assemblies are ",
-          "reference-ordered into a joined Path 0 (only if scaffolds share a ",
-          "BLAST hit). Scaffold-to-reference mappings are always computed so ",
-          "the in-app join editor works regardless of this setting."
+          ) |> shinyjs::disabled(),
+          "On: an assembly split into several scaffolds on one path is ordered against the reference and joined into Path 0.",
+          "Only when the scaffolds share a BLAST hit.",
+          "The join editor in Assembly details works with this on or off.",
+          label = "Automatically join multi-scaffold assemblies"
         ),
         size = "m",
         footer = mp_footer(primary = actionButton(ns("update_assemble_opts"), "Save"))
@@ -533,7 +521,7 @@ blast_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("blast_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label(),
             choices = rv$blast_opts$blast_opts,
             selected = current$blast_opts,
             options = list(
@@ -546,18 +534,17 @@ blast_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             mp_checkbox(ns("edit_blast_opts"), label = "Edit", value = FALSE)
           )
         ),
-        opts_help("Reusable named set of options applied to the selected samples; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected samples: their state becomes Ready to run."),
-        mp_checkbox(
-          ns("run_blast"),
-          label = "Run BLAST reference search using assembly as query",
-          value = as.logical(current$run_blast %||% 1L)
-        ) |> shinyjs::disabled(),
-        opts_help("BLAST each assembly against the bundled local database of ",
-                  "metazoan mitogenomes to find the closest reference (used for ",
-                  "orientation and curation). Annotations for the winning ",
-                  "reference are still fetched from NCBI."),
+        mp_check_help(
+          mp_checkbox(
+            ns("run_blast"),
+            label = "Run BLAST reference search using assembly as query",
+            value = as.logical(current$run_blast %||% 1L)
+          ) |> shinyjs::disabled(),
+          "Finds the closest reference mitogenome for each assembly. Used for orientation and curation.",
+          "Searches the bundled metazoan mitogenome database on this machine.",
+          "The reference's annotations are still fetched from NCBI.",
+          label = "Run BLAST reference search"
+        ),
         local_blast_db_note(session$userData$dir_out),
         div(
           id = ns("blast_taxids_group"),
@@ -565,6 +552,11 @@ blast_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             ns("taxids"),
             label = tagList(
               "Restrict search to taxon IDs (optional):",
+              mp_help_tip(mp_help_bullets(
+                "NCBI taxon ID numbers, separated by commas. Names are not accepted.",
+                "Blank searches the whole database.",
+                "Applies to local and remote searches."
+              ), label = "Restrict search to taxon IDs"),
               tags$a("NCBI Taxonomy Browser",
                 href = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi",
                 target = "_blank", rel = "noopener"
@@ -573,22 +565,21 @@ blast_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             value = current$taxids %||% "",
             placeholder = "e.g. 7711 for Chordata, or 7711,6656",
             width = "100%"
-          ) |> shinyjs::disabled(),
-          opts_help("Comma-separated NUMERIC NCBI taxon IDs; taxon names are not ",
-                    "accepted. Leave blank to search the whole database. Applies to ",
-                    "both the local and the remote search.")
+          ) |> shinyjs::disabled()
         ),
         div(
           id = ns("blast_remote_group"),
-          mp_checkbox(
-            ns("remote_blast"),
-            label = "Remote BLAST",
-            value = as.logical(current$remote_blast %||% 0L)
-          ) |> shinyjs::disabled(),
-          opts_help("Search NCBI over the network instead of the bundled local ",
-                    "database. Much slower, rate limited, and requires internet ",
-                    "access; use it only to reach sequences the local database ",
-                    "does not contain."),
+          mp_check_help(
+            mp_checkbox(
+              ns("remote_blast"),
+              label = "Remote BLAST",
+              value = as.logical(current$remote_blast %||% 0L)
+            ) |> shinyjs::disabled(),
+            "Searches NCBI online instead of the bundled database.",
+            "Much slower, rate limited, and needs internet.",
+            "Use only for sequences the bundled database lacks.",
+            label = "Remote BLAST"
+          ),
           mp_checkbox(
             ns("remote_fallback"),
             label = "Fall back to remote BLAST when no local hit",
@@ -605,6 +596,10 @@ blast_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             ns("entrez_query"),
             label = tagList(
               "Entrez query (remote BLAST only):",
+              mp_help_tip(mp_help_bullets(
+                "For remote searches only. Limits hits to matching GenBank records. Default: mitochondrial sequences only.",
+                "A local search cannot apply this filter, and will not run if the box is changed from the default. To narrow a local search, use taxon IDs."
+              ), label = "Entrez query"),
               tags$a("Entrez help documentation",
                 href = "https://www.ncbi.nlm.nih.gov/books/NBK3837/",
                 target = "_blank", rel = "noopener"
@@ -612,12 +607,7 @@ blast_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             ),
             value = current$entrez_query %||% "mitochondrion[Location]",
             width = "100%"
-          ) |> shinyjs::disabled(),
-          opts_help("Restricts a REMOTE BLAST search to GenBank records matching ",
-                    "this Entrez filter (default limits hits to mitochondrial ",
-                    "sequences). The local database search cannot apply it; use ",
-                    "taxon IDs above instead. Leave anything other than the default ",
-                    "here and the local search will refuse to run.")
+          ) |> shinyjs::disabled()
         ),
         div(
           id = ns("blast_mts_group"),
@@ -1267,8 +1257,9 @@ assemble_table_status <- function(n_visible, n_total, n_selected, noun = "sample
 }
 
 
-# Mapper help: one "?" icon and one help line per mapper, only the selected
-# mapper's pair visible. Toggled client-side when the mapper select changes.
+# Mapper help: one "?" icon per mapper, only the selected mapper's visible.
+# bowtie2 keeps a short line under the field; the bwa notes sit at the top of
+# their help panel. Toggled client-side when the mapper select changes.
 .mtr_mapper_help_spec <- list(
   "bowtie2" = list(
     text = c("Flags passed to bowtie2 on every pass. Presets: --fast-local, ",
@@ -1276,20 +1267,21 @@ assemble_table_status <- function(n_visible, n_total, n_selected, noun = "sample
              "--very-sensitive-local -N 1 for a distant reference."),
     href = "https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml"),
   "bwa-mem" = list(
-    text = c("Flags passed to bwa mem on every pass. Empty (default) uses bwa's ",
-             "own defaults; for example -B 2 -T 20 for a distant reference."),
+    intro = "Blank uses bwa defaults. Distant reference: try -B 2 -T 20.",
     href = "https://bio-bwa.sourceforge.net/bwa.shtml"),
   "bwa-aln" = list(
-    text = c("Flags passed to bwa aln on every pass (bwa sampe pairs the ",
-             "mates). Default -l 1024 -n 0.01 -o 2 disables seeding and ",
-             "relaxes the edit distance, the usual ancient-DNA settings."),
+    intro = "Default turns off seeding and allows more mismatches: the usual ancient-DNA settings.",
     href = "https://bio-bwa.sourceforge.net/bwa.shtml")
 )
 
 #' @noRd
 mtr_mapper_help <- function(selected, ns) {
   tagList(lapply(names(.mtr_mapper_help_spec), function(m) {
-    el <- tags$span(id = ns(paste0("help_icon_", m)), tool_help_icon(m))
+    sp <- .mtr_mapper_help_spec[[m]]
+    intro <- if (!is.null(sp$intro)) {
+      tagList(sp$intro, " ", tags$a(href = sp$href, target = "_blank", rel = "noopener", "Learn more"))
+    }
+    el <- tags$span(id = ns(paste0("help_icon_", m)), tool_help_icon(m, intro = intro))
     if (identical(m, selected)) el else shinyjs::hidden(el)
   }))
 }
@@ -1298,6 +1290,7 @@ mtr_mapper_help <- function(selected, ns) {
 mtr_mapper_help_text <- function(selected, ns) {
   tagList(lapply(names(.mtr_mapper_help_spec), function(m) {
     sp <- .mtr_mapper_help_spec[[m]]
+    if (is.null(sp$text)) return(NULL)
     el <- do.call(opts_help, c(as.list(sp$text), list(
       href = sp$href, id = ns(paste0("help_maptoref_", m)), nested = TRUE)))
     if (identical(m, selected)) el else shinyjs::hidden(el)
@@ -1313,14 +1306,14 @@ maptoref_ref_modal <- function(id, ref, topology, session = getDefaultReactiveDo
       title = mp_modal_title(paste("MapToRef reference for", id)),
       textInput(
         ns("maptoref_ref_value"),
-        label = "Reference:",
+        label = mp_help_label("Reference:", mp_help_bullets(
+          "One complete mitogenome to map this sample's reads to.",
+          "Give a file path on this machine, a URL, or an NCBI accession (for example NC_002333).",
+          "Blank clears the reference."
+        )),
         value = ref %|NA|% "",
         width = "100%"
-      ) |> tagAppendChild(opts_help(
-        "Absolute path on this machine, URL, or NCBI nucleotide accession ",
-        "(for example NC_002333) of one complete mitogenome to map this ",
-        "sample's reads against. Blank clears the reference. Saving ",
-        "re-queues the sample.", nested = TRUE)),
+      ) |> tagAppendChild(opts_help("Saving re-queues the sample.", nested = TRUE)),
       {
         el <- selectInput(
           ns("maptoref_ref_topology"),
