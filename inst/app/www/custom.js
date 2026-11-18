@@ -11,14 +11,28 @@ window.MP_SAMPLE_TABLES =
 // being re-rendered away closes it, so none is left stranded on screen.
 $( document ).ready(function(){
   if (!$.fn.popover) return;
-  var open = null;
+  var open = null, toolOpen = false;
   window.mpHidePopovers = function() {
     if (open) {
       $(open).attr('aria-expanded', 'false').popover('destroy');
       open = null;
     }
     $('body > .popover').remove();
+    if (toolOpen) $('.mp-tool-help-popover').hide();
+    toolOpen = false;
+    $('[data-toggle="mp-tool-help"]').attr('aria-expanded', 'false');
   };
+  // tool documentation: same rules, in its own wide scrolling panel
+  $(document).on('click', '[data-toggle="mp-tool-help"]', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var panel = $(this).siblings('.mp-tool-help-popover'), again = panel.is(':visible');
+    mpHidePopovers();
+    if (again) return;
+    panel.show();
+    toolOpen = true;
+    $(this).attr('aria-expanded', 'true');
+  });
   $(document).on('click', '[data-toggle="mp-popover"]', function(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -30,17 +44,17 @@ $( document ).ready(function(){
     open = el;
   });
   $(document).on('click', function(e) {
-    if (open && !$(e.target).closest('.popover, [data-toggle="mp-popover"]').length) mpHidePopovers();
+    if ((open || toolOpen) && !$(e.target).closest('.popover, .mp-tool-help-popover, [data-toggle="mp-popover"]').length) mpHidePopovers();
   });
   $(document).on('keydown', function(e) {
-    if (e.key === 'Escape' && open) mpHidePopovers();
+    if (e.key === 'Escape' && (open || toolOpen)) mpHidePopovers();
   });
-  $(document).on('keydown', 'span.mp-help-icon', function(e) {
+  $(document).on('keydown', '.mp-help-icon', function(e) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
   });
   document.addEventListener('scroll', function(e) {
     var t = e.target;
-    if (open && !(t.closest && t.closest('.popover'))) mpHidePopovers();
+    if ((open || toolOpen) && !(t.closest && t.closest('.popover, .mp-tool-help-popover'))) mpHidePopovers();
   }, true);
   $(document).on('show.bs.modal hide.bs.modal', function() { mpHidePopovers(); });
   $(document).on('shiny:value', function() {
@@ -358,7 +372,7 @@ $(document).on('shiny:value', function(e) {
 });
 
 // A "?" inside a <summary> opens its popover without folding the section
-$(document).on('click', 'summary .mp-help-icon', function(e) { e.preventDefault(); });
+$(document).on('click', 'summary .mp-help-icon, label .mp-help-icon', function(e) { e.preventDefault(); });
 
 // Imported gene-name review: chips and selects follow the table's filters.
 window.mpGN = {

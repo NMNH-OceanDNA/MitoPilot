@@ -95,16 +95,6 @@ annotate_server <- function(id) {
     meta_view_setup(input, output, session)
     fetch_data <- function() meta_view_join(fetch_annotate_data(), session$userData$con)
 
-    # Help-doc icons (one observer per tool, registered once at module init).
-    reopen_annotate <- function() annotate_opts_modal(rv)
-    reopen_orf <- function() orf_opts_modal(rv)
-    register_tool_help("mitos", input, reopen = reopen_annotate)
-    register_tool_help("trnaScan-SE", input, reopen = reopen_annotate)
-    register_tool_help("mitofinder", input, reopen = reopen_annotate)
-    register_tool_help("arwen", input, reopen = reopen_annotate)
-    register_tool_help("aragorn", input, reopen = reopen_annotate)
-    register_tool_help("orffinder", input, reopen = reopen_orf)
-
     # Prepare data ----
     rv <- reactiveValues(
       curate_opts = dplyr::tbl(session$userData$con, "curate_opts") |>

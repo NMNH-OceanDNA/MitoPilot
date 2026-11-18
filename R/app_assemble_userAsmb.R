@@ -70,8 +70,6 @@ assemble_server_userAsmb <- function(id) {
     meta_view_setup(input, output, session)
     fetch_data <- function() meta_view_join(fetch_assemble_data_userAsmb(), session$userData$con)
 
-    register_tool_help("fastp", input, reopen = function() pre_opts_modal(rv))
-    register_tool_help("blastn", input, reopen = function() blast_opts_modal(rv))
 
     # Prepare data ----
     rv <- reactiveValues(

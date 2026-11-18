@@ -4879,14 +4879,14 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     if (is_locked) {
       div(
         class = "alert alert-warning mp-lock-banner", role = "status",
-        icon("lock"), tags$b(" This assembly is locked"),
+        icon("lock"), tags$b(" This assembly is locked", .noWS = "after"),
+        ", so editing is off. Unlock it in the Annotate table.",
         mp_help_tip(mp_help_bullets(
           "Locked assemblies are finished with this step.",
           "Their options cannot be changed, and the next update will not re-run them.",
           "They move on to Export.",
           "You can unlock at any time."
-        ), label = "locking"),
-        ", so editing is off. Unlock it in the Annotate table."
+        ), label = "locking")
       )
     },
     uiOutput(ns("outlier_flag_banner")),
