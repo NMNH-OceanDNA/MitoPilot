@@ -20,7 +20,7 @@ annotate(
   trnaScan_condaenv = "base",
   arwen_opts = "-mtx",
   use_arwen = FALSE,
-  aragorn_opts = "-m -gcstd",
+  aragorn_opts = "-mtx",
   aragorn_condaenv = "aragorn",
   use_aragorn = FALSE,
   use_mitos_best = TRUE,
@@ -35,7 +35,9 @@ annotate(
   coverage_trim = TRUE,
   retain_low_conf_trna = FALSE,
   ignore_scaffolds = NULL,
-  out_dir = NULL
+  out_dir = NULL,
+  user_annotations_fn = NULL,
+  run_tools = TRUE
 )
 ```
 
@@ -101,7 +103,7 @@ annotate(
 
 - aragorn_opts:
 
-  Additional command line options for ARAGORN (default: "-m -gcstd").
+  Additional command line options for ARAGORN (default: "-mtx").
 
 - aragorn_condaenv:
 
@@ -174,3 +176,14 @@ annotate(
 - out_dir:
 
   Output directory.
+
+- user_annotations_fn:
+
+  Path to an imported annotation CSV. When set, its features are kept
+  as-is and tools run only if \`run_tools\` is TRUE (default: NULL).
+
+- run_tools:
+
+  logical; in user-annotation mode, also run the enabled tools and add
+  their features where they do not overlap imported ones (default TRUE;
+  ignored when user_annotations_fn is NULL).

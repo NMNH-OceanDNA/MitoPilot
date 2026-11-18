@@ -10,8 +10,8 @@ cluster](https://nmnh-oceandna.github.io/MitoPilot/articles/NOAA-SEDNA.html).
 
 This page covers the cluster-specific parts only: getting an R session,
 writing a config, and submitting work. Everything about using MitoPilot
-itself is the same as in the [Get
-Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
+itself is the same as in the [test
+project](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 walkthrough, so run through that first if you have not already.
 
 ### Launch an R session on the cluster
@@ -43,7 +43,7 @@ A quick vocabulary primer if containers are new to you:
 
 The image tag must match your installed MitoPilot version. Get it with
 `packageVersion("MitoPilot")`, which for this build of the documentation
-is 1.5.10.
+is 1.6.0.
 
 ``` bash
 singularity pull mitopilot.sif docker://macguigand/mitopilot:<version>

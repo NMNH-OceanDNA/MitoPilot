@@ -7,7 +7,7 @@ Use ARAGORN to annotate tRNAs in a mitochondrial genome assembly
 ``` r
 annotate_aragorn(
   assembly = NULL,
-  aragorn_opts = "-m -gcstd",
+  aragorn_opts = "-mtx",
   genetic_code = "2",
   circular = TRUE,
   condaenv = "aragorn"
@@ -22,7 +22,7 @@ annotate_aragorn(
 
 - aragorn_opts:
 
-  command line options for ARAGORN (default = "-m -gcstd")
+  command line options for ARAGORN (default = "-mtx")
 
 - genetic_code:
 

@@ -1,4 +1,11 @@
-# Get Started
+# Test Project: Initialize
+
+Test project: 0. Initialize [1.
+Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md)
+[2.
+Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)
+[3.
+Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md)
 
 MitoPilot takes you from raw Illumina paired-end reads to polished
 mitogenome records ready for submission to NCBI GenBank. The heavy
@@ -8,7 +15,7 @@ annotation. MitoPilot automatically curates annotations based on
 clade-specific rulesets and also allows you to manually adjust
 annotations when needed.
 
-Start here. This page gets MitoPilot installed and the built-in test
+Start here. This page checks your setup and gets the built-in test
 project running, then hands off to a page per pipeline module. Work
 through them in order; the whole test project takes an afternoon at
 most.
@@ -110,6 +117,8 @@ curation, and export.
 sets up the equivalent test project, covering the common cases. See
 [Using Your Own
 Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.md).
+If you also have annotations, see [Using Your Own
+Annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Annotations.md).
 
 ------------------------------------------------------------------------
 
@@ -194,6 +203,8 @@ Additional articles for you to explore:
   method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md)
 - [Handling difficult
   assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.md)
+- [Handling difficult
+  annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Annotations.md)
 - [Curation ruleset
   browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md)
   and [curation and validation

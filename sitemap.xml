@@ -4,6 +4,7 @@
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Curation-and-Validation.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html</loc></url>
+<url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Annotations.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html</loc></url>
@@ -20,6 +21,7 @@
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.html</loc></url>
+<url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Annotations.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html</loc></url>
@@ -29,6 +31,7 @@
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/news/index.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/MitoPilot.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/add_samples.html</loc></url>
+<url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/alignment_rotations.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/annotate.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/annotate_aragorn.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/annotate_arwen.html</loc></url>
@@ -105,10 +108,13 @@
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/native_setup.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/ncbi_normalize_id.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_db.html</loc></url>
+<url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_db_userAnnot.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_db_userAsmb.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_project.html</loc></url>
+<url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAnnot.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project.html</loc></url>
+<url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAnnot.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAsmb.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/nextflow_cmd.html</loc></url>
 <url><loc>https://nmnh-oceandna.github.io/MitoPilot/reference/orf_finder.html</loc></url>

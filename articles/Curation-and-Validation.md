@@ -149,28 +149,20 @@ fish defaults are shown below.
 Curation refines protein-coding gene boundaries by comparing each gene
 against a reference database of amino acid sequences, one BLAST database
 per gene. The reference database is selected independently of the MITOS2
-annotation database. Bundled options are `Metazoa_RefSeq235` (the
-default, and the only one carrying rRNA BLAST references),
-`Metazoa_RefSeq231`, `Metazoa_RefSeq89`, and `Chordata`.
+annotation database. The bundled curation database is
+`Metazoa_RefSeq235`, which also carries rRNA BLAST references.
 
 MitoPilot also folds each sample’s own assembly BLAST hit into the
 curation references automatically, so the closest published relative of
 your sample is always among the sequences its boundaries are compared
 against.
 
-To supply your own, use
+To supply your own, build one with
 [`custom_curation_db()`](https://nmnh-oceandna.github.io/MitoPilot/reference/custom_curation_db.md),
 described in [building custom
-databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md).
-
-The `ref_db` property of the curation parameters sets the paths
-directly, if you need per-gene control. Its default is
-`list(default = "/ref_dbs/Mitos2/Chordata/featureProt/{gene}.fas")`,
-where `{gene}` is substituted per gene during processing. Gene-specific
-overrides can be added as named entries, for example
-`list(default = "...", atp8 = "/ref_dbs/curation/atp8.fas")`. These
-paths are resolved inside the execution environment, so any file you
-point at must be visible from within the container.
+databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md),
+then tick “Use custom curation database” in the curation options and
+enter the path to its folder.
 
 ## Validation warnings
 
@@ -250,6 +242,9 @@ after you submit.
 - [Building custom
   databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.md),
   including custom curation references
-- [Get
-  Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md),
+- [Handling difficult
+  annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Annotations.md),
+  what to change when genes are missing or warnings pile up
+- [Test project
+  tutorial](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md),
   for the annotation and manual editing workflow

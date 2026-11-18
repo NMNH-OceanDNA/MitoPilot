@@ -1,6 +1,8 @@
 # Test Project: Export
 
-Test project: [1.
+Test project: [0.
+Initialize](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
+[1.
 Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md)
 [2.
 Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)

@@ -12,13 +12,13 @@ Source:
 [`inst/CITATION`](https://github.com/NMNH-OceanDNA/MitoPilot/blob/main/inst/CITATION)
 
 Leopold D, MacGuigan D (2026). *MitoPilot: Mitogenome Assembly,
-Annotation, and Curation*. R package version 1.5.10,
+Annotation, and Curation*. R package version 1.6.0,
 <https://nmnh-oceandna.github.io/MitoPilot/>.
 
     @Manual{,
       title = {MitoPilot: Mitogenome Assembly, Annotation, and Curation},
       author = {Devin Leopold and Dan MacGuigan},
       year = {2026},
-      note = {R package version 1.5.10},
+      note = {R package version 1.6.0},
       url = {https://nmnh-oceandna.github.io/MitoPilot/},
     }

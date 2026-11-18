@@ -1,8 +1,8 @@
 # Installation and Requirements
 
 Everything on this page happens once per machine. When it is done, go to
-[Get
-Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
+the
+[Tutorial](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 and run the test project.
 
 ## What you need
@@ -125,10 +125,6 @@ The pipeline is tested and supported on **Nextflow 24.10.x through
 - **Versions older than 24.10** silently ignore the pipeline’s
   `workflow.failOnIgnore` setting.
 
-If you install Nextflow through conda or mamba, pin it, because the
-channels track the newest release:
-`mamba install 'bioconda::nextflow<26'`.
-
 ## Container cache directory
 
 MitoPilot runs each processing step inside a container (Docker locally,
@@ -170,9 +166,12 @@ pipelines.
 
 ## Next steps
 
-- [Get
-  Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
+- The
+  [Tutorial](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
   walks the whole pipeline using the built-in test project.
+- [Starting your own
+  project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md)
+  covers setting up a project with your own samples.
 - [HPC cluster
   support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.md)
   covers executors, cluster profiles, and running the app over an SSH

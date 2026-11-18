@@ -27,7 +27,7 @@ new_project(
   config = NULL,
   profile_dir = mitopilot_config_dir(),
   ncbi_api_key = NULL,
-  Rproj = TRUE,
+  Rproj = FALSE,
   force = FALSE,
   ...
 )
@@ -163,7 +163,7 @@ new_project(
 - Rproj:
 
   (logical) Initialize and open an RStudio project in the project
-  directory (default = TRUE). This option has no effect if not running
+  directory (default = FALSE). This option has no effect if not running
   interactively in RStudio.
 
 - force:

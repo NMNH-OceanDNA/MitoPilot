@@ -1,0 +1,107 @@
+# Initialize a test project for user-supplied annotations
+
+Sets up a seven-sample test project for the user-annotation workflow.
+Each sample is one RefSeq teleost mitogenome from the GenBank records
+shipped with MitoPilot: the record's sequence is the assembly
+(circular), its features are the annotation, and small synthetic paired
+reads (about 20x) are sampled from it. The coordinates are real; some
+names and extra features are deliberately wrong so the gene-name review
+has work to do.
+
+## Usage
+
+``` r
+new_test_project_userAnnot(
+  path = ".",
+  no_raw_data = FALSE,
+  executor = "local",
+  container = paste0("macguigand/mitopilot:", utils::packageVersion("MitoPilot")),
+  Rproj = FALSE,
+  force = FALSE,
+  fetch_metadata = TRUE,
+  ...
+)
+```
+
+## Arguments
+
+- path:
+
+  path to the directory for the test project (default = current working
+  directory). Will be created if it does not already exist.
+
+- no_raw_data:
+
+  (logical) Set the project up without raw reads (default = FALSE). See
+  \[new_project_userAnnot()\].
+
+- executor:
+
+  The executor to use for running the nextflow pipeline. A built-in
+  template ("local" (default), "awsbatch", "slurm", "sge", "pbs", "lsf",
+  "NMNH_Hydra", "NOAA_SEDNA") or a saved profile from
+  \[generate_config()\]. See \[list_configs()\].
+
+- container:
+
+  The container to use for running the pipeline.
+
+- Rproj:
+
+  (logical) Initialize and open an RStudio project in the project
+  directory (default = FALSE). This has no effect if not running
+  interactively in RStudio.
+
+- force:
+
+  (logical) Force recreating of existing project database and config
+  files (default = FALSE).
+
+- fetch_metadata:
+
+  (logical) Fetch NCBI metadata and follow links to GBIF and GEOME
+  (default = TRUE). The demo samples have no BioSample, so nothing is
+  fetched for them. Set FALSE when offline.
+
+- ...:
+
+  Additional arguments passed to \[new_project_userAnnot()\]
+
+## Details
+
+- \`GB_NCBI\` (Danio rerio): an NCBI-style GFF3 with the full
+  gene/mRNA/CDS/exon hierarchy. Every name is guessed.
+
+- \`GB_TBL\` (Oncorhynchus mykiss): an NCBI 5-column feature table with
+  anticodons. Every name is guessed.
+
+- \`GB_BED\` (Gadus morhua): BED, with feature types inferred from the
+  names and nad1 split into two blocks (a joined feature).
+
+- \`GB_TYPOS\` (Thunnus thynnus): a GFF3 with odd names on the record's
+  37 real genes. \`mt-Nd2\`, \`MT-ND5\`, \`cytb\`, \`COII\`, \`COIII\`,
+  \`tRNA-Leu (CUN)\`, \`trnS2(tga)\`, and \`l-rRNA\` are guessed.
+  \`COX11\` (cox1), \`NDH4K\` (nad4l), \`ATP88\` (atp8), a product-only
+  \`NADH dehydrogenase subnit 3\` (nad3), \`tRNA-Xxx\` (trnK), \`rrnX\`
+  (rrnS), \`hypothetical protein\` (nad6), and \`ORF123\` (atp6) are
+  not. Each sits on a real gene, so mapping it by hand to the gene in
+  brackets gives a valid annotation.
+
+- \`GB_DROP\` (Xyrichtys novacula): a feature table with a \`D-loop\`
+  and a control-region \`misc_feature\` (both guessed as the control
+  region, \`ctrl\`), a light-strand \`rep_origin\` and a
+  \`repeat_region\` (unmapped, so dropped), plus a \`gap\` and an
+  \`STS\` (dropped on import), a pseudogene (nad6), ribosomal slippage
+  (atp8 in two parts), a 5' partial nad1 with \`codon_start\` 2, a 3'
+  partial rrnL, and nad5 spanning the origin. The two control-region
+  features are adjacent, so validate reports \`extra: ctrl\` on purpose.
+
+- \`GB_MITOS\` (Beryx splendens): a MITOS2-style GFF with lowercase
+  names, numbered tRNAs (\`trnL1(tag)\`, \`trnS2(tga)\`), \`OH\`
+  (guessed as \`ctrl\`), \`OL\` (unmapped), and cob spanning the origin
+  as one row.
+
+- \`GB_GAPS\` (Sebastes schlegelii): a plain GFF3 with correct names but
+  five genes left out (cox2, nad3, trnD, trnK, rrnS). Turn on "Run
+  annotation tools" in the Annotate Opts window and MitoPilot fills them
+  in.

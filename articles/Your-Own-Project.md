@@ -99,9 +99,8 @@ That is the minimum. Everything below is optional, but for anything
 other than a ray-finned fish you will want at least `curate_target` and
 custom assembly databases.
 
-Run from RStudio, this also creates and opens a new RStudio project. On
-RStudio Server on a cluster you usually want `Rproj = FALSE` to stay in
-your current session.
+To also create and open a new RStudio project in the project directory,
+add `Rproj = TRUE`. This only has an effect when run from RStudio.
 
 #### Arguments worth setting
 
@@ -272,8 +271,13 @@ curation, and export.
 Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.md)
 covers the extra mapping columns, projects with no raw reads, and the
 optional steps for whole-genome assemblies: finding the mitochondrial
-contigs, circularizing linear ones, and joining a mitogenome that
-arrived in several pieces.
+contigs, circularization, and joining a mitogenome that arrived in
+several pieces.
+
+If you also have annotations for each assembly, use
+[`new_project_userAnnot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAnnot.md)
+and see [Using Your Own
+Annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Annotations.md).
 
 ------------------------------------------------------------------------
 

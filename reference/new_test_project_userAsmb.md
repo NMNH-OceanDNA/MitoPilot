@@ -19,7 +19,7 @@ new_test_project_userAsmb(
   full_size = FALSE,
   executor = "local",
   container = paste0("macguigand/mitopilot:", utils::packageVersion("MitoPilot")),
-  Rproj = TRUE,
+  Rproj = FALSE,
   force = FALSE,
   fetch_metadata = TRUE,
   ...
@@ -59,7 +59,7 @@ new_test_project_userAsmb(
 - Rproj:
 
   (logical) Initialize and open an RStudio project in the project
-  directory (default = TRUE). This has no effect if not running
+  directory (default = FALSE). This has no effect if not running
   interactively in RStudio.
 
 - force:

@@ -8,6 +8,8 @@
 ### Test project walkthrough
 
 - [Test Project:
+  Initialize](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md):
+- [Test Project:
   Assemble](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Assemble.md):
 - [Test Project:
   Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md):
@@ -20,10 +22,14 @@
   Project](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Project.md):
 - [Using Your Own
   Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.md):
+- [Using Your Own
+  Annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Annotations.md):
 - [Choosing an Assembly
   Method](https://nmnh-oceandna.github.io/MitoPilot/articles/Assembly-Methods.md):
 - [Difficult
   Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.md):
+- [Difficult
+  Annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Annotations.md):
 - [Curation Ruleset
   Browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.md):
 - [Curation and

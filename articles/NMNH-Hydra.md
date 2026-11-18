@@ -1,8 +1,8 @@
 # Smithsonian Hydra Setup
 
 This page covers what is specific to the Smithsonian Hydra cluster. Once
-you are set up here, the rest of MitoPilot works exactly as in the [Get
-Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
+you are set up here, the rest of MitoPilot works exactly as in the [test
+project](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 walkthrough, with `executor = "NMNH_Hydra"`.
 
 Smithsonian users can also check out the [2025 workshop
@@ -100,9 +100,9 @@ for your own data. Work under `/pool` or `/scratch`. Home directories
 are too small for pipeline work directories, and projects cannot be run
 from `/store`.
 
-The full walkthrough, with Hydra-specific notes at each step, is on the
-[Get
-Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
+The full walkthrough, with Hydra-specific notes at each step, starts on
+the [Test Project:
+Initialize](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
 page.
 
 ## Running jobs

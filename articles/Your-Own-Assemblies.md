@@ -268,3 +268,10 @@ options on record rather than the layout you edited. The button then
 reads **Cancel queued pipeline join**, so a mis-click is easy to undo.
 If the sample cannot be queued, the button is greyed out and the reason
 is shown below it.
+
+## Importing your own annotations
+
+If you also have annotations for each assembly, use
+[`new_project_userAnnot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAnnot.md)
+instead. See [Using Your Own
+Annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Annotations.md).

@@ -8,8 +8,15 @@ page.
 
 ## Can I annotate my own mitogenome assemblies with MitoPilot?
 
-Yes! See [Using Your Own
+Yes! Each sample needs a FASTA with it’s own assembled contig(s). See
+[Using Your Own
 Assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Assemblies.md).
+
+## Can I bring my own annotations too?
+
+Yes! MitoPilot can import annotations in GFF3, BED, or GenBank feature
+table formats. See [Using Your Own
+Annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Your-Own-Annotations.md).
 
 ## Can MitoPilot find the mitogenome in my whole-genome assembly?
 
@@ -162,6 +169,19 @@ To rerun specific samples:
 - change the state of the target samples to **Ready to run**
 - lock all other samples
 - make sure your Nextflow command contains the `-resume` flag
+
+## How do I add a gene the annotator missed?
+
+In the Annotate details window, open **BLAST Reference Synteny**, click
+the missing gene in the reference track, and press **Liftover**.
+MitoPilot finds where that gene sits in your assembly and adds it as a
+new annotation once you pick a placement. See [“Add a missing gene from
+the
+reference”](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.html#add-a-missing-gene-from-the-reference).
+
+If the same gene is missing from many assemblies, change the annotation
+settings first. See [“Handling difficult
+annotations”](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Annotations.html#a-gene-is-missing).
 
 ## Why does it take so long to edit a start/stop codon position?
 

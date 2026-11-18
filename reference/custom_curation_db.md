@@ -4,11 +4,11 @@ Generate a custom curation database from user-supplied table of
 translated (amino acid) mitochondrial gene sequences. Requires a CSV
 file containing three columns: "SeqID" = unique name to be used for
 sequence, "Gene" = name of gene, and "FASTA" = name of fasta file
-containing the protein sequence. Combines your sequences with Metazoa or
-Chordata NCBI RefSeq data. Make sure to carefully consider what you are
-adding to the custom database. You should only use high-confidence
-sequences. Poor quality reference data will result in poorly curated
-gene models.
+containing the protein sequence. Combines your sequences with the
+bundled Metazoa NCBI RefSeq data (Metazoa_RefSeq235). Make sure to
+carefully consider what you are adding to the custom database. You
+should only use high-confidence sequences. Poor quality reference data
+will result in poorly curated gene models.
 
 ## Usage
 
@@ -45,8 +45,8 @@ custom_curation_db(
 
 - base_db:
 
-  Which base NCBI RefSeq database to use, "Metazoa" or "Chordata"?
-  Default = "Metazoa"
+  Base NCBI RefSeq database. Only "Metazoa" (Metazoa_RefSeq235) is
+  supported.
 
 ## Details
 

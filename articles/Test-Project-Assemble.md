@@ -1,14 +1,11 @@
 # Test Project: Assemble
 
-Test project: 1. Assemble [2.
+Test project: [0.
+Initialize](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md) 1.
+Assemble [2.
 Annotate](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Annotate.md)
 [3.
 Export](https://nmnh-oceandna.github.io/MitoPilot/articles/Test-Project-Export.md)
-
-This walkthrough picks up where [Get
-Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.md)
-leaves off, so start there if you have not yet set up the test project
-and opened the app.
 
 The Assemble module cleans the reads, builds mitogenome assemblies, maps
 the reads to the assembly to calculate coverage, and BLASTs each

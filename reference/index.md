@@ -11,10 +11,15 @@ Create a project and launch the app.
 - [`new_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAsmb.md)
   : Initialize new MitoPilot Project with user-provided mitogenome
   assemblies
+- [`new_project_userAnnot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_project_userAnnot.md)
+  : Initialize new MitoPilot Project with user-provided assemblies and
+  annotations
 - [`new_test_project()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project.md)
   : Initialize a test project
 - [`new_test_project_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAsmb.md)
   : Initialize a test project for user-supplied assemblies
+- [`new_test_project_userAnnot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_test_project_userAnnot.md)
+  : Initialize a test project for user-supplied annotations
 
 ## Project database
 
@@ -24,6 +29,8 @@ Create, migrate, edit, and export the project SQLite database.
   : Initialize a new project database
 - [`new_db_userAsmb()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_db_userAsmb.md)
   : Initialize a new project database
+- [`new_db_userAnnot()`](https://nmnh-oceandna.github.io/MitoPilot/reference/new_db_userAnnot.md)
+  : Initialize a new user-annotation project database
 - [`add_samples()`](https://nmnh-oceandna.github.io/MitoPilot/reference/add_samples.md)
   : Add samples to project database
 - [`update_sample_metadata()`](https://nmnh-oceandna.github.io/MitoPilot/reference/update_sample_metadata.md)
@@ -104,6 +111,9 @@ BLAST.
   Pre-compute a whole-genome pairwise alignment of a sample against its
   BLAST reference and write the result for ingestion into the
   `blast_ref_alignment` SQLite table.
+
+- [`alignment_rotations()`](https://nmnh-oceandna.github.io/MitoPilot/reference/alignment_rotations.md)
+  : Which side of a synteny alignment to rotate, and by how much
 
 - [`get_top_hits_local()`](https://nmnh-oceandna.github.io/MitoPilot/reference/get_top_hits_local.md)
   : Get top BLASTP hits

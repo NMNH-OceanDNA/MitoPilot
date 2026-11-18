@@ -8,7 +8,13 @@ file-based inputs without a database connection.
 ## Usage
 
 ``` r
-compute_blast_ref_alignment(assembly_seq, ref_seq, rotation = 0L, output_file)
+compute_blast_ref_alignment(
+  assembly_seq,
+  ref_seq,
+  rotation = 0L,
+  output_file,
+  sample_rotation = 0L
+)
 ```
 
 ## Arguments
@@ -32,3 +38,9 @@ compute_blast_ref_alignment(assembly_seq, ref_seq, rotation = 0L, output_file)
 
   path to write a one-row CSV with columns `aligned_sample`,
   `aligned_ref`, `rotation`, `ref_length`
+
+- sample_rotation:
+
+  integer offset (0-based) applied to the SAMPLE copy before aligning,
+  for a circular sample against a linear reference; the stored sequence
+  is not changed

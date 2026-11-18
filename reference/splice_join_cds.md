@@ -16,7 +16,9 @@ splice_join_cds(members, seq, genetic_code)
 - members:
 
   data frame of the group's annotation rows. Requires columns pos1,
-  pos2, direction, start_codon, stop_codon, partial_start, partial_stop.
+  pos2, direction, start_codon, stop_codon, partial_start, partial_stop;
+  an optional \`codon_start\` on the 5' member offsets the reading
+  frame.
 
 - seq:
 
@@ -32,6 +34,7 @@ splice_join_cds(members, seq, genetic_code)
 
 list with \`dna\`, \`translation\` (terminal stop stripped),
 \`start_codon\`, \`stop_codon\`, \`partial_start\`, \`partial_stop\`,
-\`pos1\`, \`pos2\`, \`length\`, \`direction\`, and \`segments\`: a data
-frame (one row per exon, ordered 5'-\>3') with \`member_row\` (index
-into \`members\`), \`pos1\`, \`pos2\`, \`aa_start\`, \`aa_end\`.
+\`codon_start\`, \`pos1\`, \`pos2\`, \`length\`, \`direction\`, and
+\`segments\`: a data frame (one row per exon, ordered 5'-\>3') with
+\`member_row\` (index into \`members\`), \`pos1\`, \`pos2\`,
+\`aa_start\`, \`aa_end\`.
