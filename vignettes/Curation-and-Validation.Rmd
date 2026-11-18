@@ -276,4 +276,6 @@ metadata. Expect NCBI to run its own screens after you submit.
 - [Curation ruleset browser](Ruleset-Browser.html), every ruleset and parameter
 - [Building custom databases](custom_dbs.html), including custom curation
   references
+- [Handling difficult annotations](Difficult-Annotations.html), what to change
+  when genes are missing or warnings pile up
 - [Test project tutorial](MitoPilot.html), for the annotation and manual editing workflow

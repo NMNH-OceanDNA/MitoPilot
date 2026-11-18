@@ -147,6 +147,9 @@ and rRNAs) and [tRNAscan-SE](https://github.com/UCSC-LoweLab/tRNAscan-SE)
 (tRNAs), with MitoFinder, ARWEN, ARAGORN, and ORFfinder available as optional annotators. 
 The MITOS2 reference database defaults to `Chordata`, but `Metazoa_RefSeq89` is the
 general-purpose choice for other groups.
+The defaults suit most vertebrates. For other clades, or when genes come back
+missing or on the wrong strand, see [handling difficult annotations](Difficult-Annotations.html)
+for which settings to change.
 
 **Curate Opts.** controls what MitoPilot does with those raw annotations.
 
@@ -259,6 +262,10 @@ table to jump to that gene, or use Whole genome to step back out. The view
 follows every edit you make in this window.
 
 ## Manually fix annotations
+
+If many assemblies share the same problem, change a setting and re-run before
+editing by hand; see [handling difficult annotations](Difficult-Annotations.html).
+Re-running replaces manual edits, so do it first.
 
 Click **Edit** in the alignment section to nudge the start or stop position 
 and watch the alignment respond. 

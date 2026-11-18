@@ -57,6 +57,8 @@ navbar:
         href: articles/Assembly-Methods.html
       - text: "Difficult assemblies"
         href: articles/Difficult-Assemblies.html
+      - text: "Difficult annotations"
+        href: articles/Difficult-Annotations.html
       - text: "Curation ruleset browser"
         href: articles/Ruleset-Browser.html
       - text: "Curation and validation"
@@ -109,6 +111,7 @@ articles:
   - 'Your-Own-Annotations'
   - 'Assembly-Methods'
   - 'Difficult-Assemblies'
+  - 'Difficult-Annotations'
   - 'Ruleset-Browser'
   - 'Curation-and-Validation'
   - 'custom_dbs'
