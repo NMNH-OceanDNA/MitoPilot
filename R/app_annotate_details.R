@@ -382,7 +382,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       btn <- actionButton(
         id, label,
         icon = if (on) icon("check"),
-        class = paste("btn-sm btn-default mp-flag-chip", if (on) paste0("mp-btn-", tone)),
+        class = paste("mp-flag-chip", if (on) paste0("mp-btn-", tone)),
         title = paste0(title, ". Click to ", if (on) "clear" else "set", "."),
         `aria-pressed` = if (on) "true" else "false"
       )
