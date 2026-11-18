@@ -6,7 +6,7 @@
 \usage{
 annotate_aragorn(
   assembly = NULL,
-  aragorn_opts = "-m -gcstd",
+  aragorn_opts = "-mtx",
   genetic_code = "2",
   circular = TRUE,
   condaenv = "aragorn"
@@ -15,7 +15,7 @@ annotate_aragorn(
 \arguments{
 \item{assembly}{DNAStringSet assembly to annotate}
 
-\item{aragorn_opts}{command line options for ARAGORN (default = "-m -gcstd")}
+\item{aragorn_opts}{command line options for ARAGORN (default = "-mtx")}
 
 \item{genetic_code}{NCBI translation table number passed to ARAGORN via -gc<N> (default = "2")}
 

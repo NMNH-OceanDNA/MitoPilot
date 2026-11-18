@@ -960,7 +960,7 @@ backwards_compatibility <- function(
   # if aragorn_opts column doesn't exist, add it
   if(!("aragorn_opts" %in% names(annotate_opts_table))){
     message("added 'aragorn_opts' column to annotate_opts table")
-    annotate_opts_table$aragorn_opts <- rep("-m -gcstd", nrow(annotate_opts_table))
+    annotate_opts_table$aragorn_opts <- rep("-mtx", nrow(annotate_opts_table))
     glue::glue_sql(
       "ALTER TABLE annotate_opts
        ADD COLUMN aragorn_opts TEXT",
