@@ -2206,7 +2206,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     output$liftover_btn <- renderUI({
       req(rv$blast_ref)
       p <- lift_pick()
-      lbl <- if (is.null(p)) "Lift over gene" else paste("Lift over", p$gene)
+      lbl <- if (is.null(p)) "Liftover gene" else paste("Liftover", p$gene)
       ico <- icon("arrow-up-from-bracket")
       why <- if (is.null(p)) NA_character_ else liftover_blocked_reason(rv$blast_ref, p$gene, p$pos1)
       if (is.na(why) && locked()) why <- paste("This assembly is locked.", MP_LOCK_DEF("annotate"))
@@ -2284,7 +2284,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
                           error = function(e) NULL)
           showModal(modalDialog(
             title = mp_modal_title(
-              sprintf("Lift over %s from %s (%s bp)", st$gene, st$acc, format(st$gene_len, big.mark = ",")),
+              sprintf("Liftover %s from %s (%s bp)", st$gene, st$acc, format(st$gene_len, big.mark = ",")),
               close = FALSE
             ),
             if (any_hit) div(

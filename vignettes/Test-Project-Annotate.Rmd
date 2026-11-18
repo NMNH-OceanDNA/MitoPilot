@@ -231,7 +231,7 @@ orange above 5%, a sign of possible sequencing or assembly errors.
 mitogenome, with a percent-identity bar between them. Drag or scroll sideways to pan and
 scroll or pinch to zoom; zoomed in far enough, the bases of your sample and the reference
 appear with mismatches and gaps coloured. Click a gene in the sample track to select it in
-the table. Click a gene in the reference track to zoom to it, then use **Lift over** to copy it to
+the table. Click a gene in the reference track to zoom to it, then use **Liftover** to copy it to
 your assembly; see [Add a missing gene from the reference](#add-a-missing-gene-from-the-reference).
 
 The reference mitogenome shown in this plot is recorded in the export's
@@ -299,10 +299,10 @@ Other useful editing tools:
 
 If the annotator missed a gene that the closest reference has, you can copy it over.
 Open **BLAST Reference Synteny** and click the gene in the reference track. The plot zooms to it
-and the blue **Lift over** button next to the zoom buttons takes on the gene's name. Click it to
+and the blue **Liftover** button next to the zoom buttons takes on the gene's name. Click it to
 find where that gene sits in your assembly.
 
-![Lift over dialog with placements, alignment, and synteny view](figures/get-started/annotate-liftover-dialog.png)
+![Liftover dialog with placements, alignment, and synteny view](figures/get-started/annotate-liftover-dialog.png)
 
 The table lists up to three placements, best first, with position, strand, identity, gaps, and any
 existing genes the placement overlaps. Pick one to see the reference gene aligned to it. tRNAs and

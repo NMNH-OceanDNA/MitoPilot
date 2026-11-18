@@ -152,7 +152,7 @@ To rerun specific samples:
 
 ## How do I add a gene the annotator missed?
 
-In the Annotate details window, open **BLAST Reference Synteny**, click the missing gene in the reference track, and press **Lift over**.
+In the Annotate details window, open **BLAST Reference Synteny**, click the missing gene in the reference track, and press **Liftover**.
 MitoPilot finds where that gene sits in your assembly and adds it as a new annotation once you pick a placement.
 See ["Add a missing gene from the reference"](Test-Project-Annotate.html#add-a-missing-gene-from-the-reference).
 
