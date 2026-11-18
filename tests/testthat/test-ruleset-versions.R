@@ -7,7 +7,10 @@ test_that("ruleset settings do not change without a version bump", {
     v <- p$ruleset_version
     p$ruleset_version <- NULL
     f <- withr::local_tempfile()
-    writeLines(as.character(jsonlite::toJSON(p, auto_unbox = TRUE, digits = NA)), f)
+    # binary write: the fingerprint must not depend on the platform's line ending
+    con <- file(f, "wb")
+    writeLines(as.character(jsonlite::toJSON(p, auto_unbox = TRUE, digits = NA)), con, sep = "\n")
+    close(con)
     paste(v, unname(tools::md5sum(f)))
   }, character(1))
   path <- test_path("ruleset_fingerprints.csv")

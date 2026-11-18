@@ -268,7 +268,7 @@ test_that("the Nextflow command runs from the scratch folder under the project c
   a <- cmd$args
   expect_equal(cmd$command, "nextflow")
   expect_equal(cmd$wd, st$dir)
-  expect_true(startsWith(st$dir, file.path(proj, ".liftover")))
+  expect_true(startsWith(st$dir, normalizePath(file.path(proj, ".liftover"))))
   expect_equal(a[which(a == "run") + 1], app_sys("nextflow", "liftover_curate.nf"))
   cs <- a[which(a == "-c") + 1]
   expect_equal(cs, c(cfg, file.path(st$dir, "liftover.config")))
