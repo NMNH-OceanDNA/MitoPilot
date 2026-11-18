@@ -73,18 +73,16 @@ synteny_viewer_ui <- function(ns, user_annot = FALSE, prefix = "synteny") {
       btn("zoom_in", NULL, icon("magnifying-glass-plus"), "Zoom in"),
       btn("zoom_out", NULL, icon("magnifying-glass-minus"), "Zoom out"),
       if (user_annot) mp_checkbox(ns("show_orig"), label = "Original", value = TRUE),
-      if (main) uiOutput(ns("liftover_btn"), inline = TRUE)
+      if (main) uiOutput(ns("liftover_btn"), inline = TRUE),
+      mp_help_tip(mp_help_bullets(
+        "Drag or scroll sideways to pan. Scroll or pinch to zoom.",
+        if (main) "Click a sample gene to select its row in the table.",
+        if (main) "Click a reference gene, then Liftover, to copy it to this assembly.",
+        "Bases appear when zoomed in."
+      ), label = "the synteny viewer")
     ),
     uiOutput(ns("synteny_rot_note")),
     if (user_annot) uiOutput(ns("synteny_orig_note")),
-    div(class = "mp-coverage-caption",
-        if (main) {
-          paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a sample gene to select its row,",
-                "or a reference gene, then Liftover, to copy it to this assembly.",
-                "Bases appear when zoomed in.")
-        } else {
-          "Drag or scroll sideways to pan, scroll or pinch to zoom. Bases appear when zoomed in."
-        }),
     div(
       class = "mp-seqview",
       tags$canvas(id = ns(paste0(prefix, "_canvas")), class = "mp-seqview-canvas"),

@@ -86,12 +86,16 @@ seqview_ui <- function(id, user_annot = FALSE) {
       mp_checkbox(ns("show_err"), label = "Error rate", value = TRUE),
       mp_checkbox(ns("show_nt"), label = "Nucleotides", value = TRUE),
       mp_checkbox(ns("show_aa"), label = "Amino acids", value = TRUE),
-      if (user_annot) mp_checkbox(ns("show_orig"), label = "Original", value = TRUE)
+      if (user_annot) mp_checkbox(ns("show_orig"), label = "Original", value = TRUE),
+      mp_help_tip(mp_help_bullets(
+        "Drag or scroll sideways to pan. Scroll or pinch to zoom.",
+        "Click a gene to select its row in the table.",
+        "Zoom in to see bases and translations.",
+        "Copy sequence copies the bases in view.",
+        "Error rate bars turn orange above 5%."
+      ), label = "the sequence viewer")
     ),
     if (user_annot) uiOutput(ns("orig_note")),
-    div(class = "mp-coverage-caption",
-        paste("Drag or scroll sideways to pan, scroll or pinch to zoom; click a gene to select its row.",
-              "Zoom in to see nucleotide sequence and translations. Copy sequence copies the bases in view. Error rate bars turn orange above 5%.")),
     uiOutput(ns("empty")),
     div(
       class = "mp-seqview",

@@ -4899,9 +4899,14 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     if (is_locked) {
       div(
         class = "alert alert-warning mp-lock-banner", role = "status",
-        icon("lock"), tags$b(" This assembly is locked."), " ",
-        MP_LOCK_DEF("annotate"), " Editing controls below are disabled.",
-        " Unlock this assembly in the Annotate table to edit it."
+        icon("lock"), tags$b(" This assembly is locked"),
+        mp_help_tip(mp_help_bullets(
+          "Locked assemblies are finished with this step.",
+          "Their options cannot be changed, and the next update will not re-run them.",
+          "They move on to Export.",
+          "You can unlock at any time."
+        ), label = "locking"),
+        ", so editing is off. Unlock it in the Annotate table."
       )
     },
     uiOutput(ns("outlier_flag_banner")),
@@ -5308,11 +5313,6 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
           actionButton(ns("lock_only"), "Lock", icon = icon("lock"),
                        title = "Lock this assembly and keep the window open")
         )
-      ),
-      div(
-        class = "mp-table-status mp-sticky-foot",
-        style = "justify-content: flex-end; margin: 6px 0 0 0; clear: both;",
-        MP_LOCK_DEF("annotate")
       )
     )
   )

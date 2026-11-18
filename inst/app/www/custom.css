@@ -111,6 +111,15 @@ p.mp-help-text {
 .mp-help-icon:focus {
   color: var(--mp-primary);
 }
+.mp-help-icon { cursor: pointer; }
+.popover { max-width: 380px; font-weight: normal; }
+.mp-help-list { margin: 0; padding-left: 18px; }
+.mp-help-list li + li { margin-top: 3px; }
+/* A checkbox with its "?" beside it. */
+.mp-check-help { display: flex; align-items: center; gap: var(--mp-space-1); margin-bottom: 15px; }
+.mp-check-help > .shiny-input-container { width: auto !important; margin-bottom: 0; }
+.mp-check-help .pretty { margin-right: 0; }
+.mp-tool-help-intro { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--mp-border); }
 
 /* Flag toggle buttons carry the tone of the pill they set. */
 .mp-btn-success, .mp-btn-success:hover, .mp-btn-success:focus {
