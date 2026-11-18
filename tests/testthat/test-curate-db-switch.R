@@ -16,9 +16,11 @@ test_that("curate_db_fields resolves the form to ref_dir / ref_db", {
   dir.create(file.path(db, "featureProt"), recursive = TRUE)
   on.exit(unlink(td, recursive = TRUE))
   ref <- curate_db_fields(TRUE, paste0(" ", db, "/ "), "unused")
-  expect_equal(ref, list(ref_dir = td, ref_db = "Metazoa_RefSeq235_custom"))
+  np <- function(p) normalizePath(p, winslash = "/")
+  expect_equal(np(ref$ref_dir), np(td))
+  expect_equal(ref$ref_db, "Metazoa_RefSeq235_custom")
   # round trip: the stored pair rebuilds the path shown in the form
-  expect_equal(file.path(ref$ref_dir, ref$ref_db), db)
+  expect_equal(np(file.path(ref$ref_dir, ref$ref_db)), np(db))
   expect_true(curate_db_is_custom(ref$ref_db))
 
   expect_match(curate_db_fields(TRUE, td, "unused")$error, "featureProt")
