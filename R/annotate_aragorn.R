@@ -1,7 +1,7 @@
 #' Use ARAGORN to annotate tRNAs in a mitochondrial genome assembly
 #'
 #' @param assembly DNAStringSet assembly to annotate
-#' @param aragorn_opts command line options for ARAGORN (default = "-m -gcstd")
+#' @param aragorn_opts command line options for ARAGORN (default = "-mtx")
 #' @param genetic_code NCBI translation table number passed to ARAGORN via -gc<N> (default = "2")
 #' @param circular logical; TRUE for circular topology (-c), FALSE for linear (-l)
 #' @param condaenv conda environment containing ARAGORN (default = "aragorn")
@@ -10,7 +10,7 @@
 #'
 annotate_aragorn <- function(
     assembly = NULL,
-    aragorn_opts = "-m -gcstd",
+    aragorn_opts = "-mtx",
     genetic_code = "2",
     circular = TRUE,
     condaenv = "aragorn") {
@@ -50,11 +50,11 @@ annotate_aragorn <- function(
     SeC = "trnU", fMet = "trnM", iMet = "trnM"
   )
 
-  # ARAGORN batch mode (-w) format:
-  # >seq_name [length=N] [topology]
-  # N genes found.
-  #    N   tRNA-Type(anticodon)   c[start,end]
-  tRNA_pattern <- "^\\s*\\d+\\s+tRNA-(\\S+?)\\((\\w+)\\)\\s+(c?)\\[(\\d+),(\\d+)\\]"
+  # ARAGORN batch mode (-w) format (mtRNA- in the -mt modes):
+  # >seq_name
+  # N genes found
+  # N   tRNA-Type   c[start,end]   apos   (anticodon)
+  tRNA_pattern <- "^\\s*\\d+\\s+m?tRNA-(\\S+)\\s+(c?)\\[(\\d+),(\\d+)\\]\\s+\\d+\\s+\\((\\w+)\\)"
 
   current_seq <- NA_character_
   results <- list()
@@ -68,10 +68,10 @@ annotate_aragorn <- function(
     if (length(m) == 0) next
 
     aa_type    <- m[2]
-    anticodon  <- toupper(m[3])  # match MITOS2/tRNAscan case for cross-tool tRNA_ID dedup
-    complement <- m[4]   # "c" = minus strand, "" = plus strand
-    start      <- as.integer(m[5])
-    end        <- as.integer(m[6])
+    complement <- m[3]   # "c" = minus strand, "" = plus strand
+    start      <- as.integer(m[4])
+    end        <- as.integer(m[5])
+    anticodon  <- toupper(m[6])  # match MITOS2/tRNAscan case for cross-tool tRNA_ID dedup
 
     aa_clean <- sub("[12]$", "", aa_type)
     if (aa_clean %in% c("iMet", "fMet")) aa_clean <- "Met"

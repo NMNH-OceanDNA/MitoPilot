@@ -188,7 +188,7 @@ to run* and update with the Nextflow `-resume` flag. See
 [restoring annotations](FAQ.html#how-do-i-restore-annotations-after-manual-editing).
 
 Validation warnings are not cleared when you fix the problem; they record the
-state when annotation workflow ran. Use the **Mark Reviewed** button to track your
+state when annotation workflow ran. Use the **Reviewed** button to track your
 progress.
 
 ## A last check at export

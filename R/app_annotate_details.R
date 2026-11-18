@@ -382,7 +382,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       btn <- actionButton(
         id, label,
         icon = if (on) icon("check"),
-        class = paste("btn-sm btn-default mp-flag-chip", if (on) paste0("mp-btn-", tone)),
+        class = paste("mp-flag-chip", if (on) paste0("mp-btn-", tone)),
         title = paste0(title, ". Click to ", if (on) "clear" else "set", "."),
         `aria-pressed` = if (on) "true" else "false"
       )
@@ -4879,14 +4879,14 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     if (is_locked) {
       div(
         class = "alert alert-warning mp-lock-banner", role = "status",
-        icon("lock"), tags$b(" This assembly is locked"),
+        icon("lock"), tags$b(" This assembly is locked", .noWS = "after"),
+        ", so editing is off. Unlock it in the Annotate table.",
         mp_help_tip(mp_help_bullets(
           "Locked assemblies are finished with this step.",
           "Their options cannot be changed, and the next update will not re-run them.",
           "They move on to Export.",
           "You can unlock at any time."
-        ), label = "locking"),
-        ", so editing is off. Unlock it in the Annotate table."
+        ), label = "locking")
       )
     },
     uiOutput(ns("outlier_flag_banner")),

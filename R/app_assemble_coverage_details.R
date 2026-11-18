@@ -53,10 +53,6 @@ assembly_coverage_details_server <- function(id, rv) {
       FALSE
     }
 
-    # "How do I choose?" guidance modal (reopens this modal on close).
-    register_tool_help("assembly_paths", input,
-                       reopen = function() trigger("coverage_modal"))
-
     on("coverage_modal", {
       rv$alignment <- NULL
       # Navigation state kept separate from rv$alignment so block changes don't
@@ -144,19 +140,19 @@ assembly_coverage_details_server <- function(id, rv) {
         if (locked()) {
           div(
             class = "alert alert-warning mp-lock-banner", role = "status",
-            icon("lock"), tags$b(" This sample is locked"),
+            icon("lock"), tags$b(" This sample is locked", .noWS = "after"),
+            if (any(rv$focal_assembly$path == 0, na.rm = TRUE)) {
+              tagList(", so editing is off. Unlock it in the Assemble table, or use ",
+                      tags$b("Delete consensus (Path 0)", .noWS = "after"), ".")
+            } else {
+              ", so editing is off. Unlock it in the Assemble table."
+            },
             mp_help_tip(mp_help_bullets(
               "Locked samples are finished with this step.",
               "Their options cannot be changed, and the next update will not re-run them.",
               "They move on to Annotate.",
               "You can unlock at any time."
-            ), label = "locking"),
-            ", so editing is off. Unlock it in the Assemble table",
-            if (any(rv$focal_assembly$path == 0, na.rm = TRUE)) {
-              tagList(", or use ", tags$b("Delete consensus (Path 0)"), ".")
-            } else {
-              "."
-            }
+            ), label = "locking")
           )
         },
         if (isTRUE(rv$asmb_multiscaffold_blocked)) {

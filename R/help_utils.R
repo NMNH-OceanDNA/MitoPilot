@@ -115,7 +115,7 @@ read_tool_help <- function(tool) {
 #'
 #' Use inside any opts modal next to the textInput that takes that tool's args.
 #' The help text is rendered into a hidden popover that sits inside the same
-#' modal and is shown/hidden client-side, so opening help never tears down the
+#' modal and is shown/hidden client-side (custom.js), so opening help never tears down the
 #' options modal (and therefore never discards unsaved edits).
 #'
 #' @param tool short name (matches inst/tool_help/<tool>.txt)
@@ -133,12 +133,12 @@ tool_help_icon <- function(tool,
   panel_id <- paste0("help_panel_", tool)
   shiny::tags$span(
     style = "position: relative; display: inline-block;",
-    shiny::actionLink(
-      ns(input_id),
-      label = NULL,
-      icon = shiny::icon("circle-question"),
-      title = paste("Show", label, "documentation"),
-      class = "mp-help-icon"
+    # a span, not a button: shinyjs::disabled() on a field would switch a button off
+    shiny::tags$span(
+      role = "button", tabindex = "0", id = ns(input_id), class = "mp-help-icon",
+      `data-toggle` = "mp-tool-help", `aria-expanded` = "false",
+      `aria-label` = paste("Show", label, "documentation"),
+      shiny::tags$i(class = "fa-solid fa-circle-question", `aria-hidden` = "true")
     ),
     shiny::tags$div(
       id = ns(panel_id),
@@ -162,23 +162,4 @@ tool_help_icon <- function(tool,
       )
     )
   )
-}
-
-#' Register an observer that toggles the help popover when its icon is clicked
-#'
-#' Call once per `tool_help_icon()` inside the same moduleServer. `reopen` is
-#' accepted for backward compatibility and ignored (the popover no longer
-#' replaces the options modal).
-#'
-#' @param tool short name (must match the tool_help_icon() call)
-#' @param input the moduleServer's `input` object
-#' @noRd
-register_tool_help <- function(tool, input, reopen = NULL,
-                               session = shiny::getDefaultReactiveDomain()) {
-  ns <- session$ns
-  input_id <- paste0("help_", tool)
-  panel_id <- paste0("help_panel_", tool)
-  shiny::observeEvent(input[[input_id]], ignoreInit = TRUE, {
-    shinyjs::toggle(id = panel_id)
-  })
 }

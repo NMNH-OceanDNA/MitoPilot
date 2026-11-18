@@ -19,7 +19,7 @@ annotate(
   trnaScan_condaenv = "base",
   arwen_opts = "-mtx",
   use_arwen = FALSE,
-  aragorn_opts = "-m -gcstd",
+  aragorn_opts = "-mtx",
   aragorn_condaenv = "aragorn",
   use_aragorn = FALSE,
   use_mitos_best = TRUE,
@@ -72,7 +72,7 @@ working directory.}
 
 \item{use_arwen}{logical; whether to run ARWEN tRNA prediction (default: FALSE).}
 
-\item{aragorn_opts}{Additional command line options for ARAGORN (default: "-m -gcstd").}
+\item{aragorn_opts}{Additional command line options for ARAGORN (default: "-mtx").}
 
 \item{aragorn_condaenv}{Conda environment containing ARAGORN (default: "aragorn").}
 
