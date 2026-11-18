@@ -22,20 +22,53 @@ website:
   page-navigation: true
   navbar:
     background: light
+    collapse-below: xl
     logo: man/figures/logo.png
     left:
+      # one entry per page of the matching sidebar below; keep the two in step
       - text: Installation
-        href: articles/Installation.Rmd
+        menu:
+          - articles/Installation.Rmd
+          - articles/Native-Install.Rmd
       - text: Tutorial
-        href: articles/MitoPilot.Rmd
+        menu:
+          - text: 0. Initialize
+            href: articles/MitoPilot.Rmd
+          - text: 1. Assemble
+            href: articles/Test-Project-Assemble.Rmd
+          - text: 2. Annotate
+            href: articles/Test-Project-Annotate.Rmd
+          - text: 3. Export
+            href: articles/Test-Project-Export.Rmd
       - text: User Guide
-        href: articles/Your-Own-Project.Rmd
+        menu:
+          - articles/Your-Own-Project.Rmd
+          - articles/Your-Own-Assemblies.Rmd
+          - articles/Your-Own-Annotations.Rmd
+          - text: "---"
+          - articles/Assembly-Methods.Rmd
+          - articles/Difficult-Assemblies.Rmd
+          - articles/Difficult-Annotations.Rmd
+          - text: "---"
+          - articles/Curation-and-Validation.Rmd
+          - articles/Ruleset-Browser.Rmd
+          - articles/custom_dbs.Rmd
       - text: Metadata
-        href: articles/Specimen-Metadata.Rmd
+        menu:
+          - articles/Specimen-Metadata.Rmd
+          - articles/Metadata-Linking.Rmd
+          - articles/NMNH-Vouchers.Rmd
+          - articles/Metadata-Reference.Rmd
       - text: HPC
-        href: articles/Custom-HPC.Rmd
+        menu:
+          - articles/Custom-HPC.Rmd
+          - text: "---"
+          - articles/NMNH-Hydra.Rmd
+          - articles/NOAA-SEDNA.Rmd
       - text: Help
-        href: articles/FAQ.Rmd
+        menu:
+          - articles/FAQ.Rmd
+          - articles/Troubleshooting.Rmd
     right:
       - text: Reference
         href: reference/index.qmd
@@ -46,12 +79,14 @@ website:
   sidebar:
     - id: start
       title: Installation
+      collapse-level: 1
       style: docked
       contents:
         - articles/Installation.Rmd
         - articles/Native-Install.Rmd
     - id: tutorial
       title: Tutorial
+      collapse-level: 1
       contents:
         - section: Test project walkthrough
           contents:
@@ -65,6 +100,7 @@ website:
               href: articles/Test-Project-Export.Rmd
     - id: guide
       title: User Guide
+      collapse-level: 1
       contents:
         - section: Your own data
           contents:
@@ -75,6 +111,9 @@ website:
           contents:
             - articles/Assembly-Methods.Rmd
             - articles/Difficult-Assemblies.Rmd
+        - section: Annotation
+          contents:
+            - articles/Difficult-Annotations.Rmd
         - section: Curation
           contents:
             - articles/Curation-and-Validation.Rmd
@@ -82,6 +121,7 @@ website:
             - articles/custom_dbs.Rmd
     - id: metadata
       title: Metadata
+      collapse-level: 1
       contents:
         - articles/Specimen-Metadata.Rmd
         - articles/Metadata-Linking.Rmd
@@ -89,6 +129,7 @@ website:
         - articles/Metadata-Reference.Rmd
     - id: hpc
       title: HPC
+      collapse-level: 1
       contents:
         - articles/Custom-HPC.Rmd
         - section: Site-specific setup
@@ -97,6 +138,7 @@ website:
             - articles/NOAA-SEDNA.Rmd
     - id: help
       title: Help
+      collapse-level: 1
       contents:
         - articles/FAQ.Rmd
         - articles/Troubleshooting.Rmd

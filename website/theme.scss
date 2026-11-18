@@ -1,10 +1,17 @@
 /*-- scss:defaults --*/
 // accent taken from the MitoPilot logo
 $link-color: #107080;
+// room for the longest function name in the reference sidebar
+$grid-sidebar-width: 290px;
 
 /*-- scss:rules --*/
 // Quarto darkens the selected sidebar entry; keep it the same as the outline
 div.sidebar-item-container .active {
   color: $link-color;
+  font-weight: 600;
+}
+
+// lux sets body weight 200, so "bolder" resolves to 400: the same face as body text
+b, strong {
   font-weight: 600;
 }
