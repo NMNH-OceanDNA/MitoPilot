@@ -27,15 +27,20 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
 
   # Per-unit annotations rollup (warnings + ORF count) keyed on the unit.
   annotations <- dplyr::tbl(db, "annotations") |>
-    dplyr::select(ID, path, scaffold, type, warnings) |>
+    dplyr::select(ID, path, scaffold, type, warnings, tool, gene, pos1) |>
     dplyr::collect() |>
+    dplyr::arrange(pos1) |>
     dplyr::group_by(ID, path, scaffold) |>
     dplyr::summarise(
       warnings_details = warnings[!is.na(warnings) & warnings != ""] |>
         paste(collapse = "; "),
       ORFCount = sum(type == "ORF"),
+      tf = list(tool_feature_summary(dplyr::pick(gene, pos1, tool, type), session$userData$user_annot)),
+      toolCount = tf[[1]]$n,
+      toolGenes = tf[[1]]$genes,
       .groups = "drop"
-    )
+    ) |>
+    dplyr::select(-tf)
 
   # use_orffinder per sample, to blank the ORF count when ORF finding is off
   orf_enabled <- dplyr::tbl(db, "annotate") |>
@@ -97,6 +102,8 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
       tRNACount,
       rRNACount,
       ORFCount,
+      toolCount,
+      toolGenes,
       missing,
       extra,
       warnings,
@@ -119,6 +126,10 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
         as.integer(ORFCount)
       )
     ) |>
+    dplyr::mutate(
+      toolCount = dplyr::coalesce(as.integer(toolCount), 0L),
+      toolGenes = dplyr::coalesce(toolGenes, "")
+    ) |>
     dplyr::select(-use_orffinder) |>
     dplyr::arrange(ID, path, scaffold) |>
     # Ref-align status is only meaningful when this unit has a real BLAST hit.
@@ -130,6 +141,29 @@ fetch_annotate_units <- function(session = getDefaultReactiveDomain()) {
     ) |>
     dplyr::relocate(blast_ref_status, .after = blast_accession) |>
     dplyr::mutate(ID_verified = dplyr::coalesce(ID_verified, "no"))
+}
+
+# Features added by MitoPilot's tools in a user-annotation project (not ORFs).
+.is_tool_row <- function(tool, type) {
+  !is.na(tool) & tool != "user" & !(type %in% "ORF")
+}
+
+#' Count and pos1-ordered gene list of tool-added features in one unit
+#' @noRd
+tool_feature_summary <- function(ann, user_annot) {
+  if (!isTRUE(user_annot) || is.null(ann$tool) || nrow(ann) == 0) {
+    return(list(n = 0L, genes = ""))
+  }
+  ann <- ann[order(ann$pos1), , drop = FALSE]
+  k <- .is_tool_row(ann$tool, ann$type)
+  list(n = sum(k), genes = paste(ann$gene[k], collapse = "; "))
+}
+
+#' Columns left out of the Annotate table's CSV download
+#' @noRd
+annotate_csv_drop <- function(user_annot) {
+  c("output", "view", "poor_blast_ref", "warnings_details", "blast_accession_auto",
+    "toolGenes", if (!isTRUE(user_annot)) "toolCount")
 }
 
 #' Populate the Annotate table - one row per (ID, path, scaffold) unit
@@ -164,7 +198,7 @@ fetch_annotate_data <- function(session = getDefaultReactiveDomain()) {
         "length", "topology", "scaffolds", "blast_accession", "blast_ref_status",
         "blast_accession_auto", "blast_species", "blast_lineage", "blast_pident",
         "blast_qcovs", "structure", "PCGCount", "tRNACount", "rRNACount",
-        "ORFCount", "missing", "extra", "warnings", "reviewed", "problematic",
+        "ORFCount", "toolCount", "toolGenes", "missing", "extra", "warnings", "reviewed", "problematic",
         "partial", "time_stamp", "export_group", "export_time_stamp",
         "annotate_notes", "warnings_details", "poor_blast_ref", "output", "view"
       )),
@@ -230,6 +264,7 @@ get_top_hits_local <- function(
 #' @noRd
 annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
   ns <- session$ns
+  user_annot <- isTRUE(session$userData$user_annot)
 
   current <- list()
   # An annotate row can carry NA option sets (a unit rebuilt with nothing to
@@ -241,6 +276,7 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
   sel_curate[is.na(sel_curate)] <- "default"
   if (length(unique(sel_annotate)) == 1) {
     current <- rv$annotate_opts[rv$annotate_opts$annotate_opts == sel_annotate[1], ]
+    run_tools_on <- isTRUE(as.logical(current$run_tools %||% 0L))
     cur_params <- rv$curate_opts$params[rv$curate_opts$curate_opts == sel_curate[1]] |>
       jsonlite::fromJSON()
 
@@ -253,7 +289,7 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("annotate_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label("assemblies"),
             choices = rv$annotate_opts$annotate_opts,
             selected = current$annotate_opts,
             options = list(
@@ -270,9 +306,6 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             )
           )
         ),
-        opts_help("Reusable named set of options applied to the selected assemblies; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected assemblies: their state becomes Ready to run."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -299,31 +332,50 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             selectizeInput(
               ns("start_gene"),
               label = "Starting gene for circular assemblies:",
-              choices = MITO_GENE_CHOICES,
-              selected = current$start_gene %||% character(0),
+              choices = c("(none)" = "", MITO_GENE_CHOICES),
+              selected = dplyr::coalesce(current$start_gene[1], ""),
               width = "100%",
               options = list(
                 create = FALSE,
-                maxItems = 1
+                maxItems = 1,
+                allowEmptyOption = TRUE
               )
             ) |> shinyjs::disabled()
           )
         ),
         opts_help("Circular mitogenomes are rotated to begin at this gene, giving a ",
                   "consistent start position across samples (e.g. tRNA-Phe in vertebrates)."),
+        if (user_annot) {
+          div(
+            id = ns("run_tools_box"),
+            mp_check_help(
+              mp_checkbox(
+                ns("run_tools"),
+                label = "Run annotation tools",
+                value = run_tools_on
+              ) |> shinyjs::disabled(),
+              "Adds features the tools find that your annotation lacks.",
+              "Never replaces or trims your features. A tool feature that overlaps one of yours is dropped.",
+              "Curation still checks every feature, yours included.",
+              label = "Run annotation tools"
+            )
+          )
+        },
         # Annotation tools section, boxed off from the surrounding options.
         div(
+          id = ns("tools_box"),
+          class = if (user_annot && !run_tools_on) "shinyjs-hide",
           style = paste(
             "border: 1px solid #ddd; border-radius: 6px;",
             "padding: 12px 14px 4px; margin: 8px 0 14px;"
           ),
         tags$div(
           style = "font-weight: bold; margin-bottom: 8px;",
-          "Annotation tools"
+          mp_help_label("Annotation tools", mp_help_bullets(
+            "Tool priority: when tools disagree, the higher-priority tool wins and the others only fill gaps.",
+            "Genes and rRNAs: MITOS2 > MitoFinder. tRNAs: tRNAscan-SE > ARWEN > ARAGORN > MITOS2."
+          ))
         ),
-        opts_help("When merging results from multiple annotators, higher-priority ",
-                  "tools win and lower-priority tools only fill gaps. Genes and rRNAs: ",
-                  "MITOS2 > MitoFinder. tRNAs: tRNAscan-SE > ARWEN > ARAGORN > MITOS2."),
         mp_checkbox(
           ns("use_mitos"),
           label = "Use MITOS2",
@@ -333,7 +385,11 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
           id = ns("mitos_opts_box"),
           textInput(
             ns("mitos_opts"),
-            label = tagList("MITOS2 options:", tool_help_icon("mitos")),
+            label = tagList("MITOS2 options:", tool_help_icon("mitos", intro = tagList(
+              "Main annotator for genes, tRNAs, and rRNAs. The options box takes extra MITOS2 flags. ",
+              "--best keeps only the top-scoring of overlapping predictions. ",
+              tags$a(href = "http://mitos2.bioinf.uni-leipzig.de/index.py",
+                     target = "_blank", rel = "noopener", "Learn more")))),
             value = current$mitos_opts %||% character(0),
             width = "100%"
           ) |> shinyjs::disabled()
@@ -347,22 +403,19 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
             value = isTRUE(as.logical(current$use_mitos_best %||% 1L))
           ) |> shinyjs::disabled()
         ),
-        opts_help("MITOS2 is the primary annotator (genes, tRNAs, rRNAs). The ",
-                  "options box takes extra MITOS2 flags; '--best' keeps only the ",
-                  "top-scoring of overlapping predictions.",
-                  href = "http://mitos2.bioinf.uni-leipzig.de/index.py"),
         div(
           id = ns("rescue_no_trna_box"),
-          style = "display: flex; flex-flow: row nowrap; align-items: center; margin-bottom: 8px;",
-          mp_checkbox(
-            ns("rescue_no_trna"),
-            label = "Rescue rRNAs/PCGs lost to tRNA overlap",
-            value = isTRUE(as.logical(current$rescue_no_trna %||% 1L))
-          ) |> shinyjs::disabled()
+          mp_check_help(
+            mp_checkbox(
+              ns("rescue_no_trna"),
+              label = "Rescue rRNAs/PCGs lost to tRNA overlap",
+              value = isTRUE(as.logical(current$rescue_no_trna %||% 1L))
+            ) |> shinyjs::disabled(),
+            "Runs MITOS2 a second time without tRNA prediction, to recover rRNAs and PCGs it drops when a tRNA overlaps them.",
+            "Adds some runtime.",
+            label = "Rescue rRNAs/PCGs"
+          )
         ),
-        opts_help("Runs MITOS2 a second time without tRNA prediction to recover ",
-                  "rRNAs or PCGs that MITOS2 drops when a tRNA overlaps them. ",
-                  "Adds some runtime."),
         div(
           id = ns("mitos_ref_box"),
           div(
@@ -504,15 +557,17 @@ annotate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain())
         ) |> shinyjs::disabled(),
         opts_help("Trim linear contig ends that extend past the outermost annotated ",
                   "gene features."),
-        mp_checkbox(
-          ns("ref_based_rc"),
-          label = "Reverse-complement assembly to match reference orientation",
-          value = isTRUE(as.logical(current$ref_based_rc %||% 0L))
-        ) |> shinyjs::disabled(),
-        opts_help("Reverse-complement each contig when it aligns better to the top ",
-                  "BLAST reference reversed. Off by default; the rRNA and start-gene ",
-                  "heuristics usually orient correctly. Enable for taxa they cannot ",
-                  "resolve, e.g. scyphozoan jellyfish with rRNAs on opposite strands."),
+        mp_check_help(
+          mp_checkbox(
+            ns("ref_based_rc"),
+            label = "Reverse-complement assembly to match reference orientation",
+            value = isTRUE(as.logical(current$ref_based_rc %||% 0L))
+          ) |> shinyjs::disabled(),
+          "Flips a contig when it matches the top BLAST reference better reversed.",
+          "Usually not needed: the rRNAs and the starting gene already set the direction.",
+          "Turn on for taxa where that fails, for example scyphozoan jellyfish with rRNAs on opposite strands.",
+          label = "Reverse-complement"
+        ),
         mp_checkbox(
           ns("retain_low_conf_trna"),
           label = "Retain low-confidence (NNN anticodon) tRNAs",
@@ -563,7 +618,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("curate_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label("assemblies"),
             choices = rv$curate_opts$curate_opts,
             selected = current$curate_opts,
             options = list(
@@ -580,9 +635,6 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             )
           )
         ),
-        opts_help("Reusable named set of options applied to the selected assemblies; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected assemblies: their state becomes Ready to run."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -619,42 +671,29 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
         opts_help("Maximum number of reference BLAST hits per gene used when ",
                   "validating and curating annotations."),
         div(
-          style = "display: flex; align-items: center; gap: 2em",
-          div(
-            style = "flex: 1; min-width: 0; word-wrap : break-word; word-break: break-word;",
-            selectizeInput(
-              ns("curate_ref_dir"),
-              label = "Curation reference folder:",
-              choices = unique(rv$curate_opts$ref_dir),
-              selected = current$ref_dir %||% character(0),
-              width = "100%",
-              options = list(
-                create = TRUE,
-                maxItems = 1
-              ),
-            ) |> shinyjs::disabled()
-          ),
-          div(
-            style = "flex: 1",
-            selectizeInput(
-              ns("curate_ref_db"),
-              label = "Curation reference database:",
-              # choices = unique(rv$annotate_opts$ref_db),
-              choices = c("Metazoa_RefSeq235", "Metazoa_RefSeq235_custom", "Metazoa_RefSeq231", "Metazoa_RefSeq231_custom", "Metazoa_RefSeq89", "Chordata", "Chordata_custom"),
-              selected = current$ref_db %||% character(0),
-              width = "100%",
-              options = list(
-                create = TRUE,
-                maxItems = 1
-              )
-            ) |> shinyjs::disabled()
-          )
+          class = "form-group shiny-input-container",
+          mp_checkbox(
+            ns("curate_custom_db"),
+            label = "Use custom curation database",
+            value = curate_db_is_custom(current$ref_db)
+          ) |> shinyjs::disabled()
         ),
-        opts_help("Folder holding the curation reference databases, and the database ",
-                  "used to validate gene boundaries. rRNA reference ",
-                  "data is only included in Metazoa_RefSeq235 (and custom databases ",
-                  "built from it); with other databases the annotation editor's rRNA ",
-                  "alignment falls back to the per-sample BLAST reference genome.",
+        conditionalPanel(
+          "input.curate_custom_db", ns = ns,
+          textInput(
+            ns("curate_custom_db_path"),
+            label = "Custom curation database folder:",
+            value = if (curate_db_is_custom(current$ref_db)) {
+              file.path(current$ref_dir, current$ref_db)
+            } else {
+              ""
+            },
+            width = "100%"
+          ) |> shinyjs::disabled()
+        ),
+        opts_help("Reference database used to validate gene boundaries. The bundled ",
+                  CURATE_BUNDLED_DB, " database is used unless you tick the custom ",
+                  "database and give the full path to its folder.",
                   href = "https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html"),
         div(
           style = "flex: 1",
@@ -666,7 +705,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             choices = local({
               tg <- names(RULESET_MAP)
               labs <- vapply(tg, function(k)
-                paste0(RULESET_MAP[[k]]$ncbi, " (", RULESET_MAP[[k]]$label, ")"),
+                paste0(RULESET_MAP[[k]]$ncbi, " (", RULESET_MAP[[k]]$label, ") v", ruleset_version(k)),
                 character(1))
               ord <- order(labs)
               stats::setNames(tg[ord], labs[ord])
@@ -698,8 +737,7 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             options = list(maxItems = 1)
           ) |> shinyjs::disabled()
         ),
-        opts_help("NCBI translation table used for protein-coding genes. 'Auto' sets the genetic code based on selected ",
-                  "ruleset. Or pick a specific table to override it for these samples.",
+        opts_help("NCBI translation table for protein-coding genes. Auto takes it from the ruleset.",
                   href = "https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi"),
         div(
           class = "form-group shiny-input-container",
@@ -710,7 +748,11 @@ curate_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           ) |> shinyjs::disabled()
         ),
         tags$details(
-          tags$summary("Curation rules for this ruleset"),
+          tags$summary(
+            "Curation rules saved in this project: ",
+            tryCatch(ruleset_version_label(current$target, current$params),
+                     error = function(e) "unknown version")
+          ),
           div(
             style = "margin-bottom: 14px; height: 300px; overflow: auto;",
             listviewer::reactjsonOutput(ns("params"))
@@ -796,14 +838,14 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
                 "than only the longest one per region."),
       textInput(
         ns("orffinder_opts"),
-        label = tagList("ORFfinder options:", tool_help_icon("orffinder")),
+        label = tagList("ORFfinder options:", tool_help_icon("orffinder", intro = tagList(HTML(mp_help_bullets(
+          "Extra flags passed to NCBI ORFfinder.",
+          "Genetic code (-g) and minimum length (-ml) are set for you, from the curation ruleset and the minimum ORF length above."
+        )), tags$a(href = "https://www.ncbi.nlm.nih.gov/orffinder/",
+                   target = "_blank", rel = "noopener", "Learn more")))),
         value = current$orffinder_opts %||% character(0),
         width = "100%"
-      ) |> shinyjs::disabled(),
-      opts_help("Extra command-line flags passed to NCBI ORFfinder. The genetic ",
-                "code (-g) and minimum length (-ml) are set for you, from the ",
-                "sample's curation ruleset and the minimum ORF length above.",
-                href = "https://www.ncbi.nlm.nih.gov/orffinder/")
+      ) |> shinyjs::disabled()
     )
     if (!orf_on) orf_param_opts <- shinyjs::hidden(orf_param_opts)
 
@@ -816,7 +858,7 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           selectizeInput(
             ns("orf_opts"),
-            label = "Parameter set name:",
+            label = mp_pset_label("assemblies"),
             choices = rv$orf_opts$orf_opts,
             selected = current$orf_opts,
             options = list(
@@ -833,9 +875,6 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             )
           )
         ),
-        opts_help("Reusable named set of options applied to the selected assemblies; ",
-                  "check Edit to change values or type a new name to create a set. ",
-                  "Saving re-queues the selected assemblies: their state becomes Ready to run."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -855,15 +894,16 @@ orf_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()) {
             ) |> shinyjs::disabled()
           )
         ),
-        mp_checkbox(
-          ns("use_orffinder"),
-          label = "Run ORF finder step (after curation; finds ORFs in unannotated regions)",
-          value = isTRUE(as.logical(current$use_orffinder %||% 0L))
-        ) |> shinyjs::disabled(),
-        opts_help("Optional step that scans unannotated regions for open ",
-                  "reading frames using NCBI ORFfinder. When it is on, consider ",
-                  "turning off un-annotated end trimming in the annotation options.",
-                  href = "https://www.ncbi.nlm.nih.gov/orffinder/"),
+        mp_check_help(
+          mp_checkbox(
+            ns("use_orffinder"),
+            label = "Run ORF finder step",
+            value = isTRUE(as.logical(current$use_orffinder %||% 0L))
+          ) |> shinyjs::disabled(),
+          "Optional. Scans unannotated regions for open reading frames with NCBI ORFfinder.",
+          "When on, consider turning off trimming of unannotated ends in the annotation options.",
+          label = "Run ORF finder step"
+        ),
         orf_param_opts,
         size = "m",
         footer = mp_footer(
@@ -888,4 +928,34 @@ annotate_unlock_text <- function(n) {
     "Any assembly whose state is Ready to run will be re-annotated by ",
     "the next update, replacing your curated results."
   )
+}
+
+# The one bundled curation database. Any other ref_db is a custom database.
+CURATE_BUNDLED_DB <- "Metazoa_RefSeq235"
+
+#' Is a curate_opts ref_db a custom (non-bundled) database?
+#' @noRd
+curate_db_is_custom <- function(ref_db) {
+  length(ref_db) == 1 && !is.na(ref_db) && nzchar(ref_db) && ref_db != CURATE_BUNDLED_DB
+}
+
+#' Resolve the curation options form to the stored ref_dir / ref_db pair
+#'
+#' @param custom is the custom database switch on?
+#' @param path custom database folder (or tarball) entered by the user
+#' @param bundled_dir folder holding the bundled databases
+#' @return list(ref_dir, ref_db), or list(error) when the custom path is unusable
+#' @noRd
+curate_db_fields <- function(custom, path, bundled_dir) {
+  if (!isTRUE(custom)) {
+    return(list(ref_dir = bundled_dir, ref_db = CURATE_BUNDLED_DB))
+  }
+  path <- sub("/+$", "", trimws(path %||% ""))
+  if (!dir.exists(file.path(path, "featureProt")) &&
+      !(grepl("\\.tar\\.gz$", path) && file.exists(path))) {
+    return(list(error = paste0(
+      "'", path, "' is not a curation database folder (no featureProt folder found)."
+    )))
+  }
+  list(ref_dir = dirname(path), ref_db = basename(path))
 }

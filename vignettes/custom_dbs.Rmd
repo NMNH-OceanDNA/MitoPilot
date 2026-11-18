@@ -168,9 +168,9 @@ in the mapping file.
 
 ## Build custom databases for protein-coding gene curation
 
-By default, MitoPilot uses gene sequences from NCBI RefSeq to finetune start and stop codon positions for your annotations. The curation database is specified by the `ref_dir` and `ref_db` sections of the Curation Opt. panel in the Shiny app. 
+By default, MitoPilot uses gene sequences from NCBI RefSeq to finetune start and stop codon positions for your annotations. The bundled database is `Metazoa_RefSeq235`. To use your own instead, tick "Use custom curation database" in the Curation Opt. panel of the Shiny app and enter the path to the database folder. 
 
-We have provided a helper function `MitoPilot::custom_curation_db`, which will allow you to supplement the RefSeq databases with your own gene sequences. Using a custom database can greatly improve automatic curation if your focal clade is poorly represented in RefSeq. 
+We have provided a helper function `MitoPilot::custom_curation_db`, which will allow you to supplement the bundled RefSeq database with your own gene sequences. When it finishes it prints the folder path to enter in the curation options. Using a custom database can greatly improve automatic curation if your focal clade is poorly represented in RefSeq. 
 
 Sequences can come from non-RefSeq mitogenomes on GenBank or from your own prior annotations. Make sure to carefully consider what you are adding to the custom database. You should only use high-confidence sequences, as poor quality reference data will result in poorly curated gene models.
 

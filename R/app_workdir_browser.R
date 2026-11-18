@@ -50,8 +50,7 @@ workdir_browser_server <- function(id) {
         tags$p(
           class = "text-muted",
           style = "font-size: 12px; margin-bottom: 0.75em;",
-          "Each pipeline step creates working directories to hold intermediate files and logs. Use these to troubleshoot a failed process ",
-          "or to inspect intermediate outputs. Failed attempts are listed too (see Status)."
+          "Intermediate files and logs for each pipeline step. Failed attempts are listed too (see Status)."
         ),
         shinyWidgets::pickerInput(
           ns("sample"),

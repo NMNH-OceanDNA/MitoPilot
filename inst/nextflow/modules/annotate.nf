@@ -21,7 +21,7 @@ process annotate {
     tag "${id}.${path}.${scaffold}"
 
     input:
-    tuple val(id), val(path), val(scaffold), path(assembly), path(coverage), val(opts), path(ref_dir_full), val(ref_db_clean), path(mitofinder_db)
+    tuple val(id), val(path), val(scaffold), path(assembly), path(coverage), val(opts), path(ref_dir_full), val(ref_db_clean), path(mitofinder_db), path(user_annot)
 
     output:
     tuple val(id), val(path), val(scaffold), path("${id}/annotate/${id}_annotations_*.csv"), path("${id}/annotate/${id}_assembly_*.fasta"), path("${id}/annotate/${id}_coverageStats_*.csv"), path("${id}/annotate/NF_work_dir_annotate.txt")
@@ -92,7 +92,9 @@ process annotate {
         mitofinder_new_genes = !{opts.mitofinder_new_genes == 1 ? "TRUE" : "FALSE"}, \
         mitofinder_allow_introns = !{opts.mitofinder_allow_introns == 1 ? "TRUE" : "FALSE"}, \
         mitofinder_opts = '!{opts.mitofinder_opts}', \
-        start_gene = '!{opts.start_gene}', \
+        start_gene = !{opts.start_gene ? "'" + opts.start_gene + "'" : "NA"}, \
+        user_annotations_fn = !{user_annot ? "'" + user_annot + "'" : "NULL"}, \
+        run_tools = !{opts.run_tools == 1 ? "TRUE" : "FALSE"}, \
         ignore_scaffolds = '!{opts.ignore_scaffolds}', \
         coverage_trim = !{opts.coverage_trim == 1 ? "TRUE" : "FALSE"}, \
         retain_low_conf_trna = !{opts.retain_low_conf_trna == 1 ? "TRUE" : "FALSE"}, \

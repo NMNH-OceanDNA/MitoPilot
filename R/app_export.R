@@ -700,17 +700,7 @@ export_server <- function(id) {
         )),
         export_token_ui(token_groups, target_id = ns("fasta_header"), ns = ns,
                         totals = jsonlite::toJSON(as.list(table(grouped$export_group)),
-                                                  auto_unbox = TRUE)),
-        opts_help(
-          tags$code("{completeness}"),
-          " expands to \"complete genome\" or \"partial genome\", derived from ",
-          "each assembly's topology (circular = complete, linear = partial), ",
-          "unless the per-sample Partial flag (forces partial) or the curation ",
-          "\"linear complete\" setting (forces linear assemblies to complete) ",
-          "overrides it. For GenBank, put ", tags$code("{completeness}"),
-          " at the end of the header.",
-          nested = TRUE
-        )
+                                                  auto_unbox = TRUE))
       )
       # The status line sits between the label and the box it describes, and
       # is bound to it (WCAG 3.3.1).
@@ -739,7 +729,7 @@ export_server <- function(id) {
             style = "flex: 1; min-width: 0;",
             shinyWidgets::pickerInput(
               ns("export_group"),
-              "Export group:",
+              mp_help_label("Export group:", "Assemblies exported together as one set."),
               choices = choices,
               selected = if (isTRUE(snap$export_group %in% choices)) snap$export_group,
               width = "100%"
@@ -749,7 +739,8 @@ export_server <- function(id) {
             style = "flex: 1; min-width: 0;",
             selectizeInput(
               ns("template_select"),
-              "Header template:",
+              mp_help_label("Header template:", paste("A named, reusable set of header patterns.",
+                "Export uses the text on screen; Save template keeps it for next time.")),
               choices = tmpl_choices,
               selected = sel_tmpl,
               width = "100%",
@@ -765,12 +756,6 @@ export_server <- function(id) {
             actionButton(ns("save_template"), "Save template",
                          title = "Store the header text below under this template name")
           )
-        ),
-        opts_help(
-          "Export group bundles assemblies into one output set. Header ",
-          "template is a reusable, named set of the FASTA header patterns ",
-          "below: export uses the text on screen, and Save template keeps it ",
-          "for next time."
         ),
         # What pressing Export will do, in the group currently chosen.
         uiOutput(ns("export_summary")),
@@ -796,9 +781,8 @@ export_server <- function(id) {
               class = "mp-nmnh-cols",
               tags$summary("Optional: take these from mapping file columns"),
               opts_help(
-                "Not required. Samples with GBIF, NCBI, or GEOME IDs get their catalog ",
-                "number and specimen link looked up there. A column picked here is ",
-                "used first, and the databases fill any gaps.",
+                "Catalog number and specimen link are looked up from GBIF, NCBI, or GEOME IDs. ",
+                "A column picked here is used first.",
                 nested = TRUE
               ),
               div(
@@ -817,7 +801,11 @@ export_server <- function(id) {
           )
         )),
         div(class = "mp-card mp-card-plain",
-            hdr_box("fasta_header", "Mitogenome FASTA header", opts$fasta_header)),
+            hdr_box("fasta_header", mp_help_label("Mitogenome FASTA header", mp_help_bullets(
+              tagList(tags$code("{completeness}"), ": \"complete genome\" for circular, \"partial genome\" for linear."),
+              "The Partial flag forces partial; the curation \"linear complete\" setting forces complete.",
+              tagList("For GenBank, put ", tags$code("{completeness}"), " at the end of the header.")
+            )), opts$fasta_header)),
         div(class = "mp-card mp-card-plain",
           div(class = "mp-card-title", mp_checkbox(
             ns("export_genes"),
@@ -956,6 +944,7 @@ export_server <- function(id) {
       group <- input$export_group
       req(group)
       n <- sum(rv$data$export_group == group, na.rm = TRUE)
+      out <- export_left_out(session$userData$con, group)
       path <- file.path(session$userData$dir_out, "export", group)
       files <- c(
         paste0(group, ".fasta"), paste0(group, ".tbl"), "GFFs/",
@@ -968,6 +957,14 @@ export_server <- function(id) {
       div(
         class = "mp-card mp-card-summary",
         div(class = "mp-card-title", sprintf("%s in group \"%s\"", mp_n(n, "record"), group)),
+        if (nrow(out)) {
+          div(
+            class = "mp-fg-warning", icon("triangle-exclamation"), " ",
+            sprintf("%s left out: %s.", mp_n(nrow(out), "assembly", "assemblies"), paste(
+              sprintf("%s p%s.s%s (%s)", out$ID, out$path, out$scaffold, out$why),
+              collapse = ", "))
+          )
+        },
         div("Written to ", tags$code(class = "mp-path", path), " as: ",
             paste(files, collapse = ", ")),
         if (dir.exists(path)) {
@@ -1206,20 +1203,16 @@ export_server <- function(id) {
       nmnh_ready_ids(r$ID[r$ok & !r$not_nmnh])
       nmnh_typed(list())
       modalDialog(
-        title = mp_modal_title("NMNH voucher report", close = FALSE),
+        title = mp_modal_title(tagList("NMNH voucher report", mp_help_tip(label = "the NMNH voucher report", mp_help_bullets(
+          "Type in a cell to fix a value. Saved with this project; your mapping file is not changed.",
+          "Clear a cell to restore the automatic value.",
+          "Pick a field under a cell to use another metadata field.",
+          "Not NMNH: values are used as found, without checks.",
+          "A missing value leaves its modifier out of the header."))), close = FALSE),
         size = "l",
         p(class = "mp-fg-warning", icon("triangle-exclamation"),
           " NMNH records should not be submitted to GenBank without both a ",
           tags$code("specimen_voucher"), " and a ", tags$code("voucherURI"), "."),
-        opts_help(
-          "Type a value into a cell to fix it. It is checked when you leave the ",
-          "cell and saved with this project's NMNH values; your mapping file is ",
-          "not changed. Clear a cell to go back to the automatic value. Pick a ",
-          "field under a cell to take that value from another metadata field. ",
-          "Tick Not NMNH for samples that are not NMNH specimens: their values ",
-          "are used as found, without checks. A missing value leaves its ",
-          "modifier out of the header."
-        ),
         div(class = "mp-nmnh-fields", "Fields to pick from: mapping-file columns and the metadata ",
             "fields ticked for export. ", actionLink(ns("nmnh_choose_fields"), "Choose fields"),
             tags$br(), "Not NMNH: ", actionLink(ns("nmnh_flag_all"), "Select all"), " | ",
@@ -2069,9 +2062,8 @@ export_server <- function(id) {
           )
         ),
         opts_help(
-          "Review the alignment below to decide whether the flagged samples ",
-          "need to be revised. Click 'edit' to jump to the annotation editor ",
-          "for a sample, or mark the gene resolved if the flags look benign."
+          "Check the alignment below. Click edit to fix a sample, or mark the ",
+          "gene resolved if the flags look harmless."
         ),
         uiOutput(ns("review_aln_ui")),
         tags$hr(),

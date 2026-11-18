@@ -77,7 +77,7 @@ MitoPilot ships a small pre-filtered test dataset. Running it end to end is the
 recommended way to verify your installation and learn the interface before
 using your own data.
 
-The [Get Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html)
+The [test project](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html)
 tutorial walks the whole pipeline using this test project.
 
 Want to skip straight to using MitoPilot with your own data? Head on over to
@@ -151,20 +151,21 @@ databases. There are three independent kinds of databases:
 - **Annotation** references for MITOS2. MitoPilot includes
   Chordata and Metazoa databases, selectable in the `Annotate Opts.` window.
 - **Curation** references, chosen independently of the annotation database.
-  Bundled options are `Metazoa_RefSeq235` (the default), `Metazoa_RefSeq231`,
-  `Metazoa_RefSeq89`, and `Chordata`. MitoPilot also folds each sample's assembly
+  The bundled database is `Metazoa_RefSeq235`; a custom database can be chosen
+  in the `Curate Opts.` window. MitoPilot also folds each sample's assembly
   BLAST results into the curation references automatically.
 
 # Documentation
 
 | Page | What it covers |
 |---|---|
-| [Get Started](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html) | Full walkthrough, then starting your own project |
+| [Tutorial](https://nmnh-oceandna.github.io/MitoPilot/articles/MitoPilot.html) | Full walkthrough, then starting your own project |
 | [Installation and Requirements](https://nmnh-oceandna.github.io/MitoPilot/articles/Installation.html) | Prerequisites, installing, updating, container cache |
 | [HPC cluster support](https://nmnh-oceandna.github.io/MitoPilot/articles/Custom-HPC.html) | Executors, cluster profiles, SSH tunnel, submitting runs |
 | [Curation ruleset browser](https://nmnh-oceandna.github.io/MitoPilot/articles/Ruleset-Browser.html) | What each clade ruleset enforces |
 | [Building custom databases](https://nmnh-oceandna.github.io/MitoPilot/articles/custom_dbs.html) | Assembly and curation reference databases |
 | [Handling difficult assemblies](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Assemblies.html) | Resolving competing assemblies and fragmented scaffolds |
+| [Handling difficult annotations](https://nmnh-oceandna.github.io/MitoPilot/articles/Difficult-Annotations.html) | Missing genes, wrong strand, and other annotation problems |
 | [FAQ](https://nmnh-oceandna.github.io/MitoPilot/articles/FAQ.html) and [Troubleshooting](https://nmnh-oceandna.github.io/MitoPilot/articles/Troubleshooting.html) | Common questions and pipeline failures |
 | [Reference](https://nmnh-oceandna.github.io/MitoPilot/reference/index.html) | All functions |
 | [Changelog](https://nmnh-oceandna.github.io/MitoPilot/news/index.html) | Release notes and container tags |

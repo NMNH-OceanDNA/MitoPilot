@@ -2,10 +2,12 @@
 syn_ann <- function() data.frame(
   type = c("PCG", "tRNA", "PCG"), gene = c("nad1", "trnF", "cox1_DELETED_1"),
   pos1 = c(10L, 40L, 0L), pos2 = c(39L, 108L, 0L), direction = c("+", "-", "+"),
+  partial_start = c(1L, 0L, 0L), partial_stop = c(0L, NA, 0L),
   stringsAsFactors = FALSE)
 syn_ref <- function() data.frame(
   gene = c("nad1", "trnF"), type = c("PCG", "tRNA"), pos1 = c(5L, 90L), pos2 = c(34L, 20L),
-  direction = c("+", "+"), ref_length = 100L, stringsAsFactors = FALSE)
+  direction = c("+", "+"), ref_length = 100L, partial_start = c(0L, 1L), partial_stop = c(1L, 0L),
+  stringsAsFactors = FALSE)
 syn_aln <- function(rc = FALSE) data.frame(
   aligned_sample = "acg-t", aligned_ref = "ACGTT", rotation = 4L, ref_length = 100L,
   ref_rc = rc, stringsAsFactors = FALSE)
@@ -26,6 +28,17 @@ test_that("payload carries alignment, labels, and live features", {
                list(gene = "trnF", pos1 = 90L, pos2 = 20L, dir = "+"))
 })
 
+test_that("partial flags ride along as partial5/partial3, NA and missing columns read as complete", {
+  p <- synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x")
+  expect_equal(lapply(p$sampleFeatures, `[`, c("partial5", "partial3")),
+               list(list(partial5 = TRUE, partial3 = FALSE), list(partial5 = FALSE, partial3 = FALSE)))
+  expect_equal(lapply(p$refFeatures, `[`, c("partial5", "partial3")),
+               list(list(partial5 = FALSE, partial3 = TRUE), list(partial5 = TRUE, partial3 = FALSE)))
+  old_ref <- syn_ref()[, c("gene", "type", "pos1", "pos2", "direction", "ref_length")]
+  p2 <- synteny_payload(syn_ann(), old_ref, syn_aln(), "S1", "NC_1", "x")
+  expect_equal(p2$refFeatures[[1]][c("partial5", "partial3")], list(partial5 = FALSE, partial3 = FALSE))
+})
+
 test_that("selection outside the live rows is dropped and missing alignment gives NULL", {
   expect_null(synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x", selected = 3L)$selected)
   expect_false(synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x")$refRc)
@@ -43,4 +56,57 @@ test_that("viewer UI carries the namespaced canvas, tip, and the four controls",
   for (a in c("fit", "whole", "zoom_in", "zoom_out")) {
     expect_match(html, sprintf('data-mpsyn="%s"', a), fixed = TRUE)
   }
+})
+
+test_that("payload carries the sample copy rotation, defaulting to 0", {
+  p <- synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x")
+  expect_equal(p$sampleRotation, 0L)
+  a <- syn_aln(); a$sample_rotation <- 25L
+  p <- synteny_payload(syn_ann(), syn_ref(), a, "S1", "NC_1", "x")
+  expect_equal(p$sampleRotation, 25L)
+})
+
+test_that("original features are carried only when given", {
+  o <- data.frame(name = c("COI", "rep"), gene = c("cox1", NA), type = c("PCG", ""),
+                  pos1 = c(10L, 50L), pos2 = c(39L, 60L), dir = "+",
+                  status = c("unchanged", "unmapped"), orig1 = c(10L, 50L), orig2 = c(39L, 60L),
+                  odir = "+", stringsAsFactors = FALSE)
+  p <- synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x", original = o)
+  expect_length(p$original, 2)
+  expect_equal(p$original[[1]][c("name", "gene", "type", "status", "dir")],
+               list(name = "COI", gene = "cox1", type = "PCG", status = "unchanged", dir = "+"))
+  expect_null(p$original[[2]]$gene)
+  expect_null(synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x")$original)
+  expect_null(synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x", original = o[0, ])$original)
+})
+
+test_that("extra sample placements and the picked reference gene are highlighted", {
+  ex <- data.frame(row = c("lift1", "lift2"), gene = "trnF", type = "tRNA",
+                   pos1 = c(60L, 95L), pos2 = c(80L, 5L), direction = c("+", "-"))
+  p <- synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x",
+                       extra_sample = ex, hl_ref = list(gene = "trnF", pos1 = 90L))
+  expect_length(p$sampleFeatures, 4)
+  extra <- p$sampleFeatures[3:4]
+  expect_equal(vapply(extra, `[[`, character(1), "row"), c("lift1", "lift2"))
+  expect_true(all(vapply(extra, function(f) isTRUE(f$hl), logical(1))))
+  expect_equal(extra[[2]][c("gene", "type", "pos1", "pos2", "dir")],
+               list(gene = "trnF", type = "tRNA", pos1 = 95L, pos2 = 5L, dir = "-"))
+  expect_null(p$sampleFeatures[[1]]$hl)
+  expect_equal(vapply(p$refFeatures, function(f) isTRUE(f$hl), logical(1)), c(FALSE, TRUE))
+})
+
+test_that("without extras the payload carries no highlight", {
+  p <- synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x")
+  expect_identical(p, synteny_payload(syn_ann(), syn_ref(), syn_aln(), "S1", "NC_1", "x",
+                                      extra_sample = NULL, hl_ref = NULL))
+  expect_false(any(vapply(c(p$sampleFeatures, p$refFeatures), function(f) "hl" %in% names(f), logical(1))))
+  expect_length(p$sampleFeatures, 2)
+})
+
+test_that("a second viewer instance takes its own ids and no liftover button", {
+  html <- as.character(synteny_viewer_ui(shiny::NS("a"), prefix = "liftover_syn"))
+  expect_match(html, 'id="a-liftover_syn_canvas"', fixed = TRUE)
+  expect_match(html, 'id="a-liftover_syn_tip"', fixed = TRUE)
+  expect_false(grepl("synteny_canvas|liftover_btn", html))
+  expect_match(as.character(synteny_viewer_ui(shiny::NS("a"))), 'id="a-liftover_btn"', fixed = TRUE)
 })

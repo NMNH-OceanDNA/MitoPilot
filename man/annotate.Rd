@@ -19,7 +19,7 @@ annotate(
   trnaScan_condaenv = "base",
   arwen_opts = "-mtx",
   use_arwen = FALSE,
-  aragorn_opts = "-m -gcstd",
+  aragorn_opts = "-mtx",
   aragorn_condaenv = "aragorn",
   use_aragorn = FALSE,
   use_mitos_best = TRUE,
@@ -34,7 +34,9 @@ annotate(
   coverage_trim = TRUE,
   retain_low_conf_trna = FALSE,
   ignore_scaffolds = NULL,
-  out_dir = NULL
+  out_dir = NULL,
+  user_annotations_fn = NULL,
+  run_tools = TRUE
 )
 }
 \arguments{
@@ -70,7 +72,7 @@ working directory.}
 
 \item{use_arwen}{logical; whether to run ARWEN tRNA prediction (default: FALSE).}
 
-\item{aragorn_opts}{Additional command line options for ARAGORN (default: "-m -gcstd").}
+\item{aragorn_opts}{Additional command line options for ARAGORN (default: "-mtx").}
 
 \item{aragorn_condaenv}{Conda environment containing ARAGORN (default: "aragorn").}
 
@@ -107,6 +109,14 @@ from the assembly before annotation. These correspond to the `scaffold`
 column in the assemblies table and reflect the per-scaffold `ignore` flag.}
 
 \item{out_dir}{Output directory.}
+
+\item{user_annotations_fn}{Path to an imported annotation CSV. When set, its
+features are kept as-is and tools run only if `run_tools` is TRUE
+(default: NULL).}
+
+\item{run_tools}{logical; in user-annotation mode, also run the enabled tools
+and add their features where they do not overlap imported ones (default
+TRUE; ignored when user_annotations_fn is NULL).}
 }
 \description{
 Uses Mitos2 and tRNAscan-SE to annotate a mitogenome assembly.

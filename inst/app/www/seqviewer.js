@@ -110,6 +110,39 @@
     return v || fallback;
   }
   function typeColor(t) { return cssVar('--mp-type-' + String(t || '').toLowerCase(), '#888888'); }
+  // Original (imported) track: what curation did to each user feature.
+  var STATUS_TEXT = { unchanged: 'unchanged', moved: 'boundaries changed by curation', dropped: 'dropped by curation',
+                      unmapped: 'unmapped name, dropped on import', clipped: 'clipped by trim' };
+  function origTip(f) {
+    return 'Original "' + f.name + '" -> "' + (f.gene || 'unmapped') + '" ' + f.dir + ' ' +
+      f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString() + ' | ' + (STATUS_TEXT[f.status] || f.status) +
+      (f.orig1 !== f.pos1 || f.orig2 !== f.pos2 ? ' (originally ' + f.orig1.toLocaleString() + '-' + f.orig2.toLocaleString() + ')' : '');
+  }
+  // Traces the closed arrow for a piece [x0, x1] and returns its vertices:
+  // pts[4]-pts[0] is the flat edge (pos1 side when fwd), pts[1..3] the tip.
+  function arrowPath(c, x0, x1, y, h, fwd) {
+    var head = Math.min(8, x1 - x0);
+    var pts = fwd ? [[x0, y], [x1 - head, y], [x1, y + h / 2], [x1 - head, y + h], [x0, y + h]]
+                  : [[x1, y], [x0 + head, y], [x0, y + h / 2], [x0 + head, y + h], [x1, y + h]];
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath();
+    return pts;
+  }
+  // Outline stroked side by side so a partial end (partialEdge) is dashed
+  // where the piece shows that true end (own).
+  function strokeArrow(c, pts, fwd, edge, own) {
+    var dashStart = !!edge && edge !== 'end' && own.start, dashEnd = !!edge && edge !== 'start' && own.end;
+    var dashFlat = fwd ? dashStart : dashEnd, dashTip = fwd ? dashEnd : dashStart;
+    c.setLineDash([]);
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); c.lineTo(pts[1][0], pts[1][1]); c.stroke();
+    c.beginPath(); c.moveTo(pts[3][0], pts[3][1]); c.lineTo(pts[4][0], pts[4][1]); c.stroke();
+    c.setLineDash(dashTip ? [3, 2] : []);
+    c.beginPath(); c.moveTo(pts[1][0], pts[1][1]); c.lineTo(pts[2][0], pts[2][1]); c.lineTo(pts[3][0], pts[3][1]); c.stroke();
+    c.setLineDash(dashFlat ? [3, 2] : []);
+    c.beginPath(); c.moveTo(pts[4][0], pts[4][1]); c.lineTo(pts[0][0], pts[0][1]); c.stroke();
+    c.setLineDash([]);
+  }
   function niceStep(raw) {
     var p = Math.pow(10, Math.floor(Math.log10(raw)));
     var m = raw / p;
@@ -127,6 +160,7 @@
     this.showReads = true; this.readsInput = null; this.readsMaxBp = 1000;
     this.reads = null; this.readsWindow = null; this.readsTimer = null; this.readsNonce = 0; this.readsSent = null;
     this.version = null; this.selected = null; this.nLanes = 0;
+    this.orig = []; this.nOrigLanes = 0; this.showOrig = true;
     this.viewStart = 1; this.ppb = 1;
     this.showNt = true; this.showAa = true; this.showCov = true; this.showErr = true;
     this.depth = null; this.err = null; this.depthMax = 0; this.errMax = 0;
@@ -150,6 +184,8 @@
     if (!sameSeq) { this.reads = null; this.readsWindow = null; this.readsSent = null; }
     this.feats = (p.features || []).map(function (f) { return Object.assign({}, f); });
     this.nLanes = G.lanes(this.feats, this.len);
+    this.orig = (p.original || []).map(function (f) { return Object.assign({}, f); });
+    this.nOrigLanes = G.lanes(this.orig, this.len);
     this.depth = p.depth || null; this.err = p.err || null;
     var mx = function (a, floor) { return (a || []).reduce(function (m, d) { return d !== null && d > m ? d : m; }, floor); };
     this.depthMax = mx(this.depth, 1); this.errMax = mx(this.err, 0);
@@ -242,6 +278,8 @@
   Viewer.prototype.consOn = function () { return this.ntOn() && !!this.seq2; };
   Viewer.prototype.readsOn = function () { return this.showReads && !!this.readsInput && this.viewLen() <= this.readsMaxBp; };
   Viewer.prototype.readRows = function () { return this.readsOn() && this.reads ? this.reads.rows : 0; };
+  Viewer.prototype.origOn = function () { return this.showOrig && this.orig.length > 0; };
+  Viewer.prototype.origH = function () { return this.origOn() ? this.nOrigLanes * LANE_H + PAD : 0; };
   // Visible window. On a circular unit it is left unclamped, so a view over the
   // origin asks for both sides; R reads them and the reply echoes these values.
   Viewer.prototype.viewWindow = function () {
@@ -288,12 +326,13 @@
   Viewer.prototype.topH = function () {
     return RULER_H + PAD + (this.covOn() ? COV_H + GAP : 0) + (this.errOn() ? ERR_H + GAP : 0);
   };
-  Viewer.prototype.laneY = function (lane) { return this.topH() + lane * LANE_H; };
+  Viewer.prototype.origY = function (lane) { return this.topH() + lane * LANE_H; };
+  Viewer.prototype.laneY = function (lane) { return this.topH() + this.origH() + lane * LANE_H; };
   Viewer.prototype.height = function () {
     var pcgs = this.showAa && this.ppb >= AA_MIN ? this.aaRows.length : 0;
     var nt = (this.ntOn() ? NT_H : 0) + (this.consOn() ? NT_H : 0);
     var rd = this.readRows() && !this.readsCanvas ? this.readRows() * READ_H + PAD : 0;
-    return this.topH() + this.nLanes * LANE_H + PAD + nt + pcgs * AA_H + rd + PAD;
+    return this.topH() + this.origH() + this.nLanes * LANE_H + PAD + nt + pcgs * AA_H + rd + PAD;
   };
   Viewer.prototype.draw = function () {
     if (!this.len || !this.canvas.offsetParent) return;
@@ -318,8 +357,14 @@
     var y = RULER_H + PAD;
     if (this.covOn()) { this.drawTrack(c, W, y, COV_H, this.depth, this.depthMax, 'depth', false); y += COV_H + GAP; }
     if (this.errOn()) { this.drawTrack(c, W, y, ERR_H, this.err, Math.max(this.errMax, ERR_FLAG * 2), 'error', true); y += ERR_H + GAP; }
+    if (this.origOn()) this.drawLanes(c, true);
     this.drawJoins(c); this.drawLanes(c);
-    y = this.topH() + this.nLanes * LANE_H + PAD;
+    if (this.origOn()) {
+      c.fillStyle = cssVar('--mp-text-muted', '#6a6a6a'); c.textAlign = 'right'; c.textBaseline = 'middle';
+      c.fillText('user', GUTTER - 6, this.origY(0) + (LANE_H - 6) / 2, GUTTER - 10);
+      if (this.nLanes) c.fillText('curated', GUTTER - 6, this.laneY(0) + (LANE_H - 6) / 2, GUTTER - 10);
+    }
+    y = this.topH() + this.origH() + this.nLanes * LANE_H + PAD;
     if (this.ntOn()) { this.drawNt(c, y, this.seq, this.seqLabel, null); y += NT_H; }
     if (this.consOn()) { this.drawNt(c, y, this.seq2, this.seq2Label, this.seq); y += NT_H; }
     this.aaRows.forEach(function (f) { this.drawAa(c, f, y); y += AA_H; }, this);
@@ -379,45 +424,27 @@
       }
     }, this);
   };
-  Viewer.prototype.drawLanes = function (c) {
+  // orig draws the original track muted: lighter fill, grey outline, amber
+  // when curation changed the feature; its hits carry orig so click ignores them.
+  Viewer.prototype.drawLanes = function (c, orig) {
     var vs = this.viewStart, ve = this.viewStart + this.viewLen();
+    var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = '#e69f00', warnSoft = cssVar('--mp-warning-soft', '#fde8d0');
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    this.feats.forEach(function (f) {
-      var col = typeColor(f.type), y = this.laneY(f.lane), h = LANE_H - 6, edge = G.partialEdge(f);
+    (orig ? this.orig : this.feats).forEach(function (f) {
+      var col = typeColor(f.type), y = orig ? this.origY(f.lane) : this.laneY(f.lane), h = LANE_H - 6;
+      var edge = orig ? null : G.partialEdge(f), edited = orig && f.status !== 'unchanged', sel = !orig && f.row === this.selected;
       this.segments(f).forEach(function (seg) {
         var x0 = Math.max(GUTTER, this.x(seg[0])), x1 = Math.min(this.wrap.clientWidth, this.x(seg[1] + 1));
         if (x1 - x0 < 1) return;
-        var fwd = f.dir !== '-', head = Math.min(8, x1 - x0);
-        // vertices in drawing order; pts[4]-pts[0] is the closing edge.
-        var pts = fwd ? [[x0, y], [x1 - head, y], [x1, y + h / 2], [x1 - head, y + h], [x0, y + h]]
-                      : [[x1, y], [x0 + head, y], [x0, y + h / 2], [x0 + head, y + h], [x1, y + h]];
-        c.beginPath();
-        c.moveTo(pts[0][0], pts[0][1]);
-        for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
-        c.closePath();
-        c.fillStyle = col + '55'; c.fill();
-        c.lineWidth = f.row === this.selected ? 2 : 1;
-        c.strokeStyle = f.row === this.selected ? cssVar('--mp-primary', '#337ab7') : col;
-
-        // the flat closing edge (pts[4]-pts[0]) is the pos1 side when fwd,
-        // pos2 side otherwise; the tip (pts[1..3]) is the other side.
-        var owns = edge ? G.segOwns(seg, vs, ve) : null;
-        var dashStart = !!edge && (edge === 'start' || edge === 'both') && owns.start;
-        var dashEnd = !!edge && (edge === 'end' || edge === 'both') && owns.end;
-        var dashFlat = fwd ? dashStart : dashEnd;
-        var dashTip = fwd ? dashEnd : dashStart;
-
-        c.setLineDash([]);
-        c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); c.lineTo(pts[1][0], pts[1][1]); c.stroke();
-        c.beginPath(); c.moveTo(pts[3][0], pts[3][1]); c.lineTo(pts[4][0], pts[4][1]); c.stroke();
-        c.setLineDash(dashTip ? [3, 2] : []);
-        c.beginPath(); c.moveTo(pts[1][0], pts[1][1]); c.lineTo(pts[2][0], pts[2][1]); c.lineTo(pts[3][0], pts[3][1]); c.stroke();
-        c.setLineDash(dashFlat ? [3, 2] : []);
-        c.beginPath(); c.moveTo(pts[4][0], pts[4][1]); c.lineTo(pts[0][0], pts[0][1]); c.stroke();
-        c.setLineDash([]);
-
-        if (x1 - x0 > c.measureText(f.gene).width + 8) { c.fillStyle = cssVar('--mp-text', '#333'); c.fillText(f.gene, (x0 + x1) / 2, y + h / 2); }
-        this.hits.push({ x0: x0, x1: x1, y0: y, y1: y + h, f: f, row: f.row });
+        var fwd = f.dir !== '-', pts = arrowPath(c, x0, x1, y, h, fwd);
+        c.fillStyle = edited ? warnSoft : col + (orig ? '22' : '55'); c.fill();
+        c.lineWidth = edited ? 3 : (sel ? 2 : 1);
+        c.strokeStyle = orig ? (edited ? warn : muted) : (sel ? cssVar('--mp-primary', '#337ab7') : col);
+        if (orig) { c.setLineDash([]); c.stroke(); c.lineWidth = 1; }
+        else strokeArrow(c, pts, fwd, edge, edge ? G.segOwns(seg, vs, ve) : null);
+        var label = orig ? f.name : f.gene;
+        if (x1 - x0 > c.measureText(label).width + 8) { c.fillStyle = orig ? muted : cssVar('--mp-text', '#333'); c.fillText(label, (x0 + x1) / 2, y + h / 2); }
+        this.hits.push(orig ? { x0: x0, x1: x1, y0: y, y1: y + h, f: f, orig: true } : { x0: x0, x1: x1, y0: y, y1: y + h, f: f, row: f.row });
       }, this);
     }, this);
   };
@@ -567,6 +594,7 @@
   };
   Viewer.prototype.click = function (px, py) {
     var h = this.hitTest(px, py);
+    if (h && h.orig) return;
     this.selected = h && h.f ? h.f.row : null;
     if (h && h.f && this.input && window.Shiny) {
       window.Shiny.setInputValue(this.input, { row: h.f.row, nonce: Date.now() }, { priority: 'event' });
@@ -583,7 +611,7 @@
       if (pan) { self.viewStart += pan / self.ppb; self.clamp(); self.draw(); return; }
       self.zoom(Math.pow(1.15, -e.deltaY / 100), self.viewStart + (px - GUTTER) / self.ppb);
     }, { passive: false });
-    cv.addEventListener('mousedown', function (e) { dragging = { x: e.clientX, start: self.viewStart, moved: false }; });
+    cv.addEventListener('mousedown', function (e) { cv.style.cursor = ''; dragging = { x: e.clientX, start: self.viewStart, moved: false }; });
     window.addEventListener('mousemove', function (e) {
       if (!dragging) return;
       var dx = e.clientX - dragging.x; if (Math.abs(dx) > 2) dragging.moved = true;
@@ -598,14 +626,17 @@
     var hover = function (e, cv, hits) {
       var rect = cv.getBoundingClientRect(), px = e.clientX - rect.left, py = e.clientY - rect.top;
       var h = self.hitTest(px, py, hits), b = self.baseAt(self.viewStart + (px - GUTTER) / self.ppb);
+      if (!dragging) cv.style.cursor = h && h.f && self.input ? 'pointer' : '';
       if (!self.tip) return;
       if (!b) { self.tip.hidden = true; return; }
       var t = 'Position ' + b.pos.toLocaleString() + ', ' + b.base;
       if (self.depth && self.depth[b.pos - 1] !== null) t += ' | depth ' + self.depth[b.pos - 1];
       if (self.seq2) { var c2 = self.seq2.charAt(b.pos - 1); if (c2 && c2 !== b.base) t += ' | consensus ' + c2; }
       if (self.err && self.err[b.pos - 1] !== null) t += ', error ' + (self.err[b.pos - 1] * 100).toFixed(1) + '%';
-      if (h && h.f) t += ' | ' + h.f.gene + (h.codon !== undefined ? ' codon ' + (h.codon + 1) + ' ' + h.letter : ' (' + h.f.type + ')');
-      if (h && h.f && typeof h.f.notes === 'string' && h.f.notes) t += ' | ' + h.f.notes;
+      if (h && h.orig) {
+        t += ' | ' + origTip(h.f);
+      } else if (h && h.f) t += ' | ' + h.f.gene + (h.codon !== undefined ? ' codon ' + (h.codon + 1) + ' ' + h.letter : ' (' + h.f.type + ')');
+      if (h && !h.orig && h.f && typeof h.f.notes === 'string' && h.f.notes) t += ' | ' + h.f.notes;
       if (h && h.read) {
         t += ' | read ' + h.read.strand + ' ' + h.read.start.toLocaleString() + '-' + h.read.end.toLocaleString();
         var mm = self.reads && self.reads.mm.find(function (m) { return m.row === h.row && m.pos === b.pos; });
@@ -640,7 +671,7 @@
       });
     });
     var go = document.getElementById(prefix + '-goto');
-    [['show_nt', 'showNt'], ['show_aa', 'showAa'], ['show_cov', 'showCov'], ['show_err', 'showErr'], ['show_reads', 'showReads']].forEach(function (pair) {
+    [['show_nt', 'showNt'], ['show_aa', 'showAa'], ['show_cov', 'showCov'], ['show_err', 'showErr'], ['show_reads', 'showReads'], ['show_orig', 'showOrig']].forEach(function (pair) {
       var box = document.getElementById(prefix + '-' + pair[0]);
       if (box) { self[pair[1]] = box.checked; box.addEventListener('change', function () { self[pair[1]] = box.checked; self.draw(); }); }
     });
@@ -678,9 +709,12 @@
              seq2Len: v.seq2.length,
              readsWindow: v.readsWindow, nReads: v.reads ? v.reads.reads.length : 0, readRows: v.readRows(),
              readsPanelH: v.readsCanvas ? (v.readsWrap.hidden ? 0 : parseInt(v.readsCanvas.style.height, 10) || 0) : null,
-             nLanes: v.nLanes, features: v.feats.map(function (f) { return { row: f.row, gene: f.gene, pos1: f.pos1, pos2: f.pos2, lane: f.lane }; }) };
+             nLanes: v.nLanes, features: v.feats.map(function (f) { return { row: f.row, gene: f.gene, pos1: f.pos1, pos2: f.pos2, lane: f.lane }; }),
+             nOrigLanes: v.origOn() ? v.nOrigLanes : 0,
+             original: v.orig.map(function (f) { return { name: f.name, pos1: f.pos1, pos2: f.pos2, lane: f.lane, status: f.status }; }) };
   };
-  window.mpseq.ui = { cssVar: cssVar, typeColor: typeColor, niceStep: niceStep };
+  window.mpseq.ui = { cssVar: cssVar, typeColor: typeColor, niceStep: niceStep,
+                      origTip: origTip, arrowPath: arrowPath, strokeArrow: strokeArrow };
   window.mpseq.fasta = function (id) { var v = get(id); return v ? v.visibleFasta() : null; };
   window.mpseq.zoom = function (id, f) { var v = get(id); if (v) v.zoom(f); };
   window.mpseq.fit = function (id, row) { var v = get(id); if (v) v.fit(row); };

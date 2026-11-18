@@ -28,7 +28,7 @@
 #'   [generate_config()]. See [list_configs()].
 #' @param container The container to use for running the pipeline.
 #' @param Rproj (logical) Initialize and open an RStudio project in the project
-#'   directory (default = TRUE). This has no effect if not running
+#'   directory (default = FALSE). This has no effect if not running
 #'   interactively in RStudio.
 #' @param force (logical) Force recreating of existing project database and
 #'   config files (default = FALSE).
@@ -45,7 +45,7 @@ new_test_project_userAsmb <- function(
     full_size = FALSE,
     executor = "local",
     container = paste0("macguigand/mitopilot:", utils::packageVersion("MitoPilot")),
-    Rproj = TRUE,
+    Rproj = FALSE,
     force = FALSE,
     fetch_metadata = TRUE,
     ...) {

@@ -6,6 +6,8 @@ test_that("mapper help shows only the selected mapper's icon and link", {
   expect_match(html, 'id="mock-session-help_icon_bwa-mem">')
   expect_match(html, "class=\"[^\"]*shinyjs-hide\" id=\"mock-session-help_maptoref_bowtie2\"")
   expect_match(html, "bio-bwa.sourceforge.net/bwa.shtml")
+  expect_match(html, "Blank uses bwa defaults")
+  expect_false(grepl("help_maptoref_bwa-mem", html))
   expect_match(html, "bwa mem \\[options\\]")
   expect_match(html, "bowtie2 \\[options\\]")
 })

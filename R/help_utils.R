@@ -47,14 +47,45 @@ opts_help <- function(..., href = NULL, link_text = "learn more", id = NULL,
 #' @noRd
 mp_help_tip <- function(text, label = NULL) {
   name <- if (is.null(label)) "Show help" else paste("Show help for", label)
-  shiny::tags$button(
-    type = "button",
+  # a span, not a button: shinyjs::disabled() on a field would switch a button off
+  shiny::tags$span(
+    role = "button", tabindex = "0",
     class = "mp-help-icon",
     `data-toggle` = "mp-popover",
     `data-content` = as.character(text),
     `aria-label` = name,
     shiny::tags$i(class = "fa-solid fa-circle-question", `aria-hidden` = "true")
   )
+}
+
+#' Help popover content as a short bullet list
+#' @param ... one string (or tag) per bullet.
+#' @noRd
+mp_help_bullets <- function(...) {
+  as.character(shiny::tags$ul(class = "mp-help-list", lapply(Filter(Negate(is.null), list(...)), shiny::tags$li)))
+}
+
+#' A checkbox with a help popover beside it
+#'
+#' The icon sits beside the checkbox, not in its label: the invisible input of
+#' a pretty checkbox covers the label and would swallow the click.
+#' @param box the checkbox tag.
+#' @param ... one string (or tag) per bullet.
+#' @param label name of the thing explained, for the accessible name.
+#' @noRd
+mp_check_help <- function(box, ..., label = NULL) {
+  shiny::div(class = "mp-check-help", box, mp_help_tip(mp_help_bullets(...), label = label))
+}
+
+#' "Parameter set name:" label with its help popover
+#' @param noun what the set applies to ("samples" or "assemblies").
+#' @noRd
+mp_pset_label <- function(noun = "samples") {
+  mp_help_label("Parameter set name:", mp_help_bullets(
+    paste0("A named, reusable set of options for the selected ", noun, "."),
+    "Tick Edit to change values. Type a new name to make a new set.",
+    paste0("Saving sets the selected ", noun, " to Ready to run.")
+  ))
 }
 
 #' A field or column label with a help popover beside it
@@ -84,7 +115,7 @@ read_tool_help <- function(tool) {
 #'
 #' Use inside any opts modal next to the textInput that takes that tool's args.
 #' The help text is rendered into a hidden popover that sits inside the same
-#' modal and is shown/hidden client-side, so opening help never tears down the
+#' modal and is shown/hidden client-side (custom.js), so opening help never tears down the
 #' options modal (and therefore never discards unsaved edits).
 #'
 #' @param tool short name (matches inst/tool_help/<tool>.txt)
@@ -95,18 +126,19 @@ read_tool_help <- function(tool) {
 #' @noRd
 tool_help_icon <- function(tool,
                            label = paste(tool, "options"),
-                           session = shiny::getDefaultReactiveDomain()) {
+                           session = shiny::getDefaultReactiveDomain(),
+                           intro = NULL) {
   ns <- session$ns
   input_id <- paste0("help_", tool)
   panel_id <- paste0("help_panel_", tool)
   shiny::tags$span(
     style = "position: relative; display: inline-block;",
-    shiny::actionLink(
-      ns(input_id),
-      label = NULL,
-      icon = shiny::icon("circle-question"),
-      title = paste("Show", label, "documentation"),
-      class = "mp-help-icon"
+    # a span, not a button: shinyjs::disabled() on a field would switch a button off
+    shiny::tags$span(
+      role = "button", tabindex = "0", id = ns(input_id), class = "mp-help-icon",
+      `data-toggle` = "mp-tool-help", `aria-expanded` = "false",
+      `aria-label` = paste("Show", label, "documentation"),
+      shiny::tags$i(class = "fa-solid fa-circle-question", `aria-hidden` = "true")
     ),
     shiny::tags$div(
       id = ns(panel_id),
@@ -120,6 +152,7 @@ tool_help_icon <- function(tool,
         "border-radius: var(--mp-radius); box-shadow: 0 4px 16px rgba(0,0,0,0.2);",
         "padding: 10px;"
       ),
+      if (!is.null(intro)) shiny::div(class = "mp-tool-help-intro", intro),
       shiny::tags$pre(
         style = paste(
           "white-space: pre-wrap; font-size: var(--mp-fs-meta); margin: 0;",
@@ -129,23 +162,4 @@ tool_help_icon <- function(tool,
       )
     )
   )
-}
-
-#' Register an observer that toggles the help popover when its icon is clicked
-#'
-#' Call once per `tool_help_icon()` inside the same moduleServer. `reopen` is
-#' accepted for backward compatibility and ignored (the popover no longer
-#' replaces the options modal).
-#'
-#' @param tool short name (must match the tool_help_icon() call)
-#' @param input the moduleServer's `input` object
-#' @noRd
-register_tool_help <- function(tool, input, reopen = NULL,
-                               session = shiny::getDefaultReactiveDomain()) {
-  ns <- session$ns
-  input_id <- paste0("help_", tool)
-  panel_id <- paste0("help_panel_", tool)
-  shiny::observeEvent(input[[input_id]], ignoreInit = TRUE, {
-    shinyjs::toggle(id = panel_id)
-  })
 }

@@ -6,7 +6,13 @@
 reference and write the result for ingestion into the
 \code{blast_ref_alignment} SQLite table.}
 \usage{
-compute_blast_ref_alignment(assembly_seq, ref_seq, rotation = 0L, output_file)
+compute_blast_ref_alignment(
+  assembly_seq,
+  ref_seq,
+  rotation = 0L,
+  output_file,
+  sample_rotation = 0L
+)
 }
 \arguments{
 \item{assembly_seq}{nucleotide sequence string for the sample assembly}
@@ -21,6 +27,10 @@ that it starts at the same anchor gene as the sample assembly.  Equals
 \item{output_file}{path to write a one-row CSV with columns
 \code{aligned_sample}, \code{aligned_ref}, \code{rotation},
 \code{ref_length}}
+
+\item{sample_rotation}{integer offset (0-based) applied to the SAMPLE copy
+before aligning, for a circular sample against a linear reference; the
+stored sequence is not changed}
 }
 \description{
 Called from the \code{blast_ref_align} Nextflow process after annotation is

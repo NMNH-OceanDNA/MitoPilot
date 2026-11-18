@@ -1,0 +1,22 @@
+<!-- tests/testthat/toolbar/index.html -->
+<!doctype html><meta charset="utf-8"><title>toolbar test</title>
+<script src="jquery.min.js"></script>
+<script>
+  window.Shiny = { addCustomMessageHandler: function () {}, setInputValue: function () {} };
+</script>
+<div id="asmb_ctrls"><button class="action-button" id="run_modal">Update</button></div>
+<div id="annot_ctrls"><button class="action-button" id="run_modal">Update</button></div>
+<div id="export_ctrls"><button class="action-button" id="export_now">Export</button></div>
+<script src="../../../inst/app/www/custom.js"></script>
+<script>
+  // Stand-in for Shiny's action-button binding: a per-element click count,
+  // re-sent only when the count differs from the last value sent for that id.
+  window.__sent = {}; window.__arrived = [];
+  $('.action-button').each(function () {
+    $(this).on('click', function () {
+      var v = ($(this).data('val') || 0) + 1;
+      $(this).data('val', v);
+      if (window.__sent[this.id] !== v) { window.__sent[this.id] = v; window.__arrived.push(this.id + ':' + v); }
+    });
+  });
+</script>

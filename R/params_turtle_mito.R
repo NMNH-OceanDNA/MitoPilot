@@ -6,6 +6,7 @@
 #'
 params_turtle_mito <- function(alt = list()) {
   params <- list(
+    ruleset_version = "1.0",
     hit_threshold = 80,
     max_overlap = 0.25,
     default_rules = list(

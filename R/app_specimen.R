@@ -247,13 +247,11 @@ specimen_csv_map_ui <- function(ns, current, overrides, choices) {
   concepts <- setdiff(SPECIMEN_CONCEPTS, "taxon")
   tags$details(
     class = "mp-spec-map",
-    tags$summary("Mapfile columns..."),
-    opts_help(
-      "Pick the mapping-file column MitoPilot compares for each item. Leave a ",
-      "box empty to detect the column automatically, or pick (none) to skip ",
-      "that item. Coordinates take one combined column, or latitude then longitude.",
-      nested = TRUE
-    ),
+    tags$summary("Mapfile columns...", mp_help_tip(mp_help_bullets(
+      "Pick the mapping-file column to compare for each item.",
+      "Empty: MitoPilot finds the column itself. (none): skips that item.",
+      "Coordinates: one combined column, or latitude then longitude."
+    ), label = "mapping-file columns")),
     lapply(concepts, function(k) {
       set <- k %in% names(overrides)
       sel <- if (!set) character() else if (nzchar(overrides[[k]])) {

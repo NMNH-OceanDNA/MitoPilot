@@ -1,0 +1,20 @@
+##gff-version 3
+chrM	geneious	CDS	16400	16500	.	+	0	ID=cds-cob;Name=CYTB
+chrM	geneious	CDS	1	700	.	+	.	ID=cds-cob;Name=CYTB
+chrM	geneious	CDS	735	901	.	+	0	ID=cds-atp8;Name=ATP8;transl_except=(pos:900..901,aa:TERM)
+chrM	MitoFinder	CDS	1001	2545	.	+	0	ID=cds-coi;Name=COI CDS 5' Partial CDS
+chrM	mitos	tRNA	2546	2614	.	-	.	ID=trn-leu;Name=tRNA-Leu (CUN)
+chrM	geneious	rRNA	2700	4200	.	+	.	ID=rrn-16s;Name=16S
+chrM	geneious	CDS	4300	4500	.	+	0	ID=cds-nad5;Name=ND5
+chrM	geneious	CDS	4601	5500	.	+	0	ID=cds-nad5;Name=ND5
+chrM	geneious	CDS	5600	5800	.	+	0	ID=cds-nad3;Name=ND3;exception=ribosomal slippage;Note=-1 frameshift
+chrM	geneious	CDS	5800	5950	.	+	.	ID=cds-nad3;Name=ND3;exception=ribosomal slippage;Note=-1 frameshift
+chrM	geneious	CDS	6000	7041	.	+	0	ID=cds-nd2;Name=ND2;pseudo=true;Note=frameshifted
+chrM	geneious	CDS	7100	8477	.	+	1	ID=cds-nd4;Name=ND4
+chrM	geneious	CDS	8500	9180	.	+	0	ID=cds-atp6;Name=ATPase 6
+chrM	geneious	CDS	9300	9599	.	+	0	ID=cds-orf1;Name=ORF1
+chrM	geneious	gene	9700	10655	.	+	.	ID=gene-nd1;Name=ND1
+chrM	geneious	CDS	9700	10655	.	+	0	ID=cds-nd1;Name=ND1
+chrM	geneious	misc_feature	15500	16399	.	+	.	ID=dloop;Name=D-loop
+chrM	geneious	tRNA	16450	16520	.	+	.	ID=trn-wrap;Name=trnP
+chrM	geneious	repeat_region	10700	10800	.	+	.	ID=rep1;Name=repeat;Note=50% identity

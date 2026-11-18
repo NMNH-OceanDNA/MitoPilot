@@ -99,6 +99,23 @@ rt_longtext <- function() {
   )
 }
 
+#' Count cell with the row's toolGenes list on hover
+#'
+#' @noRd
+rt_tool_count <- function() {
+  htmlwidgets::JS(
+    "function(cellInfo) {
+      var v = (cellInfo.value === null || cellInfo.value === undefined) ?
+        '' : String(cellInfo.value)
+      var g = cellInfo.row.toolGenes
+      if (g === null || g === undefined || g === '') return v
+      var t = String(g).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/'/g, '&#39;')
+      return `<abbr class='mp-abbr' tabindex='0' title='${t}'>${v}</abbr>`
+    }"
+  )
+}
+
 #' Render an NCBI GenBank accession as a clickable hyperlink
 #'
 #' @noRd

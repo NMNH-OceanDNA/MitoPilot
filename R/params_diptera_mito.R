@@ -6,6 +6,7 @@
 #'
 params_diptera_mito <- function(alt = list()) {
   params <- list(
+    ruleset_version = "1.0",
     hit_threshold = 80,
     max_overlap = 0.25,
     default_rules = list(
@@ -53,7 +54,7 @@ params_diptera_mito <- function(alt = list()) {
       cox1 = list(
         type = "PCG",
         overlap = list(start = 2, stop = T),
-        start_codons = c("TTG", "ATT", "ATC", "ATA", "ATG", "GTG", "TCG") # NCBI RefSeq dipterans have TCG start codon
+        start_codons = c("TTG", "ATT", "ATC", "ATA", "ATG", "GTG", "TCG", "CGA") # NCBI RefSeq dipterans have TCG and CGA start codons
       ),
       cox2 = list(
         type = "PCG"

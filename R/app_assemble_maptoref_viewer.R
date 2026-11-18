@@ -90,11 +90,13 @@ maptoref_viewer_server <- function(id, rv) {
           btn("copy", "Copy sequence", title = "Copy the bases in view as FASTA"),
           mp_checkbox(ns("show_cov"), label = "Coverage", value = TRUE),
           mp_checkbox(ns("show_nt"), label = "Nucleotides", value = TRUE),
-          reads_box
+          reads_box,
+          mp_help_tip(mp_help_bullets(
+            "Drag or scroll sideways to pan. Scroll or pinch to zoom.",
+            "Bases appear when zoomed in. Reads appear when the view is under 1,000 bp.",
+            "Copy sequence copies the bases in view."
+          ), label = "the coverage viewer")
         ),
-        div(class = "mp-coverage-caption",
-            paste("Drag or scroll sideways to pan, scroll or pinch to zoom.",
-                  "Letters appear when zoomed in; reads appear under 1,000 bp. Copy sequence copies the bases in view.")),
         uiOutput(ns("note")),
         div(
           class = "mp-seqview",

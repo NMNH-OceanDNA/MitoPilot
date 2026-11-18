@@ -23,7 +23,6 @@ navbar:
   type: default
   structure:
     left:
-    - intro
     - reference
     - articles
     right:
@@ -38,6 +37,8 @@ navbar:
         href: articles/Installation.html
       - text: -------
       - text: Test project
+      - text: "0. Initialize"
+        href: articles/MitoPilot.html
       - text: "1. Assemble"
         href: articles/Test-Project-Assemble.html
       - text: "2. Annotate"
@@ -50,10 +51,14 @@ navbar:
         href: articles/Your-Own-Project.html
       - text: "Using your own assemblies"
         href: articles/Your-Own-Assemblies.html
+      - text: "Using your own annotations"
+        href: articles/Your-Own-Annotations.html
       - text: "Choosing an assembly method"
         href: articles/Assembly-Methods.html
       - text: "Difficult assemblies"
         href: articles/Difficult-Assemblies.html
+      - text: "Difficult annotations"
+        href: articles/Difficult-Annotations.html
       - text: "Curation ruleset browser"
         href: articles/Ruleset-Browser.html
       - text: "Curation and validation"
@@ -94,6 +99,7 @@ articles:
 
 - title: "Test project walkthrough"
   contents:
+  - 'MitoPilot'
   - 'Test-Project-Assemble'
   - 'Test-Project-Annotate'
   - 'Test-Project-Export'
@@ -102,8 +108,10 @@ articles:
   contents:
   - 'Your-Own-Project'
   - 'Your-Own-Assemblies'
+  - 'Your-Own-Annotations'
   - 'Assembly-Methods'
   - 'Difficult-Assemblies'
+  - 'Difficult-Annotations'
   - 'Ruleset-Browser'
   - 'Curation-and-Validation'
   - 'custom_dbs'
@@ -135,8 +143,10 @@ reference:
   - MitoPilot
   - new_project
   - new_project_userAsmb
+  - new_project_userAnnot
   - new_test_project
   - new_test_project_userAsmb
+  - new_test_project_userAnnot
 
 - title: "Project database"
   desc: >
@@ -144,6 +154,7 @@ reference:
   contents:
   - new_db
   - new_db_userAsmb
+  - new_db_userAnnot
   - add_samples
   - update_sample_metadata
   - fetch_geome
@@ -182,6 +193,7 @@ reference:
   - fetch_blast_refs
   - patch_blast_ref_meta
   - compute_blast_ref_alignment
+  - alignment_rotations
   - get_top_hits_local
 
 - title: "Export and quality control"

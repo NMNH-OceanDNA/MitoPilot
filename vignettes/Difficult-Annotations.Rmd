@@ -1,0 +1,201 @@
+---
+title: "Difficult Annotations"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Difficult Annotations}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The default annotation settings work well for most vertebrates. For other clades,
+annotations may be missing genes, have genes on
+the wrong strand, or gene boundaries that do not match the references. This page
+provides some troubleshooting tips.
+
+Work in this order:
+
+1. **Change a setting and re-run.** This fixes every sample in the parameter set
+   at once.
+2. **Check the reference.** A poor reference makes good annotations look wrong.
+3. **Fix what is left by hand** in the Annotate details window.
+
+All settings below can be found in the options windows of the Annotate module: select
+the problematic assemblies, click the **Annotation**, **Curation**, or **ORF finder**
+options cell, and tick **Edit**. Saving sets the selected assemblies to state *Ready
+to run*; press **Update** to annotate them again.
+
+<div class="alert alert-warning">
+<strong>Warning.</strong> Re-running annotation replaces manual edits and notes
+for that assembly. Tinker with settings first, save manual edits for last.
+</div>
+
+## A gene is missing
+
+### Try a different MITOS2 reference database
+
+MITOS2 is the main annotator. It finds genes by comparing your assembly to a
+set of reference mitogenomes, chosen with **MITOS2 reference database**:
+`Chordata` or `Metazoa_RefSeq89`. For anything that is not a chordate, switch to
+`Metazoa_RefSeq89`. This is sometimes the only change needed.
+
+### Check the two MITOS2 switches
+
+- **Keep only best of overlapping predictions (--best).** On by default. When
+  MITOS2 predicts two overlapping features, only the top-scoring one is kept. If
+  a real gene overlaps a stronger prediction, turning this off can bring it
+  back, at the cost of more duplicates that you have to manually delete.
+- **Rescue rRNAs/PCGs lost to tRNA overlap.** On by default. MITOS2 runs a
+  second time without tRNA prediction, to recover rRNAs and protein-coding genes
+  it drops when a tRNA overlaps them. Leave it on unless you need the shorter
+  run time.
+
+### Add more annotation tools
+
+Three more annotation tools can run alongside the defaults. Each one only fills gaps: when
+tools disagree, the higher-priority tool wins:
+
+- Genes and rRNAs: MITOS2 > MitoFinder.
+- tRNAs: tRNAscan-SE > ARWEN > ARAGORN > MITOS2.
+
+**Also use MitoFinder for annotation.** MitoFinder finds genes by similarity to
+a GenBank-format reference file that you supply in **MitoFinder reference
+database (.gb format)**. It helps most when you have good annotated mitogenomes
+from close relatives. Build the reference database with `custom_assembly_db()`; see
+[building custom databases](custom_dbs.html). Two extra checkboxes appear:
+**Annotate non-standard genes (--new-genes)** and **Search for genes with
+introns (--allow-intron)**.
+
+**Also use ARWEN/ARAGORN for tRNA prediction.** Both are tRNA finders that 
+catch unusual tRNAs, such as those with a missing arm. Turn on one or both when tRNAs are
+absent. Each has its own options box, with a "?" that shows the tool's command-line options
+for more control.
+
+### Adjust tRNAscan-SE for your clade
+
+The default **tRNAscan-SE options** are `-M vert -X 20`. `-M vert` is the
+vertebrate mitochondrial model; tRNAscan-SE has mitochondrial models only for
+vertebrates and mammals. In practice, we have found that the vertebrate model 
+performs well for many invertebrate mitogenomes. But if your annotation is missing
+tRNAs, you could try replacing `-M vert` with `-O` (other
+organellar tRNAs). `-X` is the score cut-off; lowering it reports weaker tRNAs.
+The "?" beside the options box shows every flag.
+
+If a tRNA is found but its anticodon could not be determined, it is dropped by
+default. Tick **Retain low-confidence (NNN anticodon) tRNAs** to keep these, then
+check each one by hand.
+
+### Keep the ends of linear assemblies
+
+**Trim un-annotated ends of linear contigs (by gene features)** removes base pairs
+beyond the outermost annotated gene. If a gene near the end was missed, the trim
+removes the sequence it sits on. Turn this off before trying the ORF finder or
+Liftover on a linear assembly.
+
+### Look for unannotated open reading frames (ORFs)
+
+For genes that are poorly represented in the reference databases, 
+such as lineage-specific ORFs, open the
+**ORF finder** options and tick **Run ORF finder step**. After curation, NCBI
+ORFfinder scans for ORFs in regions with no annotation.
+
+- **Min ORF length (nt)** sets the shortest ORF reported.
+- **Max overlap w/ existing annotations** sets how much of an ORF may overlap a
+  gene that is already annotated.
+- **Include nested/overlapping ORFs** also reports ORFs inside or overlapping
+  another ORF, not only the longest per region.
+- The genetic code for ORFfinder is derived from the curation ruleset. 
+
+In the Annotate details window,
+**Auto-assign ORFs** renames an ORF when it matches a protein-coding gene in the
+curation database. Delete ORFs that are not real genes before export.
+
+### Copy the gene from the reference (Liftover)
+
+When a reference mitogenome contains a gene that is missing from your annotation, you can
+attempt to copy (liftover) the reference annotation. Liftover only copies 
+annotations when the reference gene sequence is highly similar to an unannotated 
+region of your sample's assembly. Control regions and genes split into several pieces in the reference
+cannot be lifted over. See
+[add a missing gene from the reference](Test-Project-Annotate.html#add-a-missing-gene-from-the-reference)
+for the full walkthrough.
+
+## Wrong strand, start position, or reading frame
+
+**The whole assembly is backwards.** MitoPilot orients each assembly from its
+rRNAs and starting gene. For taxa where that fails (for example, scyphozoan
+jellyfish with rRNAs on opposite strands) tick **Reverse-complement assembly to
+match reference orientation**. Each contig is then oriented to match the 
+top BLAST reference.
+
+**A circular assembly starts in the wrong place.** In the annotation options window, the
+**Starting gene for circular assemblies** sets the starting position for circular assemblies. 
+If you wish to modify the start position of a single circular assembly after annotation, 
+use the **Rotate** button 
+in the Annotate details window. Picking a feature on the minus
+strand will also reverse-complements the assembly. Use the **Restore assembly** button
+to revert this change.
+
+**Genes have many internal stop codons or odd boundaries.** Check the translation table
+first. In the **Curation** options, **Genetic code** is set from the curation
+ruleset unless you override it, so setting the wrong ruleset for your samples produces
+incorrect translations. 
+
+## The reference is a poor match
+
+Two different references are in play, and they can be adjusted in different ways.
+
+The **BLAST reference** is the closest GenBank mitogenome found for each
+assembly. The synteny viewer and Liftover use this reference. A
+distant or poorly annotated reference makes the synteny view misleading and gives
+Liftover little to copy.
+
+- **Pick a better BLAST reference.** In **BLAST Reference Synteny**, use the
+  dropdown to view the other top BLAST hits, then **Set ... as best reference**
+  to keep one. This does not re-run curation, so existing validation warnings
+  stay as they are.
+
+The **curation database** is used to check gene boundaries. The warnings (`low reference similarity`, `check reference
+start alignment`, `check reference stop alignment`) utilize this database, not the
+best BLAST reference you set above.
+
+- **Use a custom curation database.** The bundled database contains RefSeq
+  proteins. If your clade is poorly represented, build your own with
+  `custom_curation_db()`. Then tick **Use custom curation database** in the
+  Curation options, enter the location of your database, and re-run the annotation workflow. See
+  [building custom databases](custom_dbs.html).
+
+## Fixing annotations by hand
+
+Even with optimal annotation settings, manual review and edits are still often required. 
+Use the Annotate details window to inspect the results and make these manual edits. The
+[annotation walkthrough](Test-Project-Annotate.html#manually-fix-annotations)
+covers each tool in more detail. Briefly:
+
+- **Move a start or stop codon.** Select a protein-coding gene, open
+  **Alignment**, and click **Edit**. The `+` and `-` buttons jump to the next
+  valid start or stop codon while the alignment to the reference proteins
+  updates.
+- **Mark a gene partial.** The Partial `5'` and `3'` buttons record an
+  undetermined start or stop. Use them sparingly; GenBank may question a record
+  with many partial genes.
+- **Join a split gene.** **Merge PCGs/rRNAs** joins pieces of one gene that were
+  annotated separately.
+- **Remove a false gene.** **Delete** removes an annotation; **Restore** brings
+  it back.
+
+To discard all manual edits for an assembly and start again, set its state as *Ready
+to run* and update with the Nextflow `-resume` flag. See
+[restoring annotations](FAQ.html#how-do-i-restore-annotations-after-manual-editing).
+
+Validation warnings are not cleared when you fix the problem; they record the
+state when annotation workflow ran. Use the **Reviewed** button to track your
+progress.
+
+## A last check at export
+
+Annotation boundary errors are easiest to spot by comparing across samples. When you export a group with
+**Review PCG annotations for outliers** ticked, MitoPilot aligns each
+protein-coding gene across the group and flags samples whose gene looks
+truncated, extended, or highly divergent from the rest. From the review window you can jump
+straight to the Annotate details window for a flagged sample. See
+[the outlier review](Test-Project-Export.html#the-outlier-review).

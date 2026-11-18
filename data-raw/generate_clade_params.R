@@ -157,6 +157,7 @@ emit_params <- function(key, sheet, tt, std_start, std_stop, gene_rows) {
 #\'
 params_%s_mito <- function(alt = list()) {
   params <- list(
+    ruleset_version = "1.0",
     hit_threshold = %d,
     max_overlap = 0.25,
     default_rules = list(

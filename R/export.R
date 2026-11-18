@@ -27,6 +27,38 @@ check_single_path <- function(units) {
   invisible(TRUE)
 }
 
+# Join shared by export_group_units() and export_left_out(): the Export table's
+# own gate (kept contig, assembly and annotation both locked).
+EXPORT_GROUP_FROM <- "FROM export e
+  LEFT JOIN assemblies asm ON asm.ID = e.ID AND asm.path = e.path AND asm.scaffold = e.scaffold
+  LEFT JOIN assemble a ON a.ID = e.ID
+  LEFT JOIN annotate an ON an.ID = e.ID AND an.path = e.path AND an.scaffold = e.scaffold
+  WHERE e.export_group = ? AND"
+# A user-assembly contig with no annotate row of its own follows the sample's.
+EXPORT_GROUP_OK <- "(asm.ignore = 0 AND COALESCE(a.assemble_lock, 0) = 1
+  AND COALESCE(an.annotate_lock,
+    (SELECT MAX(x.annotate_lock) FROM annotate x WHERE x.ID = e.ID), 0) = 1)"
+
+#' Units of an export group that its export writes
+#' @return data.frame(ID, path, scaffold)
+#' @noRd
+export_group_units <- function(con, group) {
+  DBI::dbGetQuery(con, paste("SELECT e.ID, e.path, e.scaffold", EXPORT_GROUP_FROM,
+    EXPORT_GROUP_OK, "ORDER BY e.ID, e.path, e.scaffold"), params = list(group))
+}
+
+#' Units of an export group that its export leaves out, and why
+#' @return data.frame(ID, path, scaffold, why)
+#' @noRd
+export_left_out <- function(con, group) {
+  DBI::dbGetQuery(con, paste(
+    "SELECT e.ID, e.path, e.scaffold,
+       CASE WHEN asm.ignore IS NOT 0 THEN 'assembly ignored'
+            WHEN COALESCE(a.assemble_lock, 0) != 1 THEN 'assembly not locked'
+            ELSE 'annotation not locked' END AS why", EXPORT_GROUP_FROM,
+    "NOT", EXPORT_GROUP_OK, "ORDER BY e.ID, e.path, e.scaffold"), params = list(group))
+}
+
 #' Curation-options profile for one export unit
 #'
 #' A user-supplied assembly is annotated as one genome, so a single `annotate`
@@ -201,6 +233,19 @@ write_tbl_gap <- function(gap, fn) {
     cat(file = fn, sep = "\n", append = TRUE)
 }
 
+#' Write the .tbl codon_start qualifier when the frame is not 1, the start
+#' codon is non-standard, or (partial = TRUE) the 5' end is partial
+#'
+#' @noRd
+write_codon_start <- function(cur, start_codons, fn, partial = FALSE) {
+  cs <- codon_offset(cur$codon_start)
+  if (cs > 1L || !cur$start_codon %in% start_codons ||
+      (partial && isTRUE(as.integer(cur$partial_start) == 1L))) {
+    paste("\t\t\tcodon_start\t", cs) |>
+      cat(file = fn, sep = "\n", append = TRUE)
+  }
+}
+
 #' Write one .tbl feature location block; only the first interval carries the key
 #'
 #' @noRd
@@ -232,6 +277,24 @@ write_tbl_loc <- function(pos, key, fn) {
   } else {
     paste0("(pos:", te_start, "..", te_end, ",aa:TERM)")
   }
+}
+
+#' Extra GFF3 CDS attributes mirroring the .tbl `transl_except` and `note`
+#'
+#' `;` and `,` are reserved in GFF3 column 9, so they are percent-encoded.
+#'
+#' @noRd
+gff_cds_extra <- function(transl_except, note, direction = "+") {
+  esc <- function(x) gsub(",", "%2C", gsub(";", "%3B", x, fixed = TRUE), fixed = TRUE)
+  # GFF3 coordinates ascend; the .tbl writes a minus-strand range high..low
+  if (identical(direction, "-") && length(transl_except) > 0) {
+    transl_except <- sub("pos:(\\d+)\\.\\.(\\d+)", "pos:\\2..\\1", transl_except)
+    transl_except <- sub("pos:([0-9.]+)", "pos:complement(\\1)", transl_except)
+  }
+  paste0(
+    if (length(transl_except) > 0) paste0(";transl_except=", esc(transl_except)),
+    if (length(note) > 0) paste0(";Note=", esc(note))
+  )
 }
 
 #' GFF3 end coordinate for a feature that may span the origin
@@ -333,14 +396,7 @@ export_files <- function(
     dplyr::select(ID, path, scaffold)
 
   if (length(group) == 1) {
-    units <- unit_src |>
-      dplyr::inner_join(
-        dplyr::tbl(con, "export") |>
-          dplyr::filter(export_group == !!group) |>
-          dplyr::select(ID, path, scaffold),
-        by = c("ID", "path", "scaffold")
-      ) |>
-      dplyr::collect()
+    units <- export_group_units(con, group)
     group_pth <- file.path(out_dir, "export", group)
     unlink(group_pth, recursive = TRUE)
     group_gff_pth <- file.path(group_pth, "GFFs")
@@ -738,6 +794,7 @@ export_files <- function(
             cur$stop_codon <- spliced$stop_codon
             cur$partial_start <- spliced$partial_start
             cur$partial_stop <- spliced$partial_stop
+            cur$codon_start <- spliced$codon_start
             cur$length <- spliced$length
             # Gene span across all exons, from the splice helper: sorting by
             # pos1 and taking the outer bounds reports a near-whole-circle span
@@ -803,10 +860,7 @@ export_files <- function(
             paste0("\t\t\ttransl_except\t", transl_except) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
           }
-          if (!cur$start_codon %in% start_codons) {
-            paste("\t\t\tcodon_start\t", 1) |>
-              cat(file = tbl_fn, sep = "\n", append = TRUE)
-          }
+          write_codon_start(cur, start_codons, tbl_fn)
           # frameshift/RNA-editing join: INSDC requires the ribosomal_slippage
           # qualifier + exception; note carries no nucleotide locations per
           # GenBank guidance
@@ -836,14 +890,17 @@ export_files <- function(
 
           # write CDS feature for each exon. GFF3 coordinates are always
           # ascending; the strand lives in column 7, so both strands share this.
+          off <- codon_offset(cur$codon_start) - 1L
+          o <- if (identical(cur$direction, "-")) rev(seq_len(nrow(exons))) else seq_len(nrow(exons))
+          done <- cumsum(mapply(circ_len, exons$pos1[o], exons$pos2[o], MoreArgs = list(L = asmb_len)))
+          phase <- integer(nrow(exons))
+          phase[o] <- c(off, (3L - (done[-length(done)] - off) %% 3L) %% 3L)
           for (i in seq_len(nrow(exons))) {
             f9 = paste0("ID=cds-",cur$gene,";Parent=gene-",cur$gene,";Name=",cur$gene,";gbkey=CDS;gene=",cur$gene,";product=",cur$product,";transl_table=",dat$genetic_code)
-            if (length(note_out) > 0){
-              f9 = paste0(f9, ";Note=", note_out)
-            }
+            f9 = paste0(f9, gff_cds_extra(transl_except, note_out, cur$direction))
             e_wraps <- isTRUE(dat$topology == "circular") &&
               isTRUE(exons[i, ]$pos1 > exons[i, ]$pos2)
-            paste(c(seq_name, "MitoPilot", "CDS", exons[i,]$pos1, gff_end(exons[i,]$pos2, e_wraps, asmb_len), ".", cur$direction, "0", f9), collapse = "\t") |>
+            paste(c(seq_name, "MitoPilot", "CDS", exons[i,]$pos1, gff_end(exons[i,]$pos2, e_wraps, asmb_len), ".", cur$direction, phase[i], f9), collapse = "\t") |>
               cat(file = gff_fn, sep = "\n", append = TRUE)
           }
 
@@ -907,10 +964,7 @@ export_files <- function(
               paste0("\t\t\ttransl_except\t", gene_transl_except) |>
                 cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
             }
-            if (!cur$start_codon %in% start_codons || isTRUE(as.integer(cur$partial_start) == 1L)) {
-              paste("\t\t\tcodon_start\t", 1) |>
-                cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
-            }
+            write_codon_start(cur, start_codons, gene_tbl_fn, partial = TRUE)
             note_out <- add_gap_note(note)
             if (length(note_out) > 0) {
               paste0("\t\t\tnote\t", note_out) |>
@@ -982,10 +1036,7 @@ export_files <- function(
             paste0("\t\t\ttransl_except\t", transl_except) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
           }
-          if (!cur$start_codon %in% start_codons) {
-            paste("\t\t\tcodon_start\t", 1) |>
-              cat(file = tbl_fn, sep = "\n", append = TRUE)
-          }
+          write_codon_start(cur, start_codons, tbl_fn)
           if (length(note_out) > 0) {
             paste0("\t\t\tnote\t", note_out) |>
               cat(file = tbl_fn, sep = "\n", append = TRUE)
@@ -1002,11 +1053,9 @@ export_files <- function(
 
           # CDS feature
           f9 = paste0("ID=cds-",cur$gene,";Parent=gene-",cur$gene,";Name=",cur$gene,";gbkey=CDS;gene=",cur$gene,";product=",cur$product,";transl_table=",dat$genetic_code)
-          if (length(note_out) > 0){
-            f9 = paste0(f9, ";Note=", note_out)
-          }
+          f9 = paste0(f9, gff_cds_extra(transl_except, note_out, cur$direction))
           # a feature spanning the origin is written start..(asmb_len + end)
-          paste(c(seq_name, "MitoPilot", "CDS", cur$pos1, gff_end(cur$pos2, wraps, asmb_len), ".", cur$direction, "0", f9), collapse = "\t") |>
+          paste(c(seq_name, "MitoPilot", "CDS", cur$pos1, gff_end(cur$pos2, wraps, asmb_len), ".", cur$direction, codon_offset(cur$codon_start) - 1L, f9), collapse = "\t") |>
             cat(file = gff_fn, sep = "\n", append = TRUE)
 
           if(gene_export){
@@ -1074,10 +1123,7 @@ export_files <- function(
               paste0("\t\t\ttransl_except\t", gene_transl_except) |>
                 cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
             }
-            if (!cur$start_codon %in% start_codons || isTRUE(as.integer(cur$partial_start) == 1L)) {
-              paste("\t\t\tcodon_start\t", 1) |>
-                cat(file = gene_tbl_fn, sep = "\n", append = TRUE)
-            }
+            write_codon_start(cur, start_codons, gene_tbl_fn, partial = TRUE)
             note_out <- add_gap_note(note)
             if (length(note_out) > 0) {
               paste0("\t\t\tnote\t", note_out) |>
@@ -1355,8 +1401,8 @@ export_files <- function(
   if (length(group) == 1) {
     DBI::dbExecute(
       con,
-      "UPDATE export SET export_time_stamp = ? WHERE export_group = ?",
-      params = list(as.integer(Sys.time()), group)
+      "UPDATE export SET export_time_stamp = ? WHERE ID = ? AND path = ? AND scaffold = ?",
+      params = list(rep(as.integer(Sys.time()), nrow(units)), units$ID, units$path, units$scaffold)
     )
   }
 
@@ -1447,16 +1493,7 @@ make_PCG_alignments <- function(
 #' @noRd
 get_export_PCG_annotations <- function(con, group) {
   # Units in the group, with the SeqID that labels each record downstream.
-  units <- dplyr::tbl(con, "assemblies") |>
-    dplyr::filter(ignore == 0) |>
-    dplyr::select(ID, path, scaffold) |>
-    dplyr::inner_join(
-      dplyr::tbl(con, "export") |>
-        dplyr::filter(export_group == !!group) |>
-        dplyr::select(ID, path, scaffold),
-      by = c("ID", "path", "scaffold")
-    ) |>
-    dplyr::collect() |>
+  units <- export_group_units(con, group) |>
     dplyr::arrange(ID, path, scaffold) |>
     dplyr::group_by(ID) |>
     dplyr::mutate(n_units = dplyr::n()) |>

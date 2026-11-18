@@ -35,6 +35,33 @@ RULESET_MAP <- list(
   thecostraca_mito     = list(label = "Barnacles",       ncbi = "Thecostraca",      taxid = "116172")
 )
 
+# Version of a ruleset's clade settings (the curation engine is versioned by the package).
+ruleset_version <- function(target) {
+  do.call(paste0("params_", target), list())$ruleset_version
+}
+
+# Version label for a project's saved copy of a ruleset (params JSON from curate_opts).
+ruleset_version_label <- function(target, params_json) {
+  # flatten to a named character vector so JSON round-trip quirks (NA, boxing) drop out
+  flat <- function(x) {
+    x$ruleset_version <- NULL
+    u <- unlist(x)
+    u <- u[!is.na(u)]
+    storage.mode(u) <- "character"
+    u
+  }
+  pkg <- do.call(paste0("params_", target), list())
+  saved <- tryCatch(jsonlite::fromJSON(params_json), error = function(e) list())
+  v <- as.character(saved$ruleset_version %||% "1.0")
+  if (!identical(v, pkg$ruleset_version)) {
+    paste0("v", v, " (v", pkg$ruleset_version, " available; edit and save these options to update)")
+  } else if (!identical(flat(saved), flat(pkg))) {
+    paste0("v", v, " (modified)")
+  } else {
+    paste0("v", v)
+  }
+}
+
 #' Interactive browser for MitoPilot curation rulesets
 #'
 #' Generates a self-contained, interactive HTML visualization of the taxon-specific
@@ -419,6 +446,7 @@ build_ruleset_display <- function(params, label, ncbi, genetic_code = NA_integer
     label = label,
     ncbi = ncbi,
     taxid = taxid,
+    version = params$ruleset_version,
     genetic_code = list(
       code = genetic_code,
       name = genetic_code_name(genetic_code),
@@ -858,7 +886,7 @@ function selectRuleset(target, row) {
   d.appendChild(head);
 
   info.appendChild(el("h2", "detail-title", data.label));
-  var sub = el("p", "detail-sub", "Ruleset: " + target + "  @MIDDOT@  NCBI anchor: ");
+  var sub = el("p", "detail-sub", "Ruleset: " + target + " v" + data.version + "  @MIDDOT@  NCBI anchor: ");
   var ncbiLink = document.createElement("a");
   ncbiLink.href = "https://www.ncbi.nlm.nih.gov/datasets/taxonomy/" + data.taxid + "/";
   ncbiLink.target = "_blank";

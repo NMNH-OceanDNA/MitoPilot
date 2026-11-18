@@ -26,7 +26,11 @@
     return out;
   }
   function clampIdx(p, n) { return Math.min(Math.max(p, 1), n); }
-  function sampleCol(p, sNongap) { return sNongap[clampIdx(p, sNongap.length) - 1]; }
+  // Stored sample position -> position in the aligned copy (rotated by sRot when a
+  // circular sample was aligned to a linear reference), and back.
+  function sampleRot(p, n, sRot) { return n ? ((p - 1 - (sRot || 0)) % n + n) % n + 1 : p; }
+  function sampleUnrot(k, n, sRot) { return sampleRot(k, n, -(sRot || 0)); }
+  function sampleCol(p, sNongap, sRot) { var n = sNongap.length; return sNongap[sampleRot(clampIdx(p, n), n, sRot) - 1]; }
   function rotFlip(p, refLength, rotation, rc) {
     var pr = ((p - 1 - rotation) % refLength + refLength) % refLength + 1;
     return rc ? refLength - pr + 1 : pr;
@@ -44,7 +48,7 @@
     if (ctx.rc) return { c1: b, c2: a, dir: f.dir === '-' ? '+' : '-' };
     return { c1: a, c2: b, dir: f.dir };
   }
-  function sampleAt(c, s, sCounts) { return s.charAt(c - 1) === '-' ? null : sCounts[c]; }
+  function sampleAt(c, s, sCounts, sRot) { return s.charAt(c - 1) === '-' ? null : sampleUnrot(sCounts[c], sCounts[sCounts.length - 1], sRot); }
   function refAt(c, r, rCounts, refLength, rotation, rc) {
     if (r.charAt(c - 1) === '-') return null;
     var k = rCounts[c], pr = rc ? refLength - k + 1 : k;
@@ -61,6 +65,11 @@
     var both = bothCounts[c1] - bothCounts[c0 - 1];
     return both > 0 ? (matchCounts[c1] - matchCounts[c0 - 1]) / both : null;
   }
+  // Whether a drawn piece [a, b] of feature f (columns c1..c2, wrapped when
+  // c1 > c2) shows f's true start / end edge inside the visible range [vs, ve).
+  function owns(pc, f, vs, ve) {
+    return { start: pc[0] === f.c1 && pc[0] >= vs, end: pc[1] === f.c2 && pc[1] + 1 <= ve };
+  }
   // Rolling window: a pixel bin narrower than WIN columns is widened about
   // its centre so the zoomed-out band is not a 0/0.5/1 skyline.
   var WIN = 10;
@@ -74,7 +83,7 @@
   window.mpsyn.geom = { nongap: nongap, counts: counts, classify: classify, sampleCol: sampleCol,
                         refCol: refCol, pieces: pieces, refFeature: refFeature, sampleAt: sampleAt,
                         refAt: refAt, prefix: prefix, prefixNot: prefixNot, identity: identity,
-                        window: window_ };
+                        window: window_, owns: owns };
 })();
 
 (function () {
@@ -85,6 +94,7 @@
   // Same base shades as seqviewer.js; class colours as the old zoom panel.
   var BASE = { A: '#4faf45', C: '#e0a53f', G: '#e0555a', T: '#4a90d9', N: '#666666' };
   var CLS = ['#60BD68', '#E55330', '#CCCCCC'], CLS_NAME = ['match', 'mismatch', 'gap'];
+  var HL = '#19E019';
   var viewers = {};
   function ui() { return window.mpseq.ui; }
   function cssVar(n, f) { return ui().cssVar(n, f); }
@@ -97,9 +107,14 @@
     this.section = this.canvas.closest('details');
     this.L = 0; this.version = null; this.selected = null; this.viewStart = 1; this.ppc = 1;
     this.sFeats = []; this.rFeats = []; this.sLanes = 0; this.rLanes = 0; this.hits = [];
+    this.oFeats = []; this.oLanes = 0; this.showOrig = true;
     this.bindControls();
     var self = this;
-    if (window.ResizeObserver) new ResizeObserver(function () { self.draw(); }).observe(this.wrap);
+    if (window.ResizeObserver) new ResizeObserver(function () {
+      if (self.pendingFit !== undefined && self.wrap.clientWidth) {
+        var row = self.pendingFit; delete self.pendingFit; self.fit(row);
+      } else self.draw();
+    }).observe(this.wrap);
     if (this.section) this.section.addEventListener('toggle', function () { self.draw(); });
   }
 
@@ -112,10 +127,10 @@
 
   Viewer.prototype.load = function (p) {
     var same = this.version === p.version && this.L === p.s.length;
-    this.input = p.input; this.version = p.version;
+    this.input = p.input; this.refInput = p.refInput; this.version = p.version;
     if (!same) {
       this.s = p.s; this.r = p.r; this.L = p.s.length;
-      this.refLength = p.refLength; this.rotation = p.rotation; this.rc = !!p.refRc;
+      this.refLength = p.refLength; this.rotation = p.rotation; this.rc = !!p.refRc; this.sRot = p.sampleRotation || 0;
       this.sNongap = G.nongap(p.s); this.rNongap = G.nongap(p.r);
       this.sCounts = G.counts(p.s); this.rCounts = G.counts(p.r);
       this.cls = G.classify(p.s, p.r);
@@ -124,14 +139,20 @@
     var self = this;
     this.sFeats = (p.sampleFeatures || []).map(function (f) {
       return { row: f.row, gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: f.dir, track: 'sample',
-               c1: G.sampleCol(f.pos1, self.sNongap), c2: G.sampleCol(f.pos2, self.sNongap) };
+               partial5: !!f.partial5, partial3: !!f.partial3, hl: !!f.hl,
+               c1: G.sampleCol(f.pos1, self.sNongap, self.sRot), c2: G.sampleCol(f.pos2, self.sNongap, self.sRot) };
     });
     var ctx = { rNongap: this.rNongap, refLength: this.refLength, rotation: this.rotation, rc: this.rc };
     this.rFeats = (p.refFeatures || []).map(function (f) {
       var m = G.refFeature(f, ctx);
-      return { gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: m.dir, track: 'ref', c1: m.c1, c2: m.c2 };
+      return { gene: f.gene, type: f.type, pos1: f.pos1, pos2: f.pos2, dir: m.dir, sdir: f.dir, track: 'ref',
+               partial5: !!f.partial5, partial3: !!f.partial3, hl: !!f.hl, c1: m.c1, c2: m.c2 };
+    });
+    this.oFeats = (p.original || []).map(function (f) {
+      return Object.assign({}, f, { track: 'orig', c1: G.sampleCol(f.pos1, self.sNongap, self.sRot), c2: G.sampleCol(f.pos2, self.sNongap, self.sRot) });
     });
     this.sLanes = packLanes(this.sFeats, this.L); this.rLanes = packLanes(this.rFeats, this.L);
+    this.oLanes = packLanes(this.oFeats, this.L);
     this.selected = (p.selected === undefined || p.selected === null) ? null : p.selected;
     if (!same) this.initialView();
     this.draw();
@@ -169,6 +190,9 @@
   };
   Viewer.prototype.fit = function (row) {
     this.selected = (row === null || row === undefined) ? null : row;
+    // A dialog still opening has no width yet; fit once it is laid out.
+    if (!this.wrap.clientWidth) { this.pendingFit = row; return; }
+    delete this.pendingFit;
     var f = this.sFeats.find(function (x) { return x.row === row; });
     if (f) this.fitFeature(f); else this.draw();
   };
@@ -181,8 +205,10 @@
 
   // ---- layout ----
   Viewer.prototype.ntOn = function () { return this.ppc >= BAR; };
+  Viewer.prototype.origOn = function () { return this.showOrig && this.oFeats.length > 0; };
   Viewer.prototype.ys = function () {
     var y = {}, cur = RULER_H + PAD, nt = this.ntOn();
+    y.oLanes = cur; if (this.origOn()) cur += this.oLanes * LANE_H + PAD;
     y.sLanes = cur; cur += this.sLanes * LANE_H + PAD;
     y.sNt = nt ? cur : null; if (nt) cur += NT_H;
     cur += GAP; y.ident = cur; cur += IDENT_H + GAP;
@@ -205,6 +231,7 @@
     this.hits = [];
     c.save(); c.beginPath(); c.rect(GUTTER, 0, W - GUTTER, H); c.clip();
     this.drawSampleRuler(c);
+    if (this.origOn()) this.drawLanes(c, W, this.oFeats, y.oLanes);
     this.drawLanes(c, W, this.sFeats, y.sLanes);
     if (y.sNt !== null) this.drawNt(c, y.sNt, this.s);
     this.drawIdentity(c, W, y.ident);
@@ -213,7 +240,8 @@
     this.drawRefRuler(c, y.rRuler);
     c.restore();
     c.fillStyle = cssVar('--mp-text-muted', '#6a6a6a'); c.textAlign = 'right'; c.textBaseline = 'middle';
-    if (this.sLanes) c.fillText('sample', GUTTER - 6, y.sLanes + (LANE_H - 6) / 2, GUTTER - 10);
+    if (this.origOn()) c.fillText('user', GUTTER - 6, y.oLanes + (LANE_H - 6) / 2, GUTTER - 10);
+    if (this.sLanes) c.fillText(this.origOn() ? 'curated' : 'sample', GUTTER - 6, y.sLanes + (LANE_H - 6) / 2, GUTTER - 10);
     c.fillText('identity', GUTTER - 6, y.ident + IDENT_H / 2, GUTTER - 10);
     if (this.rLanes) c.fillText('ref', GUTTER - 6, y.rLanes + (LANE_H - 6) / 2, GUTTER - 10);
   };
@@ -248,24 +276,26 @@
   };
   Viewer.prototype.drawLanes = function (c, W, feats, y0) {
     var self = this, vs = this.viewStart, ve = vs + this.viewLen();
+    var muted = cssVar('--mp-text-muted', '#6a6a6a'), warn = '#e69f00', warnSoft = cssVar('--mp-warning-soft', '#fde8d0');
     c.textAlign = 'center'; c.textBaseline = 'middle';
     feats.forEach(function (f) {
-      var col = ui().typeColor(f.type), y = y0 + f.lane * LANE_H, h = LANE_H - 6;
+      var col = ui().typeColor(f.type), y = y0 + f.lane * LANE_H, h = LANE_H - 6, orig = f.track === 'orig';
+      var edge = window.mpseq.geom.partialEdge(f);
       G.pieces(f.c1, f.c2, self.L).forEach(function (pc) {
         if (pc[1] + 1 < vs || pc[0] > ve) return;
         var x0 = Math.max(GUTTER, self.x(pc[0])), x1 = Math.min(W, self.x(pc[1] + 1));
         if (x1 - x0 < 1) return;
-        var fwd = f.dir !== '-', head = Math.min(8, x1 - x0);
-        var pts = fwd ? [[x0, y], [x1 - head, y], [x1, y + h / 2], [x1 - head, y + h], [x0, y + h]]
-                      : [[x1, y], [x0 + head, y], [x0, y + h / 2], [x0 + head, y + h], [x1, y + h]];
-        c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
-        for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
-        c.closePath();
-        c.fillStyle = col + '55'; c.fill();
-        var sel = f.track === 'sample' && f.row === self.selected;
-        c.lineWidth = sel ? 2 : 1; c.strokeStyle = sel ? cssVar('--mp-primary', '#337ab7') : col; c.stroke();
-        if (x1 - x0 > c.measureText(f.gene).width + 8) {
-          c.fillStyle = cssVar('--mp-text', '#333'); c.fillText(f.gene, (x0 + x1) / 2, y + h / 2);
+        var fwd = f.dir !== '-', pts = ui().arrowPath(c, x0, x1, y, h, fwd);
+        var sel = f.track === 'sample' && f.row === self.selected, edited = orig && f.status !== 'unchanged';
+        c.fillStyle = edited ? warnSoft : col + (orig ? '22' : '55'); c.fill();
+        if (f.hl) { c.lineWidth = sel ? 6 : 3; c.strokeStyle = HL; c.stroke(); }
+        var blue = sel && !f.hl;
+        c.lineWidth = edited ? 3 : (blue ? 2 : 1);
+        c.strokeStyle = orig ? (edited ? warn : muted) : (blue ? cssVar('--mp-primary', '#337ab7') : col);
+        ui().strokeArrow(c, pts, fwd, edge, edge ? G.owns(pc, f, vs, ve) : null);
+        var label = orig ? f.name : f.gene;
+        if (x1 - x0 > c.measureText(label).width + 8) {
+          c.fillStyle = orig ? muted : cssVar('--mp-text', '#333'); c.fillText(label, (x0 + x1) / 2, y + h / 2);
         }
         self.hits.push({ x0: x0, x1: x1, y0: y, y1: y + h, f: f });
       });
@@ -321,11 +351,13 @@
   Viewer.prototype.tipText = function (col, h) {
     if (h) {
       var f = h.f;
+      if (f.track === 'orig') return ui().origTip(f);
       return (f.track === 'sample' ? 'Sample ' : 'Reference ') + f.gene + ' (' + f.type + ') ' + f.dir +
-        ' ' + f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString();
+        ' ' + f.pos1.toLocaleString() + '-' + f.pos2.toLocaleString() +
+        (f.partial5 ? " | 5' partial" : '') + (f.partial3 ? " | 3' partial" : '');
     }
     if (col < 1 || col > this.L) return '';
-    var sp = G.sampleAt(col, this.s, this.sCounts);
+    var sp = G.sampleAt(col, this.s, this.sCounts, this.sRot);
     var rp = G.refAt(col, this.r, this.rCounts, this.refLength, this.rotation, this.rc);
     return 'Column ' + col.toLocaleString() +
       ' | sample ' + (sp === null ? 'gap' : sp.toLocaleString() + ' ' + this.s.charAt(col - 1)) +
@@ -334,7 +366,16 @@
   };
   Viewer.prototype.click = function (px, py) {
     var h = this.hitTest(px, py);
-    if (h && h.f.track === 'ref') { this.fitFeature(h.f); return; }
+    if (h && h.f.track === 'ref') {
+      this.fitFeature(h.f);
+      if (this.refInput && window.Shiny) {
+        window.Shiny.setInputValue(this.refInput, { gene: h.f.gene, type: h.f.type, pos1: h.f.pos1,
+          pos2: h.f.pos2, dir: h.f.sdir, nonce: Date.now() }, { priority: 'event' });
+      }
+      return;
+    }
+    if (h && h.f.track === 'orig') return;
+    if (!this.input) return;
     this.selected = h ? h.f.row : null;
     if (h && this.input && window.Shiny) {
       window.Shiny.setInputValue(this.input, { row: h.f.row, nonce: Date.now() }, { priority: 'event' });
@@ -350,7 +391,7 @@
       if (pan) { self.viewStart += pan / self.ppc; self.clamp(); self.draw(); return; }
       self.zoom(Math.pow(1.15, -e.deltaY / 100), self.colF(px));
     }, { passive: false });
-    cv.addEventListener('mousedown', function (e) { dragging = { x: e.clientX, start: self.viewStart, moved: false }; });
+    cv.addEventListener('mousedown', function (e) { cv.style.cursor = ''; dragging = { x: e.clientX, start: self.viewStart, moved: false }; });
     window.addEventListener('mousemove', function (e) {
       if (!dragging) return;
       var dx = e.clientX - dragging.x; if (Math.abs(dx) > 2) dragging.moved = true;
@@ -363,9 +404,11 @@
       dragging = null;
     });
     cv.addEventListener('mousemove', function (e) {
-      if (!self.tip) return;
       var rect = cv.getBoundingClientRect(), px = e.clientX - rect.left, py = e.clientY - rect.top;
-      var t = px < GUTTER ? '' : self.tipText(self.colAt(px), self.hitTest(px, py));
+      var h = px < GUTTER ? null : self.hitTest(px, py);
+      if (!dragging) cv.style.cursor = h && (h.f.track === 'ref' || self.input) ? 'pointer' : '';
+      if (!self.tip) return;
+      var t = px < GUTTER ? '' : self.tipText(self.colAt(px), h);
       if (!t) { self.tip.hidden = true; return; }
       self.tip.textContent = t; self.tip.hidden = false;
       var tw = self.tip.offsetWidth, th = self.tip.offsetHeight;
@@ -380,6 +423,8 @@
         else if (a === 'whole') self.whole(); else if (a === 'fit' && self.selected !== null) self.fit(self.selected);
       });
     });
+    var box = document.getElementById(this.id.replace(/synteny_canvas$|canvas$/, 'show_orig'));
+    if (box) { this.showOrig = box.checked; box.addEventListener('change', function () { self.showOrig = box.checked; self.draw(); }); }
   };
 
   function get(id) {
@@ -418,7 +463,7 @@
   window.mpsyn.state = function (id) {
     var v = viewers[id]; if (!v) return null;
     return { L: v.L, version: v.version, viewStart: v.viewStart, ppc: v.ppc, selected: v.selected,
-             height: v.height(), sampleLanes: v.sLanes, refLanes: v.rLanes,
+             height: v.height(), sampleLanes: v.sLanes, refLanes: v.rLanes, origLanes: v.origOn() ? v.oLanes : 0,
              live: v.canvas === document.getElementById(id) };
   };
   window.mpsyn.zoom = function (id, f) { var v = get(id); if (v) v.zoom(f); };
@@ -427,5 +472,7 @@
   window.mpsyn.fit = function (id, row) { var v = get(id); if (v) v.fit(row); };
   window.mpsyn.click = function (id, px, py) { var v = get(id); if (v) v.click(px, py); };
   window.mpsyn.hitTest = function (id, px, py) { var v = get(id); return v ? v.hitTest(px, py) : null; };
-  window.mpsyn.tip = function (id, col) { var v = get(id); return v ? v.tipText(col, null) : ''; };
+  window.mpsyn.tip = function (id, col, h) { var v = get(id); return v ? v.tipText(col, h || null) : ''; };
+  window.mpsyn.hits = function (id) { var v = get(id); return v ? v.hits : []; };
+  window.mpsyn.tipAt = function (id, px, py) { var v = get(id); return v ? v.tipText(v.colAt(px), v.hitTest(px, py)) : ''; };
 })();

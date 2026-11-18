@@ -486,6 +486,7 @@ custom_assembly_db <- function(clade,
 #' @noRd
 .cadb_parse_gb <- function(gb_file) {
   lines <- readLines(gb_file, warn = FALSE)
+  lines <- lines[nzchar(lines)]  # efetch separates records with a blank line
   ends <- which(lines == "//")
   if (length(ends) == 0) {
     stop("No GenBank records found in ", gb_file)
@@ -656,6 +657,7 @@ custom_assembly_db <- function(clade,
 #' @noRd
 .cadb_write_mitofinder_db <- function(gb_file, out_file) {
   lines <- readLines(gb_file, warn = FALSE)
+  lines <- lines[nzchar(lines)]  # efetch separates records with a blank line
   ends <- which(lines == "//")
   if (length(ends) == 0) {
     stop("No GenBank records found in ", gb_file)

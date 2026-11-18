@@ -85,6 +85,27 @@ task_err_tail <- function(dir, n = 1L) {
   if (length(y) == 0) "" else paste(utils::tail(y, n), collapse = " ")
 }
 
+#' Known failure messages in a task's own output, "" when none
+#'
+#' Tool-agnostic: only messages that mean the same thing whichever tool
+#' printed them.
+#' @noRd
+task_log_cause <- function(dir) {
+  f <- file.path(dir, c(".command.log", ".command.err"))
+  f <- f[file.exists(f)]
+  if (length(f) == 0) return("")
+  y <- tryCatch(read_tail(f[1], 2e5), error = function(e) character(0))
+  y <- iconv(y, "UTF-8", "UTF-8", sub = "byte")
+  hit <- function(p) any(grepl(p, y, ignore.case = TRUE))
+  if (hit("MemoryError|out of memory|cannot allocate memory|bad_alloc|oom[-_ ]kill")) {
+    "out of memory: give the step more memory"
+  } else if (hit("no space left on device|disk quota exceeded")) {
+    "out of disk space or over quota"
+  } else {
+    ""
+  }
+}
+
 #' Sample ID a task tag belongs to
 #'
 #' Tags are `<ID>`, `<ID>.<n>`, `<ID>.<path>.<scaffold>` or
@@ -160,6 +181,9 @@ nf_log_facts <- function(log, ids = NULL) {
     cause = ifelse(is.na(lst$exit) | lst$exit %in% c("0", "-"), msg, nf_exit_cause(lst$exit)),
     stringsAsFactors = FALSE)
   tasks$stderr <- vapply(tasks$workdir, task_err_tail, "", USE.NAMES = FALSE)
+  generic <- tasks$cause == nf_exit_cause(1L)
+  found <- vapply(tasks$workdir[generic], task_log_cause, "", USE.NAMES = FALSE)
+  tasks$cause[generic] <- ifelse(nzchar(found), found, tasks$cause[generic])
 
   names_all <- c(grab("(?:Submitted|Cached) process > (.*)$", has("process > ")), att$name)
   tags <- unique(stats::na.omit(grab("\\(([^()]+)\\)$", names_all)))
@@ -178,7 +202,7 @@ nf_log_facts <- function(log, ids = NULL) {
     finished = fatal || any(grepl("Execution complete -- Goodbye", x, fixed = TRUE)),
     started = if (length(tm)) min(tm) else as.POSIXct(NA),
     ended = if (length(tm)) max(tm) else as.POSIXct(NA),
-    stats = stats, tasks = tasks,
+    stats = stats, tasks = tasks, attempts = att,
     samples = sort(unique(tag_sample(tags, ids))),
     readable = length(tm) > 0)
 }
@@ -262,6 +286,7 @@ run_report <- function(project, log, exit_status = NULL, how = NULL, con = NULL)
   started <- if (is.na(f$started)) run_base_time(base) else f$started
   bad <- run_failed_samples(con, workflow, started, f$ended)
   n_t <- nrow(f$tasks); n_s <- nrow(bad)
+  fsamples <- sample_last_task(f$attempts, bad$ID, bad$note, units = workflow == "annotate")
   cnt <- function(k) sum(f$stats[k], na.rm = TRUE)
 
   result <- if (identical(how, "stopped")) "stopped" else
@@ -307,7 +332,7 @@ run_report <- function(project, log, exit_status = NULL, how = NULL, con = NULL)
     paste("Samples:  ", length(f$samples)),
     if (!is.na(f$error)) paste("Error:    ", f$error),
     tasks, samples)
-  list(meta = meta, text = paste(text, collapse = "\n"))
+  list(meta = meta, text = paste(text, collapse = "\n"), tasks = f$tasks, samples = fsamples)
 }
 
 #' Paths of a run's report files
@@ -326,7 +351,98 @@ write_run_report <- function(project, rep) {
   writeLines(rep$text, p[["txt"]])
   meta <- lapply(rep$meta, function(v) if (length(v) == 0) NA else v)
   write.dcf(as.data.frame(meta, stringsAsFactors = FALSE), p[["dcf"]], width = 10000)
+  write_run_tasks(project, rep$meta$base, rep$tasks)
+  write_run_tasks(project, rep$meta$base, rep$samples, kind = "samples")
   invisible(p)
+}
+
+#' The last task each failed sample reached in a run, in the failed-task
+#' table's columns (`cause` holds the sample's note)
+#' @param att `nf_log_facts()$attempts`.
+#' @noRd
+sample_last_task <- function(att, ids, notes, units = FALSE) {
+  tag <- sub("^.*\\((.*)\\)$", "\\1", att$name)
+  # units: annotate IDs are <ID>.<path>.<scaffold>; older logs tag validate by <ID> alone
+  own <- if (units) sub("\\.\\d+\\.\\d+$", "", ids) else ids
+  lst <- att[vapply(seq_along(ids), function(i) utils::tail(c(NA_integer_,
+    which(tag == ids[i] | tag == own[i] | startsWith(tag, paste0(ids[i], ".")))), 1L), 0L), , drop = FALSE]
+  na_dash <- function(v) ifelse(is.na(v), "-", v)
+  data.frame(sample = ids, step = na_dash(sub("^.*:", "", sub(" \\(.*$", "", lst$name))),
+    exit = na_dash(lst$exit), cause = notes, tries = rep(1L, length(ids)),
+    workdir = na_dash(lst$workdir), stringsAsFactors = FALSE)
+}
+
+#' Save the failed-task and failed-sample tables of a report written before
+#' they existed, from the report's own text and the run's Nextflow log
+#' @noRd
+backfill_run_tasks <- function(project, base) {
+  need <- !file.exists(paste0(run_tasks_dir(project, base, c("tasks", "samples")), ".tsv"))
+  if (!any(need)) return(invisible())
+  x <- tryCatch(readLines(run_report_paths(project, base)[["txt"]], warn = FALSE),
+    error = function(e) character(0))
+  rows <- function(head) {
+    i <- which(startsWith(x, head))
+    if (!length(i)) return(list())
+    r <- x[-seq_len(i[1])]
+    strsplit(r[seq_len(c(which(!nzchar(r)), length(r) + 1L)[1] - 1L)], " | ", fixed = TRUE)
+  }
+  tk <- Filter(function(v) length(v) >= 6, rows("Failed tasks ("))
+  sm <- Filter(function(v) length(v) >= 2, rows("Failed samples ("))
+  col <- function(l, f) vapply(l, f, "")
+  if (need[1] && length(tk)) {
+    cause <- col(tk, function(v) v[4])
+    tried <- suppressWarnings(as.integer(sub("^.*; tried (\\d+) times$", "\\1", cause)))
+    write_run_tasks(project, base, data.frame(sample = col(tk, function(v) v[1]),
+      step = col(tk, function(v) v[2]), exit = col(tk, function(v) v[3]),
+      cause = sub("; tried \\d+ times$", "", cause), tries = ifelse(is.na(tried), 1L, tried),
+      workdir = col(tk, function(v) v[length(v)]), stringsAsFactors = FALSE))
+  }
+  if (need[2] && length(sm)) {
+    att <- nf_log_facts(file.path(run_dir(project, "nextflow"), paste0(base, ".nextflow.log")))$attempts
+    write_run_tasks(project, base, sample_last_task(att, col(sm, function(v) v[1]),
+      col(sm, function(v) sub("^-$", "", paste(v[-1], collapse = " | "))),
+      units = startsWith(base, "annotate_")), kind = "samples")
+  }
+  invisible()
+}
+
+#' Folder holding a run's saved output for its failed tasks (`kind` "tasks")
+#' or failed samples ("samples"); its table is `<folder>.tsv`
+#' @noRd
+run_tasks_dir <- function(project, base, kind = "tasks") {
+  file.path(run_dir(project, "reports"), paste0(base, "_", kind))
+}
+
+#' Save a run's failed tasks and a copy of each one's output
+#'
+#' Work directories get cleaned up; the copy keeps the output readable. Each
+#' log is capped at its last `max_bytes`.
+#' @noRd
+write_run_tasks <- function(project, base, tasks, kind = "tasks", max_bytes = 1e6) {
+  if (is.null(tasks) || nrow(tasks) == 0) return(invisible())
+  d <- run_tasks_dir(project, base, kind)
+  dir.create(d, recursive = TRUE, showWarnings = FALSE)
+  tasks$log <- vapply(seq_len(nrow(tasks)), function(i) {
+    src <- file.path(tasks$workdir[i], c(".command.log", ".command.err"))
+    src <- src[file.exists(src)]
+    src <- src[file.size(src) > 0]
+    y <- if (length(src)) tryCatch(read_tail(src[1], max_bytes), error = function(e) NULL)
+    if (is.null(y)) return("")
+    if (file.size(src[1]) > max_bytes) y <- c("[earlier output trimmed]", y[-1])
+    writeLines(y, file.path(d, paste0(i, ".log")))
+    paste0(i, ".log")
+  }, "")
+  utils::write.table(tasks[c("sample", "step", "exit", "cause", "tries", "workdir", "log")],
+    paste0(d, ".tsv"), sep = "\t", row.names = FALSE, qmethod = "double")
+  invisible(d)
+}
+
+#' A run's saved failed tasks, NULL when it has none
+#' @noRd
+read_run_tasks <- function(project, base, kind = "tasks") {
+  f <- paste0(run_tasks_dir(project, base, kind), ".tsv")
+  if (!file.exists(f)) return(NULL)
+  tryCatch(utils::read.delim(f, colClasses = "character", na.strings = NULL), error = function(e) NULL)
 }
 
 #' TRUE when a report metadata file exists and parses

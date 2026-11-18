@@ -146,6 +146,10 @@ backwards_compatibility <- function(
   # on already-migrated projects.)
   old_ref_str <- any(grepl("/ref_dbs/Mitos2", curate_opts_table$params))
 
+  # Curation now uses Metazoa_RefSeq235 only (or a custom database)
+  old_curate_dbs <- c("Metazoa_RefSeq89", "Metazoa_RefSeq231", "Chordata")
+  old_curate_db <- any(curate_opts_table$ref_db %in% old_curate_dbs)
+
   # A Smithsonian/MitoPilot MITOS2 ref_dir pointing at any branch other than main
   # is stale: feature/deleted branches 404 at prepare_ref_db (WF2). Only our own
   # repo URLs are considered; custom hosts or local paths are left untouched.
@@ -184,6 +188,7 @@ backwards_compatibility <- function(
   if ((!update_config || containerVer) &&
       genetic_code_numeric &&
       !old_ref_str &&
+      !old_curate_db &&
       !set_refs_pending &&
       "arwen_opts" %in% names(annotate_opts_table) &&
       "use_arwen" %in% names(annotate_opts_table) &&
@@ -228,6 +233,7 @@ backwards_compatibility <- function(
       )) &&
       "use_mitos_best" %in% names(annotate_opts_table) &&
       "rescue_no_trna" %in% names(annotate_opts_table) &&
+      "run_tools" %in% names(annotate_opts_table) &&
       "use_aragorn" %in% names(annotate_opts_table) &&
       "aragorn_opts" %in% names(annotate_opts_table) &&
       "max_paths" %in% names(assemble_opts_table) &&
@@ -235,6 +241,7 @@ backwards_compatibility <- function(
       "tool" %in% DBI::dbListFields(con, "annotations") &&
       "partial_start" %in% DBI::dbListFields(con, "annotations") &&
       "partial_stop" %in% DBI::dbListFields(con, "annotations") &&
+      "codon_start" %in% DBI::dbListFields(con, "annotations") &&
       "blast_ref_annotations" %in% DBI::dbListTables(con) &&
       "blast_ref_alignment" %in% DBI::dbListTables(con) &&
       "assembly_backup" %in% DBI::dbListTables(con) &&
@@ -289,6 +296,10 @@ backwards_compatibility <- function(
       )) &&
       isTRUE(tryCatch(
         "scaffold" %in% DBI::dbListFields(con, "blast_ref_alignment"),
+        error = function(e) FALSE
+      )) &&
+      isTRUE(tryCatch(
+        "sample_rotation" %in% DBI::dbListFields(con, "blast_ref_alignment"),
         error = function(e) FALSE
       )) &&
       isTRUE(tryCatch(
@@ -361,11 +372,11 @@ backwards_compatibility <- function(
 
     for(i in 1:nrow(curate_opts_table)){
       if(any(grep("Metazoa", curate_opts_table[i,]$params))){
-        curate_opts_table[i,]$ref_db <- "Metazoa_RefSeq89"
+        curate_opts_table[i,]$ref_db <- "Metazoa_RefSeq235"
         curate_opts_table[i,]$params <- stringr::str_remove(curate_opts_table[i,]$params,
                                                             stringr::fixed("\"ref_dbs\":{\"default\":[\"/ref_dbs/Mitos2/Metazoa/featureProt/{gene}.fas\"]},"))
       } else {
-        curate_opts_table[i,]$ref_db <- "Chordata"
+        curate_opts_table[i,]$ref_db <- "Metazoa_RefSeq235"
         curate_opts_table[i,]$params <- stringr::str_remove(curate_opts_table[i,]$params,
                                                             stringr::fixed("\"ref_dbs\":{\"default\":[\"/ref_dbs/Mitos2/Chordata/featureProt/{gene}.fas\"]},"))
       }
@@ -770,6 +781,10 @@ backwards_compatibility <- function(
     message("added 'partial_stop' column to annotations table")
     DBI::dbExecute(con, "ALTER TABLE annotations ADD COLUMN partial_stop INTEGER")
   }
+  if(!("codon_start" %in% annotations_fields)){
+    message("added 'codon_start' column to annotations table")
+    DBI::dbExecute(con, "ALTER TABLE annotations ADD COLUMN codon_start INTEGER")
+  }
   # if linear_complete column doesn't exist on curate_opts, add it (default 0)
   if(!("linear_complete" %in% DBI::dbListFields(con, "curate_opts"))){
     message("added 'linear_complete' column to curate_opts table")
@@ -880,6 +895,11 @@ backwards_compatibility <- function(
       )
   }
 
+  if(!("run_tools" %in% names(annotate_opts_table))){
+    message("added 'run_tools' column to annotate_opts table")
+    DBI::dbExecute(con, "ALTER TABLE annotate_opts ADD COLUMN run_tools INTEGER DEFAULT 1")
+  }
+
   # if use_mitos column doesn't exist, add it (default on, matching prior behaviour)
   if(!("use_mitos" %in% names(annotate_opts_table))){
     message("added 'use_mitos' column to annotate_opts table")
@@ -940,7 +960,7 @@ backwards_compatibility <- function(
   # if aragorn_opts column doesn't exist, add it
   if(!("aragorn_opts" %in% names(annotate_opts_table))){
     message("added 'aragorn_opts' column to annotate_opts table")
-    annotate_opts_table$aragorn_opts <- rep("-m -gcstd", nrow(annotate_opts_table))
+    annotate_opts_table$aragorn_opts <- rep("-mtx", nrow(annotate_opts_table))
     glue::glue_sql(
       "ALTER TABLE annotate_opts
        ADD COLUMN aragorn_opts TEXT",
@@ -1263,7 +1283,7 @@ backwards_compatibility <- function(
   # if ref_db column doesn't exist, add it
   if(!("ref_db" %in% names(curate_opts_table))){
     message("added 'ref_db' column to curate_opts table")
-    curate_opts_table$ref_db <- rep("Chordata", nrow(curate_opts_table))
+    curate_opts_table$ref_db <- rep("Metazoa_RefSeq235", nrow(curate_opts_table))
     # add new columns to database
     glue::glue_sql(
       "ALTER TABLE curate_opts
@@ -1278,6 +1298,16 @@ backwards_compatibility <- function(
         copy = TRUE,
         by = "curate_opts"
       )
+  }
+
+  if (old_curate_db) {
+    message("switched curation reference database(s) ",
+            paste(intersect(old_curate_dbs, curate_opts_table$ref_db), collapse = ", "),
+            " to Metazoa_RefSeq235; re-run curation to apply")
+    DBI::dbExecute(con, paste0(
+      "UPDATE curate_opts SET ref_db = 'Metazoa_RefSeq235' WHERE ref_db IN ('",
+      paste(old_curate_dbs, collapse = "','"), "')"
+    ))
   }
 
   # if assembler column doesn't exist, add it
@@ -1607,6 +1637,15 @@ backwards_compatibility <- function(
     DBI::dbExecute(con, "DROP TABLE blast_ref_annotations")
     DBI::dbExecute(con, "ALTER TABLE blast_ref_annotations_new RENAME TO blast_ref_annotations")
   }
+  # Reference gene 5'/3' partial flags (from the GFF3 start_range/end_range
+  # markers). Cached references fetched before this stay NULL until refetched.
+  ref_ann_cols <- DBI::dbListFields(con, "blast_ref_annotations")
+  for (col in c("partial_start", "partial_stop")) {
+    if (!(col %in% ref_ann_cols)) {
+      message("added '", col, "' column to blast_ref_annotations table")
+      DBI::dbExecute(con, paste("ALTER TABLE blast_ref_annotations ADD COLUMN", col, "INTEGER"))
+    }
+  }
 
   # max_target_seqs moved out of the nextflow .config into the blast_opts table
   # so it can be edited per parameter-set in the app. Add the column + backfill
@@ -1784,6 +1823,7 @@ backwards_compatibility <- function(
         ref_length INTEGER NOT NULL,
         ref_start INTEGER NOT NULL DEFAULT 0,
         strand TEXT NOT NULL DEFAULT '+',
+        sample_rotation INTEGER NOT NULL DEFAULT 0,
         time_stamp INTEGER,
         PRIMARY KEY (ID, path, scaffold, accession)
       );"
@@ -1870,6 +1910,10 @@ backwards_compatibility <- function(
           PRIMARY KEY (ID, path, scaffold, accession)
         );"
       )
+    }
+    if (!("sample_rotation" %in% DBI::dbListFields(con, "blast_ref_alignment"))) {
+      message("added 'sample_rotation' column to blast_ref_alignment table")
+      DBI::dbExecute(con, "ALTER TABLE blast_ref_alignment ADD COLUMN sample_rotation INTEGER NOT NULL DEFAULT 0")
     }
   }
 
@@ -2280,6 +2324,17 @@ is_user_asmb <- function(con) {
   ))
 }
 
+#' Is this a user-annotation project (imported annotation files)?
+#'
+#' @param con An open connection to a project database.
+#' @noRd
+is_user_annot <- function(con) {
+  isTRUE(tryCatch(
+    "gene_name_map" %in% DBI::dbListTables(con),
+    error = function(e) FALSE
+  ))
+}
+
 #' Landmarks of the current project schema that an older database will lack.
 #'
 #' Returns a character vector of plain-language gaps, empty when the database is
@@ -2340,6 +2395,9 @@ schema_gaps <- function(con) {
   }
   if (!has(all(c("maptoref_ref", "maptoref_topology") %in% DBI::dbListFields(con, "assemble")))) {
     gaps <- c(gaps, "the assemble table lacks the per-sample MapToRef reference columns")
+  }
+  if (!has(all(c("partial_start", "partial_stop") %in% DBI::dbListFields(con, "blast_ref_annotations")))) {
+    gaps <- c(gaps, "the blast_ref_annotations table lacks the partial-end columns")
   }
   if (is_user_asmb(con) &&
       (!has(all(c("circularize_overlap", "circularize_depth") %in%

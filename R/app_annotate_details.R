@@ -1,7 +1,3 @@
-#' annotate_details Server Functions
-#'
-#' @noRd
-
 #' Give a label-less Shiny input an accessible name
 #'
 #' A `label = NULL` input renders a bare `<input>` that screen readers and voice
@@ -377,51 +373,32 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       }
     })
 
-    # Header status pill. One component, one casing, and a value nobody has set
-    # reads "not set" rather than NA (theme T11).
-    status_badge <- function(label, state, yes_tone = "success") {
-      val <- if (is.na(state)) "not set" else tolower(as.character(state))
-      tone <- if (identical(val, "yes")) yes_tone else "neutral"
-      span(class = paste0("mp-pill mp-pill-", tone), paste0(label, ": ", val))
-    }
-
-    # Title-area passive badges, mirrored by the toggle group beside them.
-    output$status_badges <- shiny::renderUI({
-      tagList(
-        status_badge("Species ID verified", rv$updating$ID_verified),
-        status_badge("Reviewed", rv$updating$reviewed),
-        status_badge("Problematic", rv$updating$problematic, yes_tone = "warning"),
-        status_badge("Partial", rv$updating$partial, yes_tone = "warning")
-      )
-    })
-
-    # Header toggle button. mp_flag_next() picks the value the click will write
-    # and the label that names it, so the two can never disagree (theme T02).
-    # Tone mirrors the pill beside it: coloured while the flag is set, plain
-    # otherwise, so the button reads as the flag's current state.
+    # Header flag chip: one control per flag that both shows and flips it.
+    # Filled with a check while the flag is set, plain otherwise, and still
+    # readable when a lock disables it. mp_flag_next() picks the value the
+    # click will write (theme T02).
     toggle_btn <- function(id, label, state, title, off = "no", tone = "success") {
-      nxt <- mp_flag_next(state, off = off)
-      set <- identical(nxt, "yes")
+      on <- !identical(mp_flag_next(state, off = off), "yes")
       btn <- actionButton(
-        id,
-        paste(if (set) "Mark" else "Clear", label),
-        icon = icon(if (set) "check" else "minus"),
-        class = paste("btn-sm btn-default", if (!set) paste0("mp-btn-", tone)),
-        title = title
+        id, label,
+        icon = if (on) icon("check"),
+        class = paste("mp-flag-chip", if (on) paste0("mp-btn-", tone)),
+        title = paste0(title, ". Click to ", if (on) "clear" else "set", "."),
+        `aria-pressed` = if (on) "true" else "false"
       )
       if (locked()) shinyjs::disabled(btn) else btn
     }
 
     output$status_toggles <- shiny::renderUI({
       tagList(
-        toggle_btn(ns("ID_verified"), "ID Verified", rv$updating$ID_verified,
-                   "Record whether the species identification has been checked"),
+        toggle_btn(ns("ID_verified"), "ID verified", rv$updating$ID_verified,
+                   "The species identification has been checked"),
         toggle_btn(ns("reviewed"), "Reviewed", rv$updating$reviewed,
-                   "Record whether this assembly has been reviewed"),
+                   "This assembly has been reviewed"),
         toggle_btn(ns("problematic"), "Problematic", rv$updating$problematic,
-                   "Flag this assembly for another look", off = NA_character_, tone = "warning"),
+                   "This assembly needs another look", off = NA_character_, tone = "warning"),
         toggle_btn(ns("partial"), "Partial", rv$updating$partial,
-                   "Flag this assembly as an incomplete mitogenome", tone = "warning")
+                   "This assembly is an incomplete mitogenome", tone = "warning")
       )
     })
 
@@ -453,6 +430,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       out <- mp_n(nrow(live), "feature")
       if (length(parts) > 0) out <- paste0(out, " - ", paste(parts, collapse = ", "))
       if (any(deleted)) out <- paste0(out, ", ", sum(deleted), " deleted")
+      n_tool <- tool_feature_summary(live, session$userData$user_annot)$n
+      if (n_tool > 0) out <- paste0(out, ", ", n_tool, " found by MitoPilot")
       out
     })
 
@@ -482,13 +461,9 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
               # JS (not R) cell renderer so the badge re-renders client-side on
               # updateReactable() after an edit; an R cell function is only run
               # at full render, leaving stale badges when rows are re-sorted.
-              cell = htmlwidgets::JS("
+              cell = htmlwidgets::JS(paste0("
                 function(cellInfo) {
-                  var colors = {ctrl:'#FAA34A', PCG:'#60BD68', rRNA:'#5DA5DA', tRNA:'#F17CB0', ORF:'#4D4D4D'};
-                  var v = cellInfo.value || '';
-                  var c = colors[v] || '#888888';
-                  var badge = '<span style=\"background:' + c + '30;color:#111111;border:1px solid ' + c +
-                    ';border-radius:3px;padding:1px 4px;font-size:11px;white-space:nowrap;\">' + v + '</span>';
+                  ", MITO_TYPE_BADGE_JS, "
                   // Non-standard MitoFinder gene: PCG from MitoFinder with no
                   // canonical product. Flag so the user knows it can be renamed.
                   var row = cellInfo.row || {};
@@ -499,7 +474,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
                   }
                   return badge;
                 }
-              ")
+              "))
             ),
             gene = colDef(show = T,
                           name = "Gene",
@@ -1115,7 +1090,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         },
         if (has_ref) caption,
         if (has_aln) {
-          synteny_viewer_ui(ns)
+          synteny_viewer_ui(ns, isTRUE(session$userData$user_annot))
         } else if (has_ref) {
           div(class = "mp-coverage-caption", "No alignment is available for this reference.")
         }
@@ -1741,7 +1716,12 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       mp_confirm(
         ns("confirm_delete"),
         title = "Delete annotation",
-        text = stringr::str_glue(
+        text = if (is_liftover_row(rv$annotations$tool[idx])) stringr::str_glue(
+          "Delete {rv$annotations$gene[idx]} at {rv$annotations$pos1[idx]}-",
+          "{rv$annotations$pos2[idx]}? This annotation was lifted over from a ",
+          "reference, so it is removed completely and cannot be restored. ",
+          "Lift it over again to bring it back."
+        ) else stringr::str_glue(
           "Delete {rv$annotations$gene[idx]} at {rv$annotations$pos1[idx]}-",
           "{rv$annotations$pos2[idx]}? The gene name and position are recorded ",
           "in this feature's notes. This cannot be undone from this window."
@@ -1752,6 +1732,13 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     })
     observeEvent(input$confirm_delete, {
       req(input$confirm_delete)
+      if (is_liftover_row(rv$annotations$tool[selected()])) {
+        rv$annotations <- dplyr::slice(rv$annotations, -selected())
+        persist_annotations()
+        reactable::updateReactable("table", data = rv$annotations)
+        update_counts()
+        return()
+      }
       update <- rv$annotations[selected(), ] |>
         dplyr::mutate(
           pos1 = 0,
@@ -1960,6 +1947,153 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       load_blast_ref(active_ref_acc())
     }) # END LINEARIZE
 
+    # Reorient ----
+    # Rotate a circular assembly to start on a chosen feature. The picker
+    # replaces the details window; Cancel and the header X reopen it.
+    reorient_genes <- reactiveVal(NULL)
+    reorient_target <- NULL
+    observeEvent(input$reorient, {
+      if (lock_blocked()) req(F)
+      if (!unit_is_circ()) {
+        mp_toast("Only circular assemblies can be rotated.", type = "warning")
+        req(F)
+      }
+      if (!is.null(rv$editing) && editing_unsaved(rv$editing$idx)) {
+        mp_toast("Save or discard your annotation edits first.", type = "warning")
+        req(F)
+      }
+      genes <- rv$annotations |>
+        dplyr::filter(!is.na(pos1), pos1 > 0) |>
+        dplyr::arrange(pos1) |>
+        dplyr::select(type, gene, pos1, pos2, length, direction)
+      if (nrow(genes) == 0) {
+        mp_toast("This assembly has no annotations to start on.", type = "warning")
+        req(F)
+      }
+      reorient_genes(genes)
+      showModal(modalDialog(
+        title = mp_modal_title(
+          "Rotate assembly",
+          subtitle = paste(
+            "Pick the feature the assembly should start on. A feature on the",
+            "minus strand also flips the assembly, so it reads forward."
+          )
+        ),
+        reactable::reactableOutput(ns("reorient_table")),
+        footer = mp_footer(
+          primary = actionButton(ns("reorient_go"), "Rotate"),
+          dismiss = NULL,
+          extra = actionButton(ns("reorient_cancel"), "Cancel")
+        ),
+        easyClose = FALSE
+      ))
+      shinyjs::runjs(sprintf(
+        "setTimeout(function(){
+           var b = document.querySelector('#shiny-modal .modal-header .close');
+           if (b) { b.removeAttribute('data-dismiss');
+             b.addEventListener('click', function() {
+               Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
+             }); }
+         }, 0);",
+        ns("reorient_cancel")
+      ))
+    })
+    output$reorient_table <- reactable::renderReactable({
+      reactable(
+        req(reorient_genes()),
+        compact = TRUE, striped = TRUE, wrap = FALSE,
+        onClick = "select", selection = "single",
+        pagination = FALSE, height = 420,
+        rowStyle = rt_highlight_row(),
+        columns = list(
+          type = colDef(name = "Type", maxWidth = 90, filterable = TRUE),
+          gene = colDef(name = "Gene", filterable = TRUE),
+          pos1 = colDef(name = "Start"),
+          pos2 = colDef(name = "End"),
+          length = colDef(name = "Length"),
+          direction = colDef(name = "Direction", align = "center")
+        )
+      )
+    })
+    observeEvent(input$reorient_cancel, {
+      reopen_details()
+    })
+    observeEvent(input$reorient_go, {
+      sel <- reactable::getReactableState("reorient_table", "selected")
+      if (length(sel) != 1) {
+        mp_toast("Select the feature to start on.", type = "warning")
+        req(F)
+      }
+      reorient_target <<- reorient_genes()[sel, ]
+      if (identical(reorient_target$direction, "-")) {
+        mp_confirm(
+          ns("reorient_flip_confirm"),
+          title = "This will flip the strand",
+          text = stringr::str_glue(
+            "{reorient_target$gene} is on the minus strand. The whole assembly ",
+            "will be reverse-complemented so it starts on {reorient_target$gene} ",
+            "reading forward, and every feature will change strand. ",
+            "Use \"Restore assembly\" to undo."
+          ),
+          action_label = "Flip and rotate",
+          danger = TRUE
+        )
+      } else {
+        run_reorient()
+      }
+    })
+    observeEvent(input$reorient_flip_confirm, ignoreNULL = TRUE, {
+      req(isTRUE(input$reorient_flip_confirm))
+      run_reorient()
+    })
+    run_reorient <- function() {
+      tgt <- reorient_target
+      show_edit_waiter("Rotating assembly, hold tight...")
+      # one tick later, so the overlay paints before the blocking work starts
+      shinyjs::delay(100, {
+        tryCatch({
+          u <- rv$updating
+          res <- reorient_assembly_unit(
+            session$userData$con, u$ID, u$path, u$scaffold,
+            session$userData$dir_out, tgt$gene, tgt$pos1
+          )
+          note <- stringr::str_glue(
+            "EDITED: rotated {res$rotated} bp to start on {res$gene}",
+            "{if (res$flipped) ' and flipped strand' else ''}"
+          )
+          cur_notes <- (input$notes %||% rv$updating$annotate_notes) %|NA|% ""
+          rv$updating$annotate_notes <- stringr::str_remove(
+            paste(note, cur_notes, sep = "; "), "; $"
+          )
+          rv$updating$structure <- DBI::dbGetQuery(
+            session$userData$con,
+            "SELECT structure FROM annotate WHERE ID = ? AND path = ? AND scaffold = ?",
+            params = list(u$ID, u$path, u$scaffold)
+          )$structure[1]
+          update_annotate_unit("annotate_notes")
+          rv$data <- rv$data |>
+            dplyr::rows_update(
+              rv$updating[, c("ID", "path", "scaffold", "structure", "annotate_notes")],
+              by = c("ID", "path", "scaffold")
+            )
+          bump_asmb_edit()
+          trigger("update_annotate_table")
+          trigger("refresh_export")
+          # Full reload off the reoriented record; reopens the details window.
+          trigger("annotations_modal")
+          mp_toast(
+            stringr::str_glue(
+              "Assembly now starts on {res$gene}",
+              "{if (res$flipped) ' (strand flipped)' else ''}."
+            ),
+            type = "message"
+          )
+        }, error = function(e) {
+          mp_alert(title = "Rotate failed", text = conditionMessage(e), type = "error")
+        }, finally = waiter::waiter_hide())
+      })
+    }
+
     # Assembly edits: trim unannotated ends / restore ----
     # Trimming is fixed to the outermost annotated feature, so no feature is ever
     # dropped or cut and the counts, spans and gene order all stay valid. Export
@@ -1976,7 +2110,20 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     # Built here, not in the call: a lazily forced argument would capture the
     # child module's session and look up the table in the wrong namespace.
     seqview_sel <- reactive(reactable::getReactableState("table", "selected"))
-    sv <- seqview_server("seqview", rv, asmb_edit_tick, seqview_sel)
+    # Original (imported) annotation track, user-annotation projects only.
+    orig_track <- reactive({
+      if (!isTRUE(session$userData$user_annot)) return(NULL)
+      asmb_edit_tick()
+      gargoyle::watch("annotations_modal")
+      u <- rv$updating
+      req(rv$annotations, !is.null(u), length(u$ID) == 1)
+      tryCatch({
+        o <- original_features(session$userData$con, u$ID, u$path, u$scaffold)
+        if (isTRUE(o$ok)) o$rows <- flag_original(o$rows, rv$annotations, o$length)
+        o
+      }, error = function(e) list(ok = FALSE, reason = ORIG_NOTE_NO_PLACE))
+    })
+    sv <- seqview_server("seqview", rv, asmb_edit_tick, seqview_sel, orig_track)
     observeEvent(sv$pick(), {
       reactable::updateReactable("table", selected = as.integer(sv$pick()$row))
     })
@@ -1993,27 +2140,509 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         syn_version(isolate(syn_version()) + 1L)
       }
     }, ignoreNULL = FALSE)
-    observe({
+    syn_payload <- function(...) {
       ctx <- req(fig_ctx())
       req(rv$annotations, rv$blast_ref)
       acc <- active_ref_acc() %||% ctx$blast_accession
       req(!is.null(acc), !is.na(acc), nzchar(acc))
       cand <- rv$blast_ref_candidates
       lbl <- if (!is.null(cand)) cand$species[match(acc, cand$accession)] else NA
-      p <- synteny_payload(
+      synteny_payload(
         rv$annotations, rv$blast_ref, rv$blast_ref_aln, ctx$ID, acc,
-        if (is.na(lbl) || !nzchar(lbl)) acc else lbl,
-        selected = sv$sel(), version = syn_version()
+        if (is.na(lbl) || !nzchar(lbl)) acc else lbl, version = syn_version(), ...
       )
-      req(p)
-      p$id <- ns("synteny_canvas"); p$input <- ns("synteny_pick")
+    }
+    observe({
+      o <- orig_track()
+      output$synteny_orig_note <- renderUI(orig_note_ui(o))
+      p <- req(syn_payload(selected = sv$sel(), original = if (isTRUE(o$ok)) o$rows))
+      p$id <- ns("synteny_canvas"); p$input <- ns("synteny_pick"); p$refInput <- ns("synteny_ref_pick")
       session$sendCustomMessage("mpsyn", p)
+      output$synteny_rot_note <- renderUI({
+        if (isTRUE(p$sampleRotation > 0)) {
+          div(class = "mp-coverage-caption",
+              sprintf(paste("Sample drawn starting at stored position %s to line up with this linear reference;",
+                            "the saved sequence and all coordinates are unchanged."),
+                      format(p$sampleRotation + 1L, big.mark = ",")))
+        }
+      })
     })
     observeEvent(sv$sel(), {
       session$sendCustomMessage("mpsyn_select", list(id = ns("synteny_canvas"), row = sv$sel()))
     }, ignoreNULL = FALSE)
     observeEvent(input$synteny_pick, {
       reactable::updateReactable("table", selected = as.integer(input$synteny_pick$row))
+    })
+
+    # Annotation liftover (R/annotation_liftover.R) ----
+    # A reference-gene click offers a button; the dialog lists mapped placements
+    # and adds the chosen one after curating and validating it alone.
+    lift_pick <- reactiveVal(NULL)
+    lift_state <- reactiveVal(NULL)
+    lift_seen <- NULL
+    lift_k <- NULL
+    observeEvent(input$synteny_ref_pick, lift_pick(input$synteny_ref_pick))
+    observeEvent(active_ref_acc(), lift_pick(NULL), ignoreNULL = FALSE, ignoreInit = TRUE)
+    on("annotations_modal", lift_pick(NULL))
+    output$liftover_btn <- renderUI({
+      req(rv$blast_ref)
+      p <- lift_pick()
+      lbl <- if (is.null(p)) "Liftover gene" else paste("Liftover", p$gene)
+      ico <- icon("arrow-up-from-bracket")
+      why <- if (is.null(p)) NA_character_ else liftover_blocked_reason(rv$blast_ref, p$gene, p$pos1)
+      if (is.na(why) && locked()) why <- paste("This assembly is locked.", MP_LOCK_DEF("annotate"))
+      if (is.na(why)) {
+        return(actionButton(
+          ns("liftover"), lbl, icon = ico, class = "btn-primary",
+          title = if (is.null(p)) LIFTOVER_PICK_MSG else paste("Map", p$gene, "from the reference onto this assembly")
+        ))
+      }
+      tags$span(title = why, style = "display: inline-block;", shinyjs::disabled(
+        actionButton(ns("liftover"), lbl, icon = ico, class = "btn-primary", style = "pointer-events: none;")
+      ))
+    })
+    # Back to the details window with the synteny section open again
+    lift_back <- function() {
+      reopen_details()
+      shinyjs::runjs(sprintf("var d = document.getElementById('%s'); if (d) d.open = true;",
+                             ns("blast_synteny_details")))
+    }
+    lift_unit_opts <- function(u) {
+      con <- session$userData$con
+      co <- dplyr::tbl(con, "annotate") |>
+        dplyr::filter(ID == !!u$ID, path == !!u$path, scaffold == !!u$scaffold) |>
+        dplyr::pull(curate_opts)
+      list(
+        opts = dplyr::tbl(con, "curate_opts") |> dplyr::filter(curate_opts == !!co[1]) |> dplyr::collect(),
+        gc = dplyr::tbl(con, "samples") |> dplyr::filter(ID == !!u$ID) |> dplyr::pull(genetic_code)
+      )
+    }
+    lift_thr <- reactive({
+      num <- function(x, d) if (length(x) == 1 && is.numeric(x) && !is.na(x)) x else d
+      liftover_clamp(num(input$liftover_min_pctid, LIFTOVER_DEFAULTS$min_pctid),
+                     num(input$liftover_max_gap, LIFTOVER_DEFAULTS$max_gap_pct))
+    })
+    observeEvent(input$liftover, {
+      if (lock_blocked()) req(F)
+      p <- lift_pick()
+      if (is.null(p)) {
+        mp_alert(title = "Pick a reference gene first", text = LIFTOVER_PICK_MSG, type = "info")
+        req(F)
+      }
+      ref <- rv$blast_ref[rv$blast_ref$gene == p$gene & rv$blast_ref$pos1 == p$pos1, , drop = FALSE]
+      req(nrow(ref) > 0, is.na(liftover_blocked_reason(rv$blast_ref, p$gene, p$pos1)))
+      acc <- active_ref_acc()
+      u <- rv$updating
+      show_edit_waiter("Mapping the gene, hold tight...")
+      shinyjs::delay(100, {
+        st <- tryCatch({
+          asm <- get_assembly(u$ID, u$path, u$scaffold, session$userData$con)
+          ref_seq <- rv$blast_ref_seq$sequence[1]
+          gs <- liftover_ref_gene_seq(ref_seq, ref$pos1[1], ref$pos2[1], ref$direction[1])
+          uo <- tryCatch(lift_unit_opts(u), error = function(e) NULL)
+          prm <- tryCatch(jsonlite::fromJSON(uo$opts$params), error = function(e) NULL)
+          gc <- suppressWarnings(as.integer(uo$gc[1] %||% NA))
+          list(
+            gene = p$gene, acc = acc, ref = ref[1, ], asm = asm, gene_len = nchar(gs),
+            L = Biostrings::width(asm)[1], nonce = Sys.time(),
+            unit = list(ID = u$ID, path = u$path, scaffold = u$scaffold),
+            ref_seq = ref_seq, gc = gc,
+            ref_gc = suppressWarnings(as.integer(rv$blast_ref_seq$genetic_code[1] %||% NA)) %|NA|% gc,
+            starts = prm$rules[[p$gene]]$start_codons %||% prm$default_rules$PCG$start_codons,
+            hits = liftover_map(gs, as.character(asm[[1]]), grepl(" circular$", names(asm)[1]))
+          )
+        }, error = function(e) e, finally = waiter::waiter_hide())
+        if (inherits(st, "error")) {
+          mp_alert(title = "Liftover failed", text = conditionMessage(st), type = "error")
+        } else {
+          lift_state(st)
+          any_hit <- nrow(st$hits) > 0
+          ex <- if (any_hit) data.frame(
+            row = paste0("lift", seq_len(nrow(st$hits))), gene = st$gene, type = st$ref$type,
+            pos1 = st$hits$pos1, pos2 = st$hits$pos2, direction = st$hits$direction
+          )
+          syn <- tryCatch(syn_payload(extra_sample = ex, hl_ref = list(gene = st$gene, pos1 = st$ref$pos1)),
+                          error = function(e) NULL)
+          showModal(modalDialog(
+            title = mp_modal_title(
+              sprintf("Liftover %s from %s (%s bp)", st$gene, st$acc, format(st$gene_len, big.mark = ",")),
+              close = FALSE
+            ),
+            if (any_hit) div(
+              style = "display: flex; gap: 16px; flex-wrap: wrap;",
+              numericInput(ns("liftover_min_pctid"), "Min identity % (80 or higher)",
+                           LIFTOVER_DEFAULTS$min_pctid, min = 80, max = 100, step = 1, width = "210px"),
+              numericInput(ns("liftover_max_gap"), "Max gaps % (10 or lower)",
+                           LIFTOVER_DEFAULTS$max_gap_pct, min = 0, max = 10, step = 1, width = "210px")
+            ),
+            uiOutput(ns("liftover_hits")),
+            if (any_hit) tagList(
+              tags$h5("Alignment"),
+              uiOutput(ns("liftover_aln_ui"))
+            ),
+            if (!is.null(syn)) div(
+              tags$h5("Reference synteny"),
+              div(class = "mp-coverage-caption",
+                  paste0("Each placement and the reference ", st$gene,
+                         " are outlined in bright green; the selected placement has the thicker outline.")),
+              synteny_viewer_ui(ns, prefix = "liftover_syn")
+            ),
+            size = "l",
+            footer = mp_footer(
+              primary = if (any_hit) actionButton(ns("liftover_add"), "Add annotation"),
+              dismiss = NULL,
+              extra = actionButton(ns("liftover_cancel"), "Cancel")
+            ),
+            easyClose = FALSE
+          ))
+          if (!is.null(syn)) {
+            syn$id <- ns("liftover_syn_canvas")
+            session$sendCustomMessage("mpsyn", syn)
+          }
+        }
+      })
+    })
+    # Selected placement: the radio choice when it passes, else the best passing one
+    lift_sel <- reactive({
+      st <- req(lift_state())
+      thr <- lift_thr()
+      ok <- st$hits$pctid >= thr$min_pctid & st$hits$gap_pct <= thr$max_gap_pct
+      k <- suppressWarnings(as.integer(input$liftover_choice))
+      req(any(ok))
+      if (length(k) == 1 && isTRUE(ok[k])) k else which(ok)[1]
+    })
+    observeEvent(lift_sel(), {
+      session$sendCustomMessage("mpsyn_select", list(id = ns("liftover_syn_canvas"), row = paste0("lift", lift_sel())))
+    })
+    output$liftover_aln_ui <- renderUI({
+      st <- req(lift_state())
+      thr <- lift_thr()
+      if (!any(st$hits$pctid >= thr$min_pctid & st$hits$gap_pct <= thr$max_gap_pct)) {
+        return(p("Select a placement that passes the thresholds to see its alignment."))
+      }
+      tagList(
+        uiOutput(ns("liftover_notes")),
+        div(class = "mp-msa-box", msaR::msaROutput(ns("liftover_msa")))
+      )
+    })
+    lift_aln <- reactive({
+      st <- req(lift_state())
+      k <- lift_sel()
+      h <- st$hits[k, ]
+      fmt <- function(x) formatC(as.integer(x), big.mark = ",", format = "d")
+      tryCatch(
+        liftover_alignment(
+          h, st$ref, st$ref_seq, as.character(st$asm[[1]]), st$ref$type, st$starts, st$gc, st$ref_gc,
+          c(paste(st$acc, st$gene), paste0(st$unit$ID, " ", fmt(h$pos1), "-", fmt(h$pos2), " (", h$direction, ")"))
+        ),
+        error = function(e) list(aln = NULL, notes = paste("Alignment unavailable:", conditionMessage(e)))
+      )
+    })
+    output$liftover_notes <- renderUI({
+      n <- lift_aln()$notes
+      if (length(n)) div(class = "text-warning", lapply(n, tags$div))
+    })
+    output$liftover_msa <- msaR::renderMsaR({
+      input$liftover_msa_relayout
+      a <- lift_aln()
+      msaR::msaR(
+        req(a$aln), overviewbox = FALSE, seqlogo = FALSE, menu = FALSE, conservation = TRUE,
+        labelNameLength = 200, colorscheme = if (a$kind == "aa") "zappo" else "nucleotide",
+        rowheight = 20, alignmentHeight = 60
+      )
+    })
+    output$liftover_hits <- renderUI({
+      st <- req(lift_state())
+      if (nrow(st$hits) == 0) return(tags$p("No acceptable mapping found."))
+      thr <- lift_thr()
+      tb <- liftover_hit_table(st$hits, isolate(rv$annotations), st$L, thr$min_pctid, thr$max_gap_pct)
+      cur <- if (identical(lift_seen, st$nonce)) suppressWarnings(as.integer(isolate(input$liftover_choice)))
+      lift_seen <<- st$nonce
+      if (!(length(cur) == 1 && isTRUE(tb$pass[cur]))) cur <- which(tb$pass)[1]
+      id <- ns("liftover_choice")
+      rows <- lapply(seq_len(nrow(tb)), function(i) {
+        ok <- tb$pass[i]
+        tags$tr(
+          class = if (!ok) "text-muted",
+          tags$td(tags$input(
+            type = "radio", name = id, value = i, `aria-label` = paste("Placement", i),
+            checked = if (isTRUE(i == cur)) NA, disabled = if (!ok) NA
+          )),
+          tags$td(i), tags$td(tb$position[i]), tags$td(tb$strand[i]), tags$td(tb$identity[i]),
+          tags$td(tb$gaps[i]), tags$td(if (ok) tb$overlaps[i] else "(below threshold)")
+        )
+      })
+      tagList(
+        if (isTRUE(any(input$liftover_min_pctid < thr$min_pctid)) || isTRUE(any(input$liftover_max_gap > thr$max_gap_pct))) {
+          tags$p(class = "text-muted", "Identity cannot go below 80% and gaps cannot go above 10%, so those limits are used.")
+        },
+        if (!any(tb$pass)) tags$p("No placement passes the current thresholds."),
+        div(
+          id = id, class = "shiny-input-radiogroup",
+          tags$table(
+            class = "table table-condensed",
+            tags$thead(tags$tr(lapply(c("", "#", "Position", "Strand", "Identity", "Gaps", "Overlaps"), tags$th))),
+            tags$tbody(rows)
+          )
+        )
+      )
+    })
+    observeEvent(input$liftover_cancel, lift_back())
+    observeEvent(input$liftover_add, {
+      if (lock_blocked()) req(F)
+      st <- req(lift_state())
+      thr <- lift_thr()
+      tb <- liftover_hit_table(st$hits, rv$annotations, st$L, thr$min_pctid, thr$max_gap_pct)
+      k <- tryCatch(lift_sel(), error = function(e) NA_integer_)
+      if (!(length(k) == 1 && isTRUE(tb$pass[k]))) {
+        mp_toast("Pick a placement that passes the thresholds.", type = "warning")
+        req(F)
+      }
+      live <- rv$annotations[!grepl("_DELETED_", rv$annotations$gene, fixed = TRUE), , drop = FALSE]
+      if (any(live$gene == st$gene & live$pos1 == st$hits$pos1[k])) {
+        mp_alert(title = "Cannot add this annotation",
+                 text = paste(st$gene, "is already annotated at this position."), type = "warning")
+        req(F)
+      }
+      lift_k <<- k
+      txt <- liftover_confirm_text(st$gene, strsplit(tb$clash[k], ",")[[1]], st$gene %in% live$gene)
+      if (is.null(txt)) {
+        liftover_add()
+      } else {
+        mp_confirm(ns("liftover_confirm"), title = "Add lifted annotation", text = txt,
+                   action_label = "Add annotation")
+      }
+    })
+    observeEvent(input$liftover_confirm, {
+      req(isTRUE(input$liftover_confirm))
+      liftover_add()
+    })
+    # Everything both curation paths need for placement k
+    lift_inputs <- function(st, k, u) {
+      if (!identical(st$unit, list(ID = u$ID, path = u$path, scaffold = u$scaffold))) {
+        stop("The open assembly changed since mapping. Lift the gene over again.", call. = FALSE)
+      }
+      uo <- lift_unit_opts(u)
+      opts <- uo$opts
+      gc <- uo$gc
+      if (nrow(opts) != 1) stop("No curation settings were found for this assembly.", call. = FALSE)
+      if (length(gc) != 1 || is.na(gc)) stop("No genetic code is set for this sample.", call. = FALSE)
+      cov <- resolve_unit_coverage_file(session$userData$dir_out, u$ID, u$path, u$scaffold)
+      list(opts = opts, args = list(
+        hit = st$hits[k, ], ref_feature = st$ref, accession = st$acc,
+        unit = list(ID = u$ID, path = u$path, scaffold = u$scaffold), assembly = st$asm,
+        coverage_fn = if (file.exists(cov)) cov, curate_params = opts$params,
+        genetic_code = as.integer(gc),
+        ref_dir = file.path(opts$ref_dir, sub("\\.tar\\.gz$", "", opts$ref_db)),
+        template = rv$annotations
+      ))
+    }
+    lift_commit <- function(r) {
+      row <- r$row
+      u <- rv$updating
+      if (!identical(as.character(c(row$ID, row$path, row$scaffold)), as.character(c(u$ID, u$path, u$scaffold)))) {
+        stop("The open assembly changed while curating. Lift the gene over again.", call. = FALSE)
+      }
+      if (any(rv$annotations$gene == row$gene & rv$annotations$pos1 == row$pos1)) {
+        stop(row$gene, " is already annotated at this position.", call. = FALSE)
+      }
+      row$fas <- "nt"
+      row$faa <- if (row$type == "PCG") "aa" else NA_character_
+      row <- row[, intersect(names(rv$annotations), names(row)), drop = FALSE]
+      old <- rv$annotations
+      ann <- old
+      nb <- r$neighbors
+      i <- match(paste(nb$gene, nb$pos1), paste(ann$gene, ann$pos1))
+      ann$warnings[i] <- nb$warnings
+      rv$annotations <- dplyr::bind_rows(ann, row) |> dplyr::arrange(pos1)
+      tryCatch(persist_annotations(), error = function(e) {
+        rv$annotations <- old
+        stop(e)
+      })
+      r
+    }
+    lift_report <- function(res) {
+      if (inherits(res, "error")) {
+        mp_alert(title = "Liftover failed", text = conditionMessage(res), type = "error")
+        return(invisible())
+      }
+      row <- res$row
+      idx <- which(rv$annotations$gene == row$gene & rv$annotations$pos1 == row$pos1)[1]
+      lift_back()
+      shinyjs::delay(500, reactable::updateReactable("table", selected = idx, session = session))
+      mp_toast(paste0(
+        row$gene, " added at ", formatC(as.integer(row$pos1), big.mark = ",", format = "d"), "-",
+        formatC(as.integer(row$pos2), big.mark = ",", format = "d"),
+        if (!res$curated) " (curation skipped; the reason is in its warnings)",
+        "."
+      ), type = "success")
+      update_counts()
+    }
+    liftover_add <- function() {
+      st <- lift_state()
+      k <- lift_k
+      u <- rv$updating
+      if (liftover_needs_nf(st$ref$type)) return(lift_nf_run(st, k, u))
+      show_edit_waiter("Curating and validating the new annotation, hold tight...")
+      shinyjs::delay(100, {
+        res <- tryCatch({
+          a <- lift_inputs(st, k, u)
+          lift_commit(do.call(liftover_annotate, c(a$args, list(existing = rv$annotations))))
+        }, error = function(e) e, finally = waiter::waiter_hide())
+        lift_report(res)
+      })
+    }
+
+    # PCGs and rRNAs: curate in a background Nextflow run (R/annotation_liftover.R)
+    lift_job <- reactiveVal(NULL)
+    lift_tok <- NULL
+    lift_fail <- NULL
+    lift_dying <- list()
+    lift_reap <- reactiveVal(0)
+    lift_nf_run <- function(st, k, u) {
+      tok <- new.env()
+      tok$cancelled <- FALSE
+      lift_tok <<- tok
+      waiter::waiter_show(
+        html = tagList(
+          waiter::spin_fading_circles(),
+          tags$h4(style = "color:white; margin-top:1em;", "Curating and validating the new annotation, hold tight..."),
+          tags$button(
+            type = "button", class = "btn btn-default", style = "margin-top:1em;",
+            onclick = sprintf("Shiny.setInputValue('%s', Date.now(), {priority: 'event'})", ns("liftover_nf_cancel")),
+            "Cancel"
+          )
+        ),
+        color = "rgba(40,40,40,0.85)"
+      )
+      shinyjs::delay(100, {
+        if (tok$cancelled) return(invisible())
+        proj <- normalizePath(dirname(getOption("MitoPilot.db") %||% "."))
+        ps <- tryCatch({
+          a <- lift_inputs(st, k, u)
+          ao <- dplyr::tbl(session$userData$con, "assemble") |>
+            dplyr::filter(ID == !!u$ID) |>
+            dplyr::pull(assemble_opts)
+          ps <- do.call(liftover_prepare, c(a$args, list(
+            max_blast_hits = a$opts$max_blast_hits %|NA|% 10,
+            blast_ref_files = liftover_blast_ref_files(session$userData$dir_out, u$ID, ao[1] %|NA|% ""),
+            dir = file.path(proj, ".liftover", paste0("lift_", u$ID, "_", st$gene, "_", format(Sys.time(), "%Y%m%d-%H%M%S")))
+          )))
+          ps$opts <- a$opts
+          ps
+        }, error = function(e) e)
+        if (inherits(ps, "error")) {
+          lift_tok <<- NULL
+          waiter::waiter_hide()
+          return(mp_alert(title = "Liftover failed", text = conditionMessage(ps), type = "error"))
+        }
+        ps$proj <- proj
+        lift_nf_next(list(st = ps, stage = "db", tok = tok))
+      })
+    }
+    # Start the next background step: fetch the curation DB when not cached, then Nextflow
+    lift_nf_next <- function(j) {
+      ps <- j$st
+      if (j$tok$cancelled) return(unlink(ps$dir, recursive = TRUE))
+      p <- tryCatch({
+        db <- liftover_ref_db_dir(ps$opts$ref_dir, ps$opts$ref_db, ps$proj, background = TRUE)
+        if (is.character(db)) {
+          j$stage <- "nf"
+          liftover_nf_start(ps, db, ps$proj)
+        } else db
+      }, error = function(e) e)
+      if (inherits(p, "error")) return(lift_nf_failed(ps, conditionMessage(p)))
+      j$p <- p
+      lift_job(j)
+    }
+    lift_nf_failed <- function(ps, reason) {
+      lift_tok <<- NULL
+      waiter::waiter_hide()
+      lift_fail <<- list(st = ps, reason = reason)
+      gene <- ps$row$gene
+      mp_confirm(
+        ns("liftover_nf_skip"), title = "Curation failed",
+        text = paste0(
+          "Curating and validating ", gene, " did not finish: ", sub("[.]?$", ".", reason),
+          " Files from this attempt are kept in ", ps$dir, ". Add ", gene, " without curation?"
+        ),
+        action_label = "Add without curation"
+      )
+    }
+    observe({
+      j <- lift_job()
+      req(j)
+      if (j$p$is_alive()) {
+        invalidateLater(500)
+        return()
+      }
+      isolate({
+        lift_job(NULL)
+        tryCatch(j$p$kill_tree(), error = function(e) NULL)
+        ok <- identical(j$p$get_exit_status(), 0L)
+        if (j$stage == "db") {
+          if (ok) lift_nf_next(j) else lift_nf_failed(j$st, j$p$read_all_output())
+        } else if (!ok) {
+          out <- tryCatch(readLines(file.path(j$st$dir, "nextflow.out")), error = function(e) character())
+          lift_nf_failed(j$st, liftover_nf_reason(out))
+        } else {
+          lift_tok <<- NULL
+          waiter::waiter_hide()
+          res <- tryCatch(lift_commit(liftover_finish(j$st, j$st$dir, existing = rv$annotations)), error = function(e) {
+            simpleError(paste0(conditionMessage(e), " Files from this attempt are kept in ", j$st$dir, "."))
+          })
+          if (!inherits(res, "error")) unlink(j$st$dir, recursive = TRUE)
+          lift_report(res)
+        }
+      })
+    })
+    # Cancelled runs: stop, escalate after 15 s, then remove their own files
+    observe({
+      lift_reap()
+      req(length(lift_dying) > 0)
+      invalidateLater(500)
+      keep <- vapply(lift_dying, function(j) {
+        if (j$p$is_alive()) {
+          if (difftime(Sys.time(), j$cancelled, units = "secs") > 15) j$p$kill_tree()
+          return(TRUE)
+        }
+        tryCatch(j$p$kill_tree(), error = function(e) NULL)
+        unlink(c(j$st$dir, attr(j$p, "staging")), recursive = TRUE)
+        FALSE
+      }, logical(1))
+      lift_dying <<- lift_dying[keep]
+    })
+    observeEvent(input$liftover_nf_cancel, {
+      req(!is.null(lift_tok), !lift_tok$cancelled)
+      lift_tok$cancelled <- TRUE
+      lift_tok <<- NULL
+      j <- lift_job()
+      if (!is.null(j)) {
+        lift_job(NULL)
+        tryCatch(j$p$signal(tools::SIGTERM), error = function(e) NULL)
+        j$cancelled <- Sys.time()
+        lift_dying <<- c(lift_dying, list(j))
+        lift_reap(lift_reap() + 1)
+      }
+      waiter::waiter_hide()
+      mp_toast("Liftover cancelled. Nothing was added.", type = "message")
+    })
+    observeEvent(input$liftover_nf_skip, {
+      f <- lift_fail
+      lift_fail <<- NULL
+      req(f, isTRUE(input$liftover_nf_skip))
+      lift_report(tryCatch(lift_commit(liftover_finish(f$st, NULL, f$reason, existing = rv$annotations)), error = function(e) e))
+    })
+    session$onSessionEnded(function() {
+      for (j in c(list(isolate(lift_job())), lift_dying)) {
+        if (is.null(j)) next
+        if (j$p$is_alive()) {
+          j$p$signal(tools::SIGTERM)
+          j$p$wait(5000)
+        }
+        j$p$kill_tree()
+        unlink(c(j$st$dir, attr(j$p, "staging")), recursive = TRUE)
+      }
     })
 
     # Everything the controls need, read from the DB rather than tracked in a
@@ -2060,18 +2689,34 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         "Trim unannotated ends"
       }
       tagList(
-        if (is.na(reason)) {
-          actionButton(ns("trim_ends"), lbl, icon = icon("scissors"))
-        } else {
-          tags$span(
-            title = reason,
-            actionButton(ns("trim_ends"), lbl, icon = icon("scissors")) |>
-              shinyjs::disabled()
+        div(
+          if (is.na(reason)) {
+            actionButton(ns("trim_ends"), lbl, icon = icon("scissors"))
+          } else {
+            tags$span(
+              title = reason,
+              actionButton(ns("trim_ends"), lbl, icon = icon("scissors")) |>
+                shinyjs::disabled()
+            )
+          },
+          mp_help_tip(
+            "Removes sequence before the first and after the last annotation.",
+            label = "Trim unannotated ends"
           )
-        },
+        ),
         if (isTRUE(st$edited)) {
           b <- actionButton(ns("restore_asmb"), "Restore assembly", icon = icon("rotate-left"))
-          if (locked()) shinyjs::disabled(b) else b
+          div(
+            if (locked()) shinyjs::disabled(b) else b,
+            mp_help_tip(
+              paste(
+                "Puts the assembly and its annotations back to how they were",
+                "before the first Linearize, Rotate, or Trim. Annotation edits",
+                "made since then are lost."
+              ),
+              label = "Restore assembly"
+            )
+          )
         }
       )
     })
@@ -3697,9 +4342,10 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       req(length(id) == 1)
       retained <- rv$annotations |>
         dplyr::filter(!stringr::str_detect(gene, "_DELETED_"))
-      pcg  <- sum(retained$type == "PCG",  na.rm = TRUE)
-      trna <- sum(retained$type == "tRNA", na.rm = TRUE)
-      rrna <- sum(retained$type == "rRNA", na.rm = TRUE)
+      cnt  <- count_feature_types(retained)
+      pcg  <- cnt[["PCG"]]
+      trna <- cnt[["tRNA"]]
+      rrna <- cnt[["rRNA"]]
       # missing/extra from this unit's curation count rules
       me <- tryCatch({
         co <- dplyr::tbl(con, "annotate") |>
@@ -3715,7 +4361,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
       # ORF count is derived in the table; keep blank when ORF finding is off
       orf_blank <- "ORFCount" %in% names(rv$data) && !is.na(i) &&
         isTRUE(is.na(rv$data$ORFCount[i]))
-      orf <- if (orf_blank) NA_integer_ else as.integer(sum(retained$type == "ORF", na.rm = TRUE))
+      orf <- if (orf_blank) NA_integer_ else cnt[["ORF"]]
+      tf <- tool_feature_summary(retained, session$userData$user_annot)
       # Short-circuit if nothing the count/missing/extra columns track changed
       # (e.g. position-only codon edits) to avoid needless writes/refreshes.
       same <- function(a, b) (is.na(a) && is.na(b)) || (!is.na(a) && !is.na(b) && a == b)
@@ -3724,6 +4371,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
           identical(as.integer(rv$data$tRNACount[i]), as.integer(trna)) &&
           identical(as.integer(rv$data$rRNACount[i]), as.integer(rrna)) &&
           same(rv$data$ORFCount[i], orf) &&
+          identical(as.integer(rv$data$toolCount[i]), as.integer(tf$n)) &&
+          identical(rv$data$toolGenes[i], tf$genes) &&
           same(rv$data$missing[i], me$missing %||% NA_character_) &&
           same(rv$data$extra[i], me$extra %||% NA_character_)) {
         return(invisible(NULL))
@@ -3746,7 +4395,8 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         dplyr::rows_update(
           data.frame(ID = id, path = p, scaffold = s,
                      PCGCount = pcg, tRNACount = trna, rRNACount = rrna,
-                     ORFCount = orf, missing = upd$missing, extra = upd$extra,
+                     ORFCount = orf, toolCount = as.integer(tf$n), toolGenes = tf$genes,
+                     missing = upd$missing, extra = upd$extra,
                      stringsAsFactors = FALSE),
           by = c("ID", "path", "scaffold")
         )
@@ -4186,7 +4836,6 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
           "display: flex; align-items: center; gap: 8px;",
           "flex-wrap: wrap; margin-top: 8px;"
         ),
-        uiOutput(ns("status_badges"), inline = TRUE, style = "display: contents;"),
         uiOutput(ns("status_toggles"), inline = TRUE, style = "display: contents;")
       )
     )),
@@ -4230,14 +4879,19 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     if (is_locked) {
       div(
         class = "alert alert-warning mp-lock-banner", role = "status",
-        icon("lock"), tags$b(" This assembly is locked."), " ",
-        MP_LOCK_DEF("annotate"), " Editing controls below are disabled.",
-        " Unlock this assembly in the Annotate table to edit it."
+        icon("lock"), tags$b(" This assembly is locked", .noWS = "after"),
+        ", so editing is off. Unlock it in the Annotate table.",
+        mp_help_tip(mp_help_bullets(
+          "Locked assemblies are finished with this step.",
+          "Their options cannot be changed, and the next update will not re-run them.",
+          "They move on to Export.",
+          "You can unlock at any time."
+        ), label = "locking")
       )
     },
     uiOutput(ns("outlier_flag_banner")),
     # Assembly-level sequence edits: above the table they rewrite, each with a
-    # one-line caption saying what it does (theme T16, C10).
+    # help icon saying what it does (theme T16, C10).
     div(
       style = paste(
         "display: flex; flex-wrap: wrap; align-items: flex-start;",
@@ -4246,18 +4900,19 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
       div(
         off(actionButton(ns("linearize"), "Linearize",
                          icon = icon("arrows-left-right-to-line"))),
-        div(
-          class = "mp-table-status", style = "margin: 2px 0 0 0;",
-          "Breaks a circular assembly before or after the selected feature."
+        mp_help_tip(
+          "Breaks a circular assembly before or after the selected feature.",
+          label = "Linearize"
         )
       ),
       div(
-        uiOutput(ns("asmb_edit_controls"), inline = TRUE, style = "display: contents;"),
-        div(
-          class = "mp-table-status", style = "margin: 2px 0 0 0;",
-          "Removes sequence before the first and after the last annotation."
+        off(actionButton(ns("reorient"), "Rotate", icon = icon("rotate"))),
+        mp_help_tip(
+          "Rotates a circular assembly to start on a chosen feature.",
+          label = "Rotate"
         )
-      )
+      ),
+      uiOutput(ns("asmb_edit_controls"), inline = TRUE, style = "display: contents;")
     ),
     tags$details(
       id = ns("annotation_table_details"),
@@ -4373,7 +5028,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
        });",
       ns("annotation_table_details"), ns("annotation_btns_wrapper")
     ))),
-    seqview_ui(ns("seqview")),
+    seqview_ui(ns("seqview"), user_annot = isTRUE(session$userData$user_annot)),
     tags$details(
       id = ns("blast_synteny_details"),
       tags$summary("BLAST Reference Synteny"),
@@ -4638,11 +5293,6 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
           actionButton(ns("lock_only"), "Lock", icon = icon("lock"),
                        title = "Lock this assembly and keep the window open")
         )
-      ),
-      div(
-        class = "mp-table-status mp-sticky-foot",
-        style = "justify-content: flex-end; margin: 6px 0 0 0; clear: both;",
-        MP_LOCK_DEF("annotate")
       )
     )
   )

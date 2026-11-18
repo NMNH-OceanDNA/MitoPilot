@@ -163,6 +163,36 @@ circ_overlap_len <- function(p1, p2, q1, q2, L) {
   total
 }
 
+#' Rows of df that overlap a same-gene row of hits (when same_gene), or have
+#' more than 10% of their length covered by hits
+#'
+#' @param df,hits annotation tables (contig, gene, pos1, pos2)
+#' @param contig_lens named vector of contig lengths
+#' @param same_gene also flag any overlap with a hit of the same gene
+#'
+#' @noRd
+#'
+overlapped <- function(df, hits, contig_lens, same_gene = FALSE) {
+  purrr::pmap_lgl(
+    list(df$gene, df$contig, df$pos1, df$pos2),
+    \(g, ctg, p1, p2) {
+      hit <- hits$contig == ctg & circ_overlap(p1, p2, hits$pos1, hits$pos2)
+      if (same_gene && any(hit & hits$gene == g, na.rm = TRUE)) {
+        return(TRUE)
+      }
+      h <- hits[hit, , drop = FALSE]
+      if (nrow(h) == 0L) {
+        return(FALSE)
+      }
+      L <- contig_lens[ctg]
+      total <- sum(purrr::map2_int(
+        h$pos1, h$pos2, \(q1, q2) circ_overlap_len(p1, p2, q1, q2, L)
+      ))
+      total / circ_len(p1, p2, L) > 0.10
+    }
+  )
+}
+
 #' Extend an OH call to the (putative) full-length control region
 #'
 #' MITOS2 reports the origin of replication (OH) as a short locus; the control
@@ -326,6 +356,13 @@ get_top_hits <- function(
       .sep = " "
     ) |>
       system2("blastp", args = _, input = query, stdout = TRUE)
+  }
+
+  # A failed search must not be saved as "no hits"
+  if (!is.null(attr(hits_refSeq, "status")) && isTRUE(nzchar(query))) {
+    stop("get_top_hits: blastp failed (exit ", attr(hits_refSeq, "status"),
+         ") against ", db_arg, ". See the BLAST error above; a custom curation ",
+         "database may need rebuilding with custom_curation_db().", call. = FALSE)
   }
 
   if(length(hits_refSeq) == 0) {
@@ -737,6 +774,101 @@ guess_orf_gene <- function(refHits_json, threshold = ORF_ASSIGN_SIM_THRESHOLD) {
   )
 }
 
+#' JOIN group id from a `JOIN: mode=... group=N` notes marker
+#'
+#' @param notes character vector of notes
+#' @return integer vector, NA where there is no marker
+#' @noRd
+join_group_id <- function(notes) {
+  as.integer(
+    stringr::str_match(
+      dplyr::coalesce(as.character(notes), ""),
+      "^JOIN: mode=\\w+ group=(\\d+)"
+    )[, 2]
+  )
+}
+
+#' TRUE for rows carrying a JOIN marker
+#'
+#' @param notes character vector of notes
+#' @noRd
+is_join_member <- function(notes) {
+  !is.na(join_group_id(notes))
+}
+
+#' TRUE for the first row of each JOIN group and for every non-member row
+#'
+#' @param annotations annotations data frame with contig and notes
+#' @noRd
+join_copy_row <- function(annotations) {
+  grp <- join_group_id(annotations$notes)
+  is.na(grp) | !duplicated(paste(annotations$contig, grp))
+}
+
+#' "contig group" key of each JOIN member, NA for non-members
+#'
+#' @param annotations annotations data frame with contig and notes
+#' @noRd
+join_group_key <- function(annotations) {
+  g <- join_group_id(annotations$notes)
+  ifelse(is.na(g), NA_character_, paste(annotations$contig, g))
+}
+
+#' 5'-most (five) and 3'-most (three) member of each JOIN group
+#'
+#' Members are ordered by pos1; when `circ` is TRUE for the group's contig (of
+#' length `len`), the feature starts after the largest gap between members.
+#'
+#' @param annotations annotations data frame
+#' @param circ,len per-row circular flag and contig length
+#' @return list of logical vectors `five`, `three`; TRUE for non-members
+#' @noRd
+join_end_rows <- function(annotations, circ = FALSE, len = NA) {
+  n <- nrow(annotations)
+  circ <- rep_len(circ, n)
+  len <- rep_len(len, n)
+  p1 <- annotations$pos1
+  p2 <- annotations$pos2
+  key <- join_group_key(annotations)
+  five <- three <- rep(TRUE, n)
+  for (k in unique(stats::na.omit(key))) {
+    m <- which(key == k)
+    ord <- m[order(p1[m])]
+    j <- length(ord)
+    if (isTRUE(circ[m[1]]) && j > 1L) {
+      inner <- pmax(p1[ord[-1]] - p2[ord[-j]], 0)
+      closing <- (p1[ord[1]] - p2[ord[j]]) %% len[m[1]]
+      if (max(inner) > closing) {
+        first <- which.max(inner) + 1L
+        ord <- ord[c(first:j, seq_len(first - 1L))]
+      }
+    }
+    if (identical(annotations$direction[m[1]], "-")) ord <- rev(ord)
+    five[ord[-1]] <- FALSE
+    three[ord[-j]] <- FALSE
+  }
+  list(five = five, three = three)
+}
+
+#' Reading-frame offset of a CDS: 2 or 3, else 1 (NA/NULL/out of range)
+#'
+#' @param x `codon_start` value(s)
+#' @noRd
+codon_offset <- function(x) {
+  x <- suppressWarnings(as.integer(x))
+  if (length(x) == 0L) return(1L)
+  ifelse(!is.na(x) & x %in% 2:3, x, 1L)
+}
+
+#' TRUE for PCG rows curation must leave at their imported coordinates
+#'
+#' @param notes character vector of notes
+#' @param codon_start `codon_start` column, or NULL when absent
+#' @noRd
+skip_boundary_curation <- function(notes, codon_start) {
+  is_join_member(notes) | codon_offset(codon_start) > 1L
+}
+
 #' Next unused join-group id for a set of annotations
 #'
 #' Join groups are tagged in the `notes` field with a `JOIN: mode=... group=N`
@@ -748,12 +880,7 @@ guess_orf_gene <- function(refHits_json, threshold = ORF_ASSIGN_SIM_THRESHOLD) {
 #' @return integer group id, 1 when no join markers are present.
 #' @noRd
 next_join_group <- function(notes) {
-  grps <- as.integer(
-    stringr::str_match(
-      dplyr::coalesce(as.character(notes), ""),
-      "^JOIN: mode=\\w+ group=(\\d+)"
-    )[, 2]
-  )
+  grps <- join_group_id(notes)
   if (all(is.na(grps))) 1L else max(grps, na.rm = TRUE) + 1L
 }
 
@@ -776,14 +903,15 @@ mute_partial_codon_warning <- function(expr) {
 #' annotate-details editor's spliced-CDS preview / alignment.
 #'
 #' @param members data frame of the group's annotation rows. Requires columns
-#'   pos1, pos2, direction, start_codon, stop_codon, partial_start, partial_stop.
+#'   pos1, pos2, direction, start_codon, stop_codon, partial_start, partial_stop;
+#'   an optional `codon_start` on the 5' member offsets the reading frame.
 #' @param seq the scaffold assembly sequence (DNAString/DNAStringSet) the members
 #'   belong to.
 #' @param genetic_code a resolved Biostrings genetic-code vector (e.g.
 #'   `session$userData$gcode` or `Biostrings::getGeneticCode("2")`).
 #'
 #' @return list with `dna`, `translation` (terminal stop stripped), `start_codon`,
-#'   `stop_codon`, `partial_start`, `partial_stop`, `pos1`, `pos2`, `length`,
+#'   `stop_codon`, `partial_start`, `partial_stop`, `codon_start`, `pos1`, `pos2`, `length`,
 #'   `direction`, and `segments`: a data frame (one row per exon, ordered 5'->3')
 #'   with `member_row` (index into `members`), `pos1`, `pos2`, `aa_start`, `aa_end`.
 #' @keywords internal
@@ -818,9 +946,13 @@ splice_join_cds <- function(members, seq, genetic_code) {
   merged <- Biostrings::DNAStringSet(paste(exon_seqs, collapse = ""))
   if (direction == "-") merged <- Biostrings::reverseComplement(merged)
 
+  i5 <- if (direction == "-") n else 1L
+  codon_start <- codon_offset(exons$codon_start[i5])
+  off <- codon_start - 1L
+
   translation <- mute_partial_codon_warning(
-    Biostrings::translate(merged, genetic.code = genetic_code,
-                          if.fuzzy.codon = "solve")
+    Biostrings::translate(Biostrings::subseq(merged, start = 1L + off),
+                          genetic.code = genetic_code, if.fuzzy.codon = "solve")
   ) |>
     as.character()
   translation <- sub("\\*$", "", translation)
@@ -836,8 +968,8 @@ splice_join_cds <- function(members, seq, genetic_code) {
     member_row = exons_53$.__row,
     pos1 = exons_53$pos1,
     pos2 = exons_53$pos2,
-    aa_start = pmin(floor((cum_start - 1) / 3) + 1, aa_len),
-    aa_end = pmin(ceiling(cum_end / 3), aa_len),
+    aa_start = pmin(pmax(floor((cum_start - 1 - off) / 3) + 1, 1), aa_len),
+    aa_end = pmin(pmax(ceiling((cum_end - off) / 3), 1), aa_len),
     stringsAsFactors = FALSE
   )
 
@@ -875,6 +1007,7 @@ splice_join_cds <- function(members, seq, genetic_code) {
     stop_codon = stop_codon,
     partial_start = partial_start,
     partial_stop = partial_stop,
+    codon_start = codon_start,
     pos1 = gene_pos1,
     pos2 = gene_pos2,
     length = sum(seg_len),

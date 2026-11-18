@@ -6,6 +6,7 @@
 #'
 params_starfish_mito <- function(alt = list()) {
   params <- list(
+    ruleset_version = "1.0",
     hit_threshold = 60,
     max_overlap = 0.25,
     default_rules = list(

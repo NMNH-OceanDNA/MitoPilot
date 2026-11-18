@@ -194,9 +194,8 @@ That is the minimum. Everything below is optional, but for anything other than a
 ray-finned fish you will want at least `curate_target` and custom assembly
 databases.
 
-Run from RStudio, this also creates and opens a new RStudio project. On RStudio
-Server on a cluster you usually want `Rproj = FALSE` to stay in your current
-session.
+To also create and open a new RStudio project in the project directory, add
+`Rproj = TRUE`. This only has an effect when run from RStudio.
 
 ### Arguments worth setting
 
@@ -344,8 +343,12 @@ and let you perform annotation, curation, and export.
 
 [Using Your Own Assemblies](Your-Own-Assemblies.html) covers the extra mapping
 columns, projects with no raw reads, and the optional steps for whole-genome
-assemblies: finding the mitochondrial contigs, circularizing linear ones, and
+assemblies: finding the mitochondrial contigs, circularization, and
 joining a mitogenome that arrived in several pieces.
+
+If you also have annotations for each assembly, use
+`new_project_userAnnot()` and see
+[Using Your Own Annotations](Your-Own-Annotations.html).
 
 <hr class="part-break" />
 

@@ -27,3 +27,4 @@ $run_dev.*
 ^inst/native/\.pixi$
 ^tests/testthat/_problems$
 ^tests/testthat/testthat-problems\.rds$
+^website$

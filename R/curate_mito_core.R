@@ -100,6 +100,12 @@ curate_mito_core <- function(
     as.integer(circ_len(p1, p2, ctg_len(seqid)))
   }
 
+  # Gene each contig starts on (the annotate-step rotation anchor)
+  start_anchor <- annotations |>
+    dplyr::filter(pos1 == 1, direction == "+") |>
+    dplyr::distinct(contig, .keep_all = TRUE) |>
+    {\(x) stats::setNames(x$gene, x$contig)}()
+
   ## load coverage ----
   if (!is.null(coverage_fn)) {
     coverage <- tryCatch(
@@ -354,33 +360,52 @@ curate_mito_core <- function(
     }
   })
 
-  annotations$refHits <- annotations |>
-    dplyr::select(type, gene, translation) |>
-    purrr::pmap(function(type, gene, translation) {
-      if (type != "PCG") {
+  pcg_refhits <- function(gene, translation) {
+    ## Gene ref database ----
+    ref_db <- stringr::str_glue(ref_dbs[[gene]] %||% ref_dbs[["default"]])
+
+    # No per-gene reference DB (e.g. a non-standard MitoFinder gene): BLAST the
+    # translation against the combined all-gene DB like an ORF so candidate
+    # identities still surface in the alignment.
+    if (!file.exists(as.character(ref_db))) {
+      cdb <- combined_ref_db()
+      if (is.null(cdb) || is.na(translation) || !nzchar(translation)) {
+        return('{}')
+      }
+      out <- get_top_hits_orf(cdb, translation, max_blast_hits) |>
+        json_string()
+      return(out %||% '{}')
+    }
+
+    out <- get_top_hits(gene_dbs(gene), translation, max_blast_hits) |>
+      json_string()
+    out %||% '{}'
+  }
+
+  # A JOIN group is BLASTed once, as its spliced protein, and every member
+  # carries the same hits. The spliced protein rides along for validation.
+  join_key <- ifelse(annotations$type == "PCG", join_group_key(annotations), NA_character_)
+  annotations$join_translation <- rep(NA_character_, nrow(annotations))
+  annotations$refHits <- purrr::pmap(
+    list(annotations$type, annotations$gene, annotations$translation, join_key),
+    function(type, gene, translation, key) {
+      if (type != "PCG" || !is.na(key)) {
         return(NA)
       }
-
-      ## Gene ref database ----
-      ref_db <- stringr::str_glue(ref_dbs[[gene]] %||% ref_dbs[["default"]])
-
-      # No per-gene reference DB (e.g. a non-standard MitoFinder gene): BLAST the
-      # translation against the combined all-gene DB like an ORF so candidate
-      # identities still surface in the alignment.
-      if (!file.exists(as.character(ref_db))) {
-        cdb <- combined_ref_db()
-        if (is.null(cdb) || is.na(translation) || !nzchar(translation)) {
-          return('{}')
-        }
-        out <- get_top_hits_orf(cdb, translation, max_blast_hits) |>
-          json_string()
-        return(out %||% '{}')
-      }
-
-      out <- get_top_hits(gene_dbs(gene), translation, max_blast_hits) |>
-        json_string()
-      out %||% '{}'
-    })
+      pcg_refhits(gene, translation)
+    }
+  )
+  for (k in unique(stats::na.omit(join_key))) {
+    m <- which(join_key == k)
+    tr <- tryCatch(
+      splice_join_cds(
+        annotations[m, ], assembly[contig_key[annotations$contig[m[1]]]], genetic_code
+      )$translation,
+      error = function(e) NA_character_
+    )
+    annotations$join_translation[m] <- tr
+    annotations$refHits[m] <- if (is.na(tr) || !nzchar(tr)) '{}' else pcg_refhits(annotations$gene[m[1]], tr)
+  }
 
 
   # Prepend remote BLAST top hit to refHits for each PCG
@@ -430,6 +455,11 @@ curate_mito_core <- function(
         cur$warnings,
         stringr::str_glue("{n_ambiguous} ambiguous bases in CDS")
       )
+    }
+
+    # JOIN members and frame-offset CDSs keep the coordinates they arrived with
+    if (skip_boundary_curation(notes, cur$codon_start)) {
+      return(cur)
     }
 
     # Stop if no hits above threshold
@@ -839,6 +869,7 @@ curate_mito_core <- function(
   ## Stop codon trimming ----
   for (idx in seq_len(nrow(annotations))) {
     if (annotations$type[idx] != "PCG") next
+    if (skip_boundary_curation(annotations$notes[idx], annotations$codon_start[idx])) next
     gene <- annotations$gene[idx]
     overlap_rules <- rules[[gene]][["overlap"]]
     stop_opts <- rules[[gene]][["stop_codons"]]
@@ -904,6 +935,8 @@ curate_mito_core <- function(
     }
   }
 
+  annotations <- assess_partial_ends(annotations, assembly, contig_key, rules)
+
   # End trimming ----
   # Remove un-annotated regions at the beginning or end of linear contigs
   if (isTRUE(feature_trim)) {
@@ -957,6 +990,12 @@ curate_mito_core <- function(
   })
 
   }
+
+  # Curation may have moved the start gene's start; put it back at position 1
+  reanchored <- .reanchor_start_gene(assembly, annotations, coverage, contig_key, start_anchor)
+  assembly <- reanchored$assembly
+  annotations <- reanchored$annotations
+  coverage <- reanchored$coverage
 
   # Outputs ----
   readr::write_csv(
@@ -1048,6 +1087,42 @@ curate_mito_core <- function(
       coverage |> dplyr::filter(SeqId != seqid),
       coverage_flip
     )
+  }
+  list(assembly = assembly, annotations = annotations, coverage = coverage)
+}
+
+# Re-rotate circular contigs whose start gene no longer begins at position 1.
+# `anchor` is a named vector, seqid -> gene that started the contig before
+# curation. Contigs flipped during curation (anchor now on "-") are left alone.
+.reanchor_start_gene <- function(assembly, annotations, coverage, contig_key, anchor) {
+  for (seqid in names(anchor)) {
+    if (!stringr::str_detect(contig_key[[seqid]], "circular")) next
+    rows <- which(annotations$contig == seqid & annotations$gene == anchor[[seqid]] &
+                    annotations$direction == "+")
+    if (length(rows) == 0L) next
+    # the anchor copy: the one now spanning the origin, else the first on the contig
+    wraps <- rows[annotations$pos1[rows] > annotations$pos2[rows]]
+    row <- if (length(wraps) > 0L) wraps[1] else rows[which.min(annotations$pos1[rows])]
+    s <- as.integer(annotations$pos1[row])
+    if (s == 1L) next
+    ctg <- assembly[contig_key[seqid]]
+    L <- Biostrings::width(ctg)[[1]]
+    assembly[contig_key[seqid]] <- Biostrings::xscat(
+      Biostrings::subseq(ctg, s, L), Biostrings::subseq(ctg, 1, s - 1L)
+    )
+    on_ctg <- annotations$contig == seqid
+    annotations$pos1[on_ctg] <- wrap_pos(annotations$pos1[on_ctg] - s + 1L, L)
+    annotations$pos2[on_ctg] <- wrap_pos(annotations$pos2[on_ctg] - s + 1L, L)
+    if (!is.null(coverage)) {
+      cov <- coverage[coverage$SeqId == seqid, ]
+      cov <- cov[order(cov$Position), ]
+      cut <- cov$Position >= s
+      cov <- rbind(cov[cut, ], cov[!cut, ])
+      cov$Position <- seq_len(nrow(cov))
+      coverage <- rbind(coverage[coverage$SeqId != seqid, ], cov)
+    }
+    annotations <- dplyr::arrange(annotations, contig, pos1)
+    message("curate: re-rotated ", seqid, " to the start of ", anchor[[seqid]])
   }
   list(assembly = assembly, annotations = annotations, coverage = coverage)
 }

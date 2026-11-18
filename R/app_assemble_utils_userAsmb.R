@@ -288,7 +288,7 @@ circularize_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain
         style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
         selectizeInput(
           ns("circularize_opts"),
-          label = "Parameter set name:",
+          label = mp_pset_label(),
           choices = rv$circularize_opts$circularize_opts,
           selected = current$circularize_opts,
           options = list(
@@ -301,9 +301,6 @@ circularize_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain
           mp_checkbox(ns("edit_circularize_opts"), label = "Edit", value = FALSE)
         )
       ),
-      opts_help("Reusable named set of options applied to the selected samples; ",
-                "check Edit to change values or type a new name to create a set. ",
-                "Saving re-queues the selected samples: their state becomes Ready to run."),
       div(
         style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
         div(
@@ -323,17 +320,17 @@ circularize_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain
           ) |> shinyjs::disabled()
         )
       ),
-      mp_checkbox(
-        ns("attempt_circularization"),
-        label = "Attempt to circularize linear assemblies",
-        value = isTRUE(as.logical(current$attempt %||% 0L))
-      ) |> shinyjs::disabled(),
-      opts_help("Assemblers often report a circular mitogenome as a linear contig ",
-                "whose end repeats its start. When switched on, the contig is ",
-                "BLASTed against itself, any redundant overlap is trimmed, and the ",
-                "assembly is relabeled circular. Every contig in the assembly is ",
-                "tried, up to 100 contigs; assemblies above that limit are skipped ",
-                "and reported in the Circularization note."),
+      mp_check_help(
+        mp_checkbox(
+          ns("attempt_circularization"),
+          label = "Attempt to circularize linear assemblies",
+          value = isTRUE(as.logical(current$attempt %||% 0L))
+        ) |> shinyjs::disabled(),
+        "Assemblers often report a circular mitogenome as a linear contig whose end repeats its start.",
+        "On: each contig is BLASTed against itself, the repeated end is trimmed, and the assembly is marked circular.",
+        "Assemblies with more than 100 contigs are skipped and listed in the Circularization note.",
+        label = "Attempt to circularize"
+      ),
       div(
         id = ns("circ_params_group"),
         div(
@@ -341,7 +338,8 @@ circularize_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain
           div(
             style = "flex: 1",
             numericInput(
-              ns("circ_min_overlap"), "Min. overlap (bp):",
+              ns("circ_min_overlap"),
+              mp_help_label("Min. overlap (bp):", "Shortest repeated end, in bases, that counts as a redundant copy rather than a repeat."),
               width = "100%",
               value = current$min_overlap %||% numeric(0)
             ) |> shinyjs::disabled()
@@ -349,14 +347,13 @@ circularize_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain
           div(
             style = "flex: 1",
             numericInput(
-              ns("circ_min_identity"), "Min. identity (%):",
+              ns("circ_min_identity"),
+              mp_help_label("Min. identity (%):", "How similar the two ends must be to count as the same sequence."),
               width = "100%",
               value = current$min_identity %||% numeric(0)
             ) |> shinyjs::disabled()
           )
         ),
-        opts_help("How long and how similar the overlap between the contig ends must ",
-                  "be before it is treated as a redundant copy rather than a repeat."),
         if (!no_raw) {
           tagList(
             div(
@@ -364,7 +361,10 @@ circularize_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain
               div(
                 style = "flex: 1",
                 numericInput(
-                  ns("circ_min_junction_reads"), "Min. junction reads:",
+                  ns("circ_min_junction_reads"),
+                  mp_help_label("Min. junction reads:", paste(
+                    "Reads are mapped across the new junction to confirm it.",
+                    "The assembly stays linear unless at least this many reads cross it.")),
                   width = "100%",
                   value = current$min_junction_reads %||% numeric(0)
                 ) |> shinyjs::disabled()
@@ -372,16 +372,14 @@ circularize_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain
               div(
                 style = "flex: 1",
                 numericInput(
-                  ns("circ_min_overhang"), "Min. read overhang (bp):",
+                  ns("circ_min_overhang"),
+                  mp_help_label("Min. read overhang (bp):",
+                    "Each of those reads must reach at least this many bases past the junction on both sides."),
                   width = "100%",
                   value = current$min_overhang %||% numeric(0)
                 ) |> shinyjs::disabled()
               )
-            ),
-            opts_help("Reads are mapped across the new junction to confirm it. An ",
-                      "assembly stays linear unless at least this many reads cross ",
-                      "the junction, each extending the given number of bases past ",
-                      "it on both sides.")
+            )
           )
         }
       ),
@@ -432,7 +430,7 @@ find_mito_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()
         style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
         selectizeInput(
           ns("find_mito_opts"),
-          label = "Parameter set name:",
+          label = mp_pset_label(),
           choices = rv$find_mito_opts$find_mito_opts,
           selected = current$find_mito_opts,
           options = list(
@@ -445,9 +443,6 @@ find_mito_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()
           mp_checkbox(ns("edit_find_mito_opts"), label = "Edit", value = FALSE)
         )
       ),
-      opts_help("Reusable named set of options applied to the selected samples; ",
-                "check Edit to change values or type a new name to create a set. ",
-                "Saving re-queues the selected samples: their state becomes Ready to run."),
       div(
         style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
         div(
@@ -465,27 +460,29 @@ find_mito_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()
           ) |> shinyjs::disabled()
         )
       ),
-      mp_checkbox(
-        ns("find_mitogenome"),
-        label = "Search the assembly for mitochondrial contigs",
-        value = isTRUE(as.logical(current$attempt %||% 0L))
-      ) |> shinyjs::disabled(),
-      opts_help("Use this when your FASTA holds a whole assembly rather than a ",
-                "mitogenome. Contigs are BLASTed against the bundled metazoan ",
-                "mitogenome database, the survivors are confirmed with MitoFinder, ",
-                "and only those continue through the pipeline. A sample where ",
-                "nothing is confirmed is marked failed."),
+      mp_check_help(
+        mp_checkbox(
+          ns("find_mitogenome"),
+          label = "Search the assembly for mitochondrial contigs",
+          value = isTRUE(as.logical(current$attempt %||% 0L))
+        ) |> shinyjs::disabled(),
+        "For a FASTA that holds a whole assembly, not just a mitogenome.",
+        "Contigs are BLASTed against the bundled metazoan mitogenome database, then confirmed with MitoFinder. Only confirmed contigs continue.",
+        "A sample with nothing confirmed is marked failed.",
+        label = "Search the assembly for mitochondrial contigs"
+      ),
       div(
         id = ns("find_mito_params_group"),
         textInput(
           ns("find_mitofinder_db"),
-          label = "MitoFinder reference database (.gb):",
+          label = mp_help_label("MitoFinder reference database (.gb):", mp_help_bullets(
+            "GenBank database used to confirm candidate contigs.",
+            "Required while the search is on.",
+            tagList("Build one for your clade with ", tags$code("custom_assembly_db(db_type = \"mitofinder\")"), ".")
+          )),
           value = current$mitofinder_db %||% "",
           width = "100%"
         ) |> shinyjs::disabled(),
-        opts_help("GenBank database used to confirm candidate contigs. Build one ",
-                  "for your clade with custom_assembly_db(db_type = \"mitofinder\"). ",
-                  "Required while the search is switched on."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(
@@ -517,15 +514,16 @@ find_mito_opts_modal <- function(rv = NULL, session = getDefaultReactiveDomain()
           div(
             style = "flex: 1",
             numericInput(
-              ns("find_min_aligned_fraction"), "Min. aligned fraction (0-1):",
+              ns("find_min_aligned_fraction"),
+              mp_help_label("Min. aligned fraction (0-1):", mp_help_bullets(
+                "Filters out NUMTs (mitochondrial copies in the nuclear genome).",
+                "A real mitochondrial contig is almost all mitochondrial; a nuclear scaffold with a NUMT aligns over only a small part of itself."
+              )),
               width = "100%", min = 0, max = 1, step = 0.05,
               value = current$min_aligned_fraction %||% numeric(0)
             ) |> shinyjs::disabled()
           )
         ),
-        opts_help("The aligned fraction is the NUMT filter: a real mitochondrial ",
-                  "contig is almost entirely mitochondrial, while a nuclear ",
-                  "scaffold carrying a NUMT aligns over a small slice of itself."),
         div(
           style = "display: flex; flex-flow: row nowrap; align-items: center; gap: 2em;",
           div(

@@ -79,16 +79,6 @@ assemble_server <- function(id) {
     meta_view_setup(input, output, session)
     fetch_data <- function() meta_view_join(fetch_assemble_data(), session$userData$con)
 
-    # Help-doc icons (one observer per tool, registered once at module init).
-    register_tool_help("fastp", input, reopen = function() pre_opts_modal(rv))
-    register_tool_help("getOrganelle", input, reopen = function() assemble_opts_modal(rv))
-    register_tool_help("mitofinder", input, reopen = function() assemble_opts_modal(rv))
-    register_tool_help("bowtie2", input)
-    register_tool_help("bwa-mem", input)
-    register_tool_help("bwa-aln", input)
-    register_tool_help("samtools-consensus", input)
-    register_tool_help("blastn", input, reopen = function() blast_opts_modal(rv))
-
     # Prepare data ----
     rv <- reactiveValues(
       pre_opts = dplyr::tbl(session$userData$con, "pre_opts") |>

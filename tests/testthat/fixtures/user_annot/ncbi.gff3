@@ -1,0 +1,15 @@
+##gff-version 3
+##sequence-region NC_000001.1 1 16500
+NC_000001.1	RefSeq	region	1	16500	.	+	.	ID=NC_000001.1:1..16500;Dbxref=taxon:9999;Is_circular=true;gbkey=Src;genome=mitochondrion;mol_type=genomic DNA
+NC_000001.1	RefSeq	gene	1	69	.	+	.	ID=gene-TRNF;Name=TRNF;gbkey=Gene;gene=TRNF;gene_biotype=tRNA
+NC_000001.1	RefSeq	tRNA	1	69	.	+	.	ID=rna-TRNF;Parent=gene-TRNF;gbkey=tRNA;gene=TRNF;product=tRNA-Phe;anticodon=(pos:34..36)
+NC_000001.1	RefSeq	exon	1	69	.	+	.	ID=exon-TRNF-1;Parent=rna-TRNF;gbkey=tRNA;gene=TRNF;product=tRNA-Phe
+NC_000001.1	RefSeq	gene	70	1023	.	+	.	ID=gene-RNR1;Name=RNR1;gbkey=Gene;gene=RNR1;gene_biotype=rRNA
+NC_000001.1	RefSeq	rRNA	70	1023	.	+	.	ID=rna-RNR1;Parent=gene-RNR1;gbkey=rRNA;gene=RNR1;product=12S ribosomal RNA
+NC_000001.1	RefSeq	gene	5000	6544	.	+	.	ID=gene-COX1;Name=COX1;gbkey=Gene;gene=COX1;gene_biotype=protein_coding
+NC_000001.1	RefSeq	mRNA	5000	6544	.	+	.	ID=rna-COX1;Parent=gene-COX1;gbkey=mRNA;gene=COX1
+NC_000001.1	RefSeq	CDS	5000	6544	.	+	0	ID=cds-YP_000001.1;Parent=rna-COX1;Dbxref=GenBank:YP_000001.1;Name=YP_000001.1;gbkey=CDS;gene=COX1;product=cytochrome c oxidase subunit I;protein_id=YP_000001.1;transl_table=2
+NC_000001.1	RefSeq	gene	14149	14673	.	-	.	ID=gene-ND6;Name=ND6;gbkey=Gene;gene=ND6;gene_biotype=protein_coding;partial=true;start_range=.,14149
+NC_000001.1	RefSeq	mRNA	14149	14673	.	-	.	ID=rna-ND6;Parent=gene-ND6;gbkey=mRNA;gene=ND6;partial=true;start_range=.,14149
+NC_000001.1	RefSeq	CDS	14149	14673	.	-	0	ID=cds-YP_000002.1;Parent=rna-ND6;Dbxref=GenBank:YP_000002.1;Name=YP_000002.1;gbkey=CDS;gene=ND6;partial=true;start_range=.,14149;product=NADH dehydrogenase subunit 6;protein_id=YP_000002.1;transl_table=2
+NC_000001.1	RefSeq	D_loop	15900	16500	.	+	.	ID=id-NC_000001.1:15900..16500;gbkey=D-loop

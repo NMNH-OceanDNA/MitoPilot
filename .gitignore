@@ -34,3 +34,8 @@ inst/native/pixi.lock
 inst/native/.pixi/
 tests/testthat/_problems/
 tests/testthat/testthat-problems.rds
+website/*
+!website/_quarto.yml
+!website/index.qmd
+!website/build.R
+!website/theme.scss

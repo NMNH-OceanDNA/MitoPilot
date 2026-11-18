@@ -44,7 +44,7 @@
 #' @param curate_memory Default memory (GB) for curation
 #' @param curate_target Default target database for curation
 #' @param curate_ref_db Default curation reference database (default =
-#'   "Metazoa_RefSeq235", the only bundled DB with rRNA BLAST references)
+#'   "Metazoa_RefSeq235", the only bundled curation database)
 #' @param max_blast_hits Maximum number of top BLAST hits to retain (default = 10)
 #' @param linear_complete Treat linear assemblies as complete genomes for the
 #'   export "completeness" field? By default only circular assemblies are
@@ -125,7 +125,7 @@ new_db_userAsmb <- function(
     mitos_opts = "--intron 0 --oril 0",
     trnaScan_opts = "-M vert -X 20",
     arwen_opts = "-mtx",
-    aragorn_opts = "-m -gcstd",
+    aragorn_opts = "-mtx",
     # Default curation options
     curate_cpus = 4,
     curate_memory = 8,
@@ -706,6 +706,7 @@ new_db_userAsmb <- function(
       mitos_opts TEXT,
       use_mitos_best INTEGER,
       rescue_no_trna INTEGER,
+      run_tools INTEGER,
       use_trnaScan INTEGER,
       trnaScan_opts TEXT,
       arwen_opts TEXT,
@@ -737,6 +738,7 @@ new_db_userAsmb <- function(
         mitos_opts = mitos_opts,
         use_mitos_best = 1L,
         rescue_no_trna = 1L,
+        run_tools = 1L,
         use_trnaScan = 1L,
         trnaScan_opts = trnaScan_opts,
         arwen_opts = arwen_opts,
@@ -869,6 +871,7 @@ new_db_userAsmb <- function(
       stop_codon TEXT,
       partial_start INTEGER,
       partial_stop INTEGER,
+      codon_start INTEGER,
       translation TEXT,
       notes TEXT,
       warnings TEXT,
@@ -892,6 +895,8 @@ new_db_userAsmb <- function(
       pos2 INTEGER,
       direction TEXT,
       ref_length INTEGER,
+      partial_start INTEGER,
+      partial_stop INTEGER,
       time_stamp INTEGER,
       PRIMARY KEY (accession, gene, pos1)
     );"
@@ -941,6 +946,7 @@ new_db_userAsmb <- function(
       ref_length INTEGER NOT NULL,
       ref_start INTEGER NOT NULL DEFAULT 0,
       strand TEXT NOT NULL DEFAULT '+',
+      sample_rotation INTEGER NOT NULL DEFAULT 0,
       time_stamp INTEGER,
       PRIMARY KEY (ID, path, scaffold, accession)
     );"

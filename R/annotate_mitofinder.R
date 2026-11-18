@@ -264,33 +264,8 @@ annotate_mitofinder <- function(
   # output so downstream curation has the same fields. MitoFinder coordinates are
   # normally pos1 <= pos2; extract_circ_region() reads across the origin anyway so
   # a pos1 > pos2 call yields the gene rather than aborting the whole sample.
-  gc <- Biostrings::getGeneticCode(as.character(genetic_code))
   annotations <- annotations |>
-    dplyr::rowwise() |>
-    dplyr::mutate(
-      # coding-strand sequence for this feature (reverse-complemented when on "-")
-      .cds = if (type == "PCG") {
-        suppressWarnings({
-          s <- extract_circ_region(assembly[contig], pos1, pos2)
-          if (direction == "-") s <- Biostrings::reverseComplement(s)
-          unname(as.character(s))
-        })
-      } else NA_character_,
-      start_codon = if (type == "PCG" && !is.na(.cds)) substr(.cds, 1L, 3L) else NA_character_,
-      stop_codon = if (type == "PCG" && !is.na(.cds)) {
-        n <- nchar(.cds)
-        len <- if (n %% 3L == 0L) 3L else n %% 3L
-        substr(.cds, n - len + 1L, n)
-      } else NA_character_,
-      translation = if (type == "PCG" && !is.na(.cds)) {
-        suppressWarnings(
-          Biostrings::DNAString(substr(.cds, 1L, nchar(.cds) - nchar(stop_codon))) |>
-            Biostrings::translate(genetic.code = gc, if.fuzzy.codon = "solve") |>
-            as.character()
-        )
-      } else NA_character_
-    ) |>
-    dplyr::ungroup() |>
+    add_pcg_codons(assembly, genetic_code) |>
     dplyr::select(
       contig, type, gene, product, pos1, pos2, length, direction, tRNA_ID,
       anticodon, start_codon, stop_codon, translation

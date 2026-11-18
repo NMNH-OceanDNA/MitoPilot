@@ -70,8 +70,6 @@ assemble_server_userAsmb <- function(id) {
     meta_view_setup(input, output, session)
     fetch_data <- function() meta_view_join(fetch_assemble_data_userAsmb(), session$userData$con)
 
-    register_tool_help("fastp", input, reopen = function() pre_opts_modal(rv))
-    register_tool_help("blastn", input, reopen = function() blast_opts_modal(rv))
 
     # Prepare data ----
     rv <- reactiveValues(
@@ -149,6 +147,7 @@ assemble_server_userAsmb <- function(id) {
     # No-raw-data projects have no reads/coverage, so hide the read-derived
     # columns (preprocess opts, read count, read length) entirely.
     no_raw <- isTRUE(session$userData$no_raw_data)
+    user_annot <- isTRUE(session$userData$user_annot)
 
     # Hide unselected column groups and lock/state codes via CSS. Hiding (not
     # removing) keeps columns/rows mounted, so filters, sort, page, and
@@ -291,8 +290,9 @@ assemble_server_userAsmb <- function(id) {
               header = mp_col_header("find_mito_opts"),
               html = T,
               width = 140,
-              cell = rt_link(ns("set_find_mito_opts"), title = "Edit mitogenome search options",
-                             lock_col = "assemble_lock")
+              cell = if (user_annot) function(value) "off" else
+                rt_link(ns("set_find_mito_opts"), title = "Edit mitogenome search options",
+                        lock_col = "assemble_lock")
             ),
             # The note doubles as the link to the search evidence.
             find_mito_notes = colDef(
@@ -311,8 +311,9 @@ assemble_server_userAsmb <- function(id) {
               header = mp_col_header("circularize_opts"),
               html = T,
               width = 140,
-              cell = rt_link(ns("set_circularize_opts"), title = "Edit circularization options",
-                             lock_col = "assemble_lock")
+              cell = if (user_annot) function(value) "off" else
+                rt_link(ns("set_circularize_opts"), title = "Edit circularization options",
+                        lock_col = "assemble_lock")
             ),
             # The note doubles as the link to the circularization evidence.
             circularize_notes = colDef(

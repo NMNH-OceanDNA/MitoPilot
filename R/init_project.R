@@ -52,7 +52,7 @@
 #'   "lsf", "NMNH_Hydra", "NOAA_SEDNA") or the name of a saved cluster profile
 #'   created with [generate_config()]. See [list_configs()] for available names.
 #' @param Rproj (logical) Initialize and open an RStudio project in the project
-#'   directory (default = TRUE). This option has no effect if not running
+#'   directory (default = FALSE). This option has no effect if not running
 #'   interactively in RStudio.
 #' @param custom_seeds_db Full path to custom seeds database for GetOrganelle
 #' @param custom_labels_db Full path to custom labels database for GetOrganelle
@@ -94,7 +94,7 @@ new_project <- function(
     config = NULL,
     profile_dir = mitopilot_config_dir(),
     ncbi_api_key = NULL,
-    Rproj = TRUE,
+    Rproj = FALSE,
     force = FALSE,
     ...) {
   # Fail early on an unsupported Nextflow (see README "Nextflow compatibility").

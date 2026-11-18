@@ -29,7 +29,7 @@ new_project_userAsmb(
   config = NULL,
   profile_dir = mitopilot_config_dir(),
   ncbi_api_key = NULL,
-  Rproj = TRUE,
+  Rproj = FALSE,
   force = FALSE,
   ...
 )
@@ -145,7 +145,7 @@ rate limits for the remote BLAST + GenBank fetch steps. See
 empty and edited later in `.config` (`params.ncbi_api_key`).}
 
 \item{Rproj}{(logical) Initialize and open an RStudio project in the project
-directory (default = TRUE). This option has no effect if not running
+directory (default = FALSE). This option has no effect if not running
 interactively in RStudio.}
 
 \item{force}{(logical) Force recreating of existing project database and

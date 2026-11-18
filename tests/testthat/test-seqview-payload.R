@@ -133,3 +133,17 @@ test_that("an assembly without reads carries no coverage tracks", {
   expect_null(p$depth); expect_null(p$err)
   expect_null(seqview_payload(a, "ACGT", "linear", "S1.1.1", coverage = NULL)$depth)
 })
+
+test_that("original features are carried only when given", {
+  o <- data.frame(name = c("COI", "rep"), gene = c("cox1", NA), type = c("PCG", ""),
+                  pos1 = c(10L, 50L), pos2 = c(39L, 60L), dir = "+",
+                  status = c("unchanged", "unmapped"), orig1 = c(10L, 50L), orig2 = c(39L, 60L),
+                  odir = "+", stringsAsFactors = FALSE)
+  p <- seqview_payload(sv_ann(), "ACGT", "linear", "S1.1.1", original = o)
+  expect_length(p$original, 2)
+  expect_equal(p$original[[1]][c("name", "gene", "status", "pos1", "orig2")],
+               list(name = "COI", gene = "cox1", status = "unchanged", pos1 = 10L, orig2 = 39L))
+  expect_null(p$original[[2]]$gene)
+  expect_null(seqview_payload(sv_ann(), "ACGT", "linear", "S1.1.1")$original)
+  expect_null(seqview_payload(sv_ann(), "ACGT", "linear", "S1.1.1", original = o[0, ])$original)
+})

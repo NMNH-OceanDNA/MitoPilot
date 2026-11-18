@@ -421,3 +421,29 @@ test_that("pan moves the view by a fraction of its width, back again, and clamps
   expect_equal(v[3], v[1], tolerance = 1e-6)
   expect_equal(v[4], 1)
 })
+
+test_that("original track packs above the curated lanes, toggles off, and is not clickable", {
+  b <- sv_page()
+  r <- js(b, "(function(){
+    window.__inputs = [];
+    var seq = Array(2000).join('ACGT').slice(0, 2000);
+    window.__handlers.mpseq({id:'sv-canvas', input:'sv-pick', unit:'S1.1.1', len:2000, topology:'circular', seq:seq, version:1, selected:null,
+      features:[{row:1,type:'PCG',gene:'nad1',pos1:100,pos2:399,dir:'+',partial5:false,partial3:false,notes:''}],
+      original:[{name:'ND1',gene:'nad1',type:'PCG',pos1:100,pos2:402,dir:'+',status:'moved',orig1:100,orig2:402,odir:'+'},
+                {name:'CYTB',gene:'cob',type:'PCG',pos1:1950,pos2:60,dir:'+',status:'dropped',orig1:1950,orig2:60,odir:'+'}]});
+    window.mpseq.whole('sv-canvas');
+    var s0 = window.mpseq.state('sv-canvas');
+    var y = window.mpseq.laneY('sv-canvas', 0);
+    var h = window.mpseq.hitTest('sv-canvas', 200, y - 22);
+    window.mpseq.click('sv-canvas', 200, y - 22);
+    var wrapHit = window.mpseq.hitTest('sv-canvas', 62, y - 22);
+    var box = document.getElementById('sv-show_orig'); box.checked = false; box.dispatchEvent(new Event('change'));
+    var s1 = window.mpseq.state('sv-canvas');
+    return JSON.stringify({n0:s0.nOrigLanes, n1:s1.nOrigLanes, orig:s0.original.length, hitOrig: !!(h && h.orig),
+      hitName: h && h.f && h.f.name, wrapHit: !!(wrapHit && wrapHit.orig),
+      sent: window.__inputs.length, sel: s1.selected, taller: s0.height > s1.height});})()")
+  r <- jsonlite::fromJSON(r)
+  expect_equal(r$n0, 1L); expect_equal(r$n1, 0L); expect_equal(r$orig, 2L)
+  expect_true(r$hitOrig); expect_equal(r$hitName, "ND1"); expect_true(r$wrapHit)
+  expect_equal(r$sent, 0L); expect_null(r$sel); expect_true(r$taller)
+})

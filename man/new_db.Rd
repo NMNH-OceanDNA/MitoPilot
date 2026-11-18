@@ -45,7 +45,7 @@ new_db(
   mitos_opts = "--intron 0 --oril 0",
   trnaScan_opts = "-M vert -X 20",
   arwen_opts = "-mtx",
-  aragorn_opts = "-m -gcstd",
+  aragorn_opts = "-mtx",
   curate_cpus = 4,
   curate_memory = 8,
   curate_target = "fish_mito",
@@ -170,7 +170,7 @@ but flagged as ignored (default = 500).}
 \item{curate_target}{Default target database for curation}
 
 \item{curate_ref_db}{Default curation reference database (default =
-"Metazoa_RefSeq235", the only bundled DB with rRNA BLAST references)}
+"Metazoa_RefSeq235", the only bundled curation database)}
 
 \item{max_blast_hits}{Maximum number of top BLAST hits to retain (default = 10)}
 

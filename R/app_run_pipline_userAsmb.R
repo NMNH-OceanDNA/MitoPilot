@@ -91,6 +91,12 @@ pipeline_server_userAsmb <- function(id) {
     }
 
     on("run_modal", {
+      if (annot_import_blocks_run(session)) {
+        mp_alert("Gene names not confirmed",
+                 "Review and confirm the imported gene names first (Gene names button, or Review in the header).",
+                 type = "warning")
+        req(FALSE)
+      }
       job_submitting(FALSE)
       # Generate Nextflow params ----
       run_base(run_basename(session$userData$mode))

@@ -552,6 +552,13 @@ rotate_alignment_columns <- function(aligned_sample, aligned_ref, strand, rotati
   )
 }
 
+#' Was this row aligned from a rotated sample copy (circular sample, linear ref)?
+#' Its sample track is not in stored coordinates, so edits drop it for recompute.
+#' @noRd
+sample_copy_rotated <- function(rows, i) {
+  isTRUE(rows$sample_rotation[i] > 0)
+}
+
 #' Which of these accessions are circular references?
 #' @noRd
 circular_ref_accessions <- function(con, accessions) {
@@ -577,7 +584,7 @@ project_ref_alignment_trim <- function(con, id, path, scaffold, n, from, to) {
   rows <- ref_alignment_rows(con, id, path, scaffold)
   if (is.null(rows)) return(invisible())
   for (i in seq_len(nrow(rows))) {
-    res <- tryCatch(
+    res <- if (sample_copy_rotated(rows, i)) NULL else tryCatch(
       project_alignment_trim(
         rows$aligned_sample[i], rows$aligned_ref[i], rows$strand[i],
         rows$rotation[i], n, from, to
@@ -600,7 +607,7 @@ rotate_ref_alignment <- function(con, id, path, scaffold, n, start) {
   if (is.null(rows)) return(invisible())
   circular <- circular_ref_accessions(con, rows$accession)
   for (i in seq_len(nrow(rows))) {
-    res <- if (!(rows$accession[i] %in% circular)) NULL else tryCatch(
+    res <- if (!(rows$accession[i] %in% circular) || sample_copy_rotated(rows, i)) NULL else tryCatch(
       rotate_alignment_columns(
         rows$aligned_sample[i], rows$aligned_ref[i], rows$strand[i],
         rows$rotation[i], rows$ref_length[i], n, start
@@ -688,4 +695,159 @@ restore_assembly_unit <- function(con, id, path, scaffold, dir_out) {
     annotate_topology = bak$annotate_topology[1],
     ops = strsplit(bak$ops[1] %|NA|% "", "\\+")[[1]]
   ))
+}
+
+#' Rotate a circular unit so a chosen feature starts it, on the plus strand
+#'
+#' A plus-strand feature becomes position 1. A minus-strand feature is put at
+#' the end and the whole unit is reverse-complemented, so it too starts at
+#' position 1 reading forward. Rewrites the same records as a trim: `assemblies`,
+#' the annotations, the annotate-stage FASTA + coverage CSV, the cached reference
+#' alignments, and `annotate.structure`.
+#'
+#' @param gene,pos1 Key of the feature to start on.
+#' @return list(gene, rotated, flipped)
+#' @noRd
+reorient_assembly_unit <- function(con, id, path, scaffold, dir_out, gene, pos1) {
+  id <- as.character(id); path <- as.integer(path); scaffold <- as.integer(scaffold)
+  key <- list(id, path, scaffold)
+
+  asm <- DBI::dbGetQuery(
+    con,
+    "SELECT sequence, topology, depth, gc, errors FROM assemblies
+     WHERE ID = ? AND path = ? AND scaffold = ?",
+    params = key
+  )
+  if (nrow(asm) == 0 || is.na(asm$sequence[1]) || !nzchar(asm$sequence[1])) {
+    stop("No sequence on record for assembly ", id, ".", path, ".", scaffold, call. = FALSE)
+  }
+  if (!identical(asm$topology[1], "circular")) {
+    stop("Only circular assemblies can be rotated.", call. = FALSE)
+  }
+  n <- nchar(asm$sequence[1])
+
+  ann <- DBI::dbGetQuery(
+    con, "SELECT * FROM annotations WHERE ID = ? AND path = ? AND scaffold = ?",
+    params = key
+  )
+  live <- !is.na(ann$pos1) & ann$pos1 > 0
+  row <- which(live & ann$gene == gene & ann$pos1 == as.integer(pos1))
+  if (length(row) != 1L) {
+    stop("Feature ", gene, " was not found on this assembly.", call. = FALSE)
+  }
+  rc <- identical(ann$direction[row], "-")
+  s <- wrap_pos(if (rc) ann$pos2[row] + 1L else ann$pos1[row], n)
+  if (s == 1L && !rc) {
+    stop("This assembly already starts on ", gene, ".", call. = FALSE)
+  }
+  # the cut lands just before s; a feature covering both sides of it would be split
+  split <- live & circ_overlap(s, s, ann$pos1, ann$pos2) &
+    circ_overlap(wrap_pos(s - 1L, n), wrap_pos(s - 1L, n), ann$pos1, ann$pos2)
+  if (any(split)) {
+    stop(
+      "Starting on ", gene, " would split the ",
+      paste(unique(ann$gene[split]), collapse = ", "), " annotation.",
+      call. = FALSE
+    )
+  }
+
+  cov_fn <- resolve_unit_coverage_file(dir_out, id, path, scaffold)
+  cov <- if (file.exists(cov_fn)) tryCatch(utils::read.csv(cov_fn), error = function(e) NULL) else NULL
+  has_cov <- !is.null(cov) && nrow(cov) > 0
+  if (has_cov) {
+    pos_ok <- "Position" %in% names(cov) &&
+      identical(as.integer(cov$Position), seq_len(nrow(cov)))
+    if (("SeqId" %in% names(cov) && dplyr::n_distinct(cov$SeqId) > 1) ||
+        nrow(cov) != n || !pos_ok) {
+      stop(
+        "The coverage track does not line up with the assembly (", n, " bp), so ",
+        "rotating would desynchronize them. Re-run the annotation workflow ",
+        "for this sample first.",
+        call. = FALSE
+      )
+    }
+  }
+
+  snapshot_assembly_unit(con, id, path, scaffold, dir_out, "reorient")
+
+  # old position of each new base, in new order
+  ord <- c(seq.int(s, n), seq_len(s - 1L))
+  if (rc) ord <- rev(ord)
+  dna <- Biostrings::DNAString(asm$sequence[1])
+  dna <- Biostrings::xscat(Biostrings::subseq(dna, s, n), Biostrings::subseq(dna, 1L, s - 1L))
+  if (rc) dna <- Biostrings::reverseComplement(dna)
+  new_seq <- as.character(dna)
+
+  reorder_string <- function(x) {
+    if (is.null(x) || length(x) == 0 || is.na(x) || !nzchar(x)) return(NA_character_)
+    v <- strsplit(trimws(x), "\\s+")[[1]]
+    if (length(v) != n) return(NA_character_)
+    paste(v[ord], collapse = " ")
+  }
+  if (has_cov) {
+    cov <- cov[ord, , drop = FALSE]
+    cov$Position <- seq_len(n)
+    if ("Call" %in% names(cov)) cov$Call <- strsplit(new_seq, "")[[1]]
+    readr::write_csv(cov, cov_fn, quote = "none", na = "")
+    new_depth  <- cov_column_string(cov$MeanDepth)
+    new_gc     <- cov_column_string(cov$GC)
+    new_errors <- cov_column_string(cov$ErrorRate)
+  } else {
+    new_depth  <- reorder_string(asm$depth[1])
+    new_gc     <- reorder_string(asm$gc[1])
+    new_errors <- reorder_string(asm$errors[1])
+  }
+
+  DBI::dbExecute(
+    con,
+    "UPDATE assemblies SET sequence = ?, depth = ?, gc = ?, errors = ?,
+       edited = 1, time_stamp = ? WHERE ID = ? AND path = ? AND scaffold = ?",
+    params = list(new_seq, new_depth, new_gc, new_errors, as.integer(Sys.time()),
+                  id, path, scaffold)
+  )
+
+  p1 <- wrap_pos(ann$pos1[live] - s + 1L, n)
+  p2 <- wrap_pos(ann$pos2[live] - s + 1L, n)
+  if (rc) {
+    ann$pos1[live] <- n - p2 + 1L
+    ann$pos2[live] <- n - p1 + 1L
+    ann$direction[live] <- ifelse(ann$direction[live] == "-", "+", "-")
+  } else {
+    ann$pos1[live] <- p1
+    ann$pos2[live] <- p2
+  }
+  DBI::dbExecute(
+    con, "DELETE FROM annotations WHERE ID = ? AND path = ? AND scaffold = ?",
+    params = key
+  )
+  DBI::dbAppendTable(con, "annotations", ann)
+
+  # A flip changes the strand of every alignment; drop them for recompute.
+  if (rc) {
+    drop_stale_ref_alignment(con, id, path, scaffold)
+  } else {
+    rotate_ref_alignment(con, id, path, scaffold, n, s)
+  }
+  write_unit_assembly_fasta(dir_out, id, path, scaffold, new_seq, "circular")
+
+  # ponytail: gene order is re-cut at the first token named `gene`; a multi-copy
+  # start gene may pick the wrong copy. Recompute from annotations if it matters.
+  st <- DBI::dbGetQuery(
+    con, "SELECT structure FROM annotate WHERE ID = ? AND path = ? AND scaffold = ?",
+    params = key
+  )$structure
+  if (length(st) == 1L && !is.na(st)) {
+    tok <- strsplit(st, "|", fixed = TRUE)[[1]]
+    if (rc) tok <- rev(tok)
+    k <- match(gene, tok)
+    if (!is.na(k)) {
+      DBI::dbExecute(
+        con, "UPDATE annotate SET structure = ? WHERE ID = ? AND path = ? AND scaffold = ?",
+        params = list(paste(tok[c(seq.int(k, length(tok)), seq_len(k - 1L))], collapse = "|"),
+                      id, path, scaffold)
+      )
+    }
+  }
+
+  list(gene = gene, rotated = s - 1L, flipped = rc)
 }
