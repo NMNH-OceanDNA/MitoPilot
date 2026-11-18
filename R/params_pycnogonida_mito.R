@@ -54,6 +54,7 @@ params_pycnogonida_mito <- function(alt = list()) {
       ),
       cox1 = list(
         type = "PCG",
+        start_codons = c("ATG", "GTG", "ATA", "ATT", "ATC", "TTG", "CGA"),
         intron = TRUE,
         overlap = list(start = 2, stop = T)
       ),

@@ -54,7 +54,7 @@ params_malacostraca_mito <- function(alt = list()) {
       ),
       cox1 = list(
         type = "PCG",
-        start_codons = c("ATG", "GTG", "ATA", "ATT", "ATC", "TTG", "ACG", "TCG", "CTG", "AAG"),
+        start_codons = c("ATG", "GTG", "ATA", "ATT", "ATC", "TTG", "ACG", "TCG", "CTG", "AAG", "CGA"),
         overlap = list(start = 2, stop = T)
       ),
       cox2 = list(

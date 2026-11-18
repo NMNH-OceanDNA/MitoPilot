@@ -54,7 +54,7 @@ params_thecostraca_mito <- function(alt = list()) {
       ),
       cox1 = list(
         type = "PCG",
-        start_codons = c("ATG", "GTG", "ATA", "ATT", "ATC", "TTG", "ACG", "TCG"),
+        start_codons = c("ATG", "GTG", "ATA", "ATT", "ATC", "TTG", "ACG", "TCG", "CGA"),
         overlap = list(start = 2, stop = T)
       ),
       cox2 = list(
