@@ -156,6 +156,9 @@ In the Annotate details window, open **BLAST Reference Synteny**, click the miss
 MitoPilot finds where that gene sits in your assembly and adds it as a new annotation once you pick a placement.
 See ["Add a missing gene from the reference"](Test-Project-Annotate.html#add-a-missing-gene-from-the-reference).
 
+If the same gene is missing from many assemblies, change the annotation settings first.
+See ["Handling difficult annotations"](Difficult-Annotations.html#a-gene-is-missing).
+
 ## Why does it take so long to edit a start/stop codon position?
 
 Every time you make a manual edit to the start or stop codon position, MitoPilot has to re-do the sequence alignment.

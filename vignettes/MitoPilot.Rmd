@@ -322,6 +322,7 @@ Additional articles for you to explore:
 - [Building custom databases](custom_dbs.html)
 - [Choosing an assembly method](Assembly-Methods.html)
 - [Handling difficult assemblies](Difficult-Assemblies.html)
+- [Handling difficult annotations](Difficult-Annotations.html)
 - [Curation ruleset browser](Ruleset-Browser.html) and [curation and validation details](Curation-and-Validation.html)
 - [HPC cluster support](Custom-HPC.html),
   [Smithsonian Hydra](NMNH-Hydra.html), and [NOAA SEDNA](NOAA-SEDNA.html)
