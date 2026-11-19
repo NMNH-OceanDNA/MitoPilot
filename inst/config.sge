@@ -17,8 +17,8 @@ process {
   queue = '<<QUEUE>>'                 // SGE/UGE queue (maps to -q)
   penv = '<<PENV>>'                   // parallel environment for multi-threaded jobs
   clusterOptions = '-S /bin/bash <<CLUSTER_OPTIONS>>' // extra qsub directives, e.g. -l h_data=...
-  cpus = { opts.cpus }               // set number of CPUs based on value pulled from SQL database
-  memory = { opts.memory.GB * task.attempt } // set memory based on value pulled from SQL database
+  cpus = { opts?.cpus ?: 1 }               // set number of CPUs based on value pulled from SQL database
+  memory = { ((opts?.memory instanceof Number) ? opts.memory : 4).GB * task.attempt } // set memory based on value pulled from SQL database
 }
 
 // SQL database configuration (https://github.com/nextflow-io/nf-sqldb)

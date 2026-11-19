@@ -1,3 +1,7 @@
+# MitoPilot (development version)
+
+- **Fix: Assemble workflow crashed on scheduler executors after scaffold joining.** With the SLURM, PBS, LSF, SGE, AWS Batch, and NOAA_SEDNA executors, the run stopped with "Unknown method invocation `multiply` on ConfigObject type" at the step that saves scaffold mappings. The same error could stop the reference database and curation-saving steps of the Annotate workflow. These steps now set their own CPU and memory (1 CPU, 4 GB), and the config templates fall back to the same values for any step without per-sample options. Projects created before this version get the fix from the package update alone; no config change is needed.
+
 # MitoPilot 1.6.0
 
 Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`

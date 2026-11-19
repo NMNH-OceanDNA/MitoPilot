@@ -26,7 +26,7 @@ process {
       "-l mres=${opts.memory * task.attempt}G,h_data=${(opts.memory * task.attempt) / opts.cpus}G,h_vmem=${(opts.memory * task.attempt) / opts.cpus}G -S /bin/bash"
     }
   }
-  cpus = { opts.cpus } // set number of CPUs based on value pulled from SQL database
+  cpus = { opts?.cpus ?: 1 } // set number of CPUs based on value pulled from SQL database
 }
 
 // SQL database configuration (https://github.com/nextflow-io/nf-sqldb)
