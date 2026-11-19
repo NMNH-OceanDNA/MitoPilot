@@ -7,8 +7,8 @@ plugins {
 process {
   executor = 'local'
   container = '<<CONTAINER_ID>>'
-  cpus = { opts.cpus }
-  memory = { (opts?.memory?.GB ?: 1) * task.attempt }
+  cpus = { opts?.cpus ?: 1 }
+  memory = { ((opts?.memory instanceof Number) ? opts.memory : 4).GB * task.attempt }
 }
 
 // SQL database configuration (https://github.com/nextflow-io/nf-sqldb)

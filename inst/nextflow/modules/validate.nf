@@ -61,6 +61,9 @@ process write_curated_result {
     // local executor so it isn't routed to sge/slurm (which can't run native
     // tasks and emits a "cannot be executed by ... Using 'local' instead" warn).
     executor 'local'
+    // No `opts` input: set these so the config's opts-based defaults are not evaluated
+    cpus 1
+    memory 4.GB
     maxForks 1
     errorStrategy 'ignore'
     tag "${id}.${path}.${scaffold}"

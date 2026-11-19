@@ -11,8 +11,8 @@ process {
   executor = 'local'
   container = '<<CONTAINER_ID>>'
   queue = '<<BATCH_QUEUE>>'
-  cpus = { opts.cpus }
-  memory = { opts.memory.GB * task.attempt}
+  cpus = { opts?.cpus ?: 1 }
+  memory = { ((opts?.memory instanceof Number) ? opts.memory : 4).GB * task.attempt }
 }
 
 // AWS Batch parameters (modify as needed, see: https://www.nextflow.io/docs/latest/aws.html#aws-batch)

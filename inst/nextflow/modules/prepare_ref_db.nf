@@ -18,6 +18,9 @@ process prepare_ref_db {
     // 45 MB copy is negligible.
     stageInMode 'copy'
     executor 'local'
+    // No `opts` input: set these so the config's opts-based defaults are not evaluated
+    cpus 1
+    memory 4.GB
 
     input:
     tuple val(clade), path(tarball)
