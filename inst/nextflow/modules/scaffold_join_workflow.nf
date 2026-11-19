@@ -97,6 +97,9 @@ def asFileList(x) {
 process write_scaffold_mappings {
 
     executor 'local'
+    // No `opts` input: set these so the config's opts-based defaults are not evaluated
+    cpus 1
+    memory 4.GB
     maxForks 1
     errorStrategy 'ignore'
     tag "${id}"

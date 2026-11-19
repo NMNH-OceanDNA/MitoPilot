@@ -16,8 +16,8 @@ process {
   container = '<<CONTAINER_ID>>'
   queue = '<<QUEUE>>'                 // SLURM partition (maps to -p)
   clusterOptions = '<<CLUSTER_OPTIONS>>' // extra sbatch directives, e.g. --account=...
-  cpus = { opts.cpus }               // set number of CPUs based on value pulled from SQL database
-  memory = { opts.memory.GB * task.attempt } // set memory based on value pulled from SQL database
+  cpus = { opts?.cpus ?: 1 }               // set number of CPUs based on value pulled from SQL database
+  memory = { ((opts?.memory instanceof Number) ? opts.memory : 4).GB * task.attempt } // set memory based on value pulled from SQL database
 }
 
 // SQL database configuration (https://github.com/nextflow-io/nf-sqldb)

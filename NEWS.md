@@ -2,6 +2,8 @@
 
 Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`
 
+- **Fix: Assemble workflow crashed on scheduler executors after scaffold joining.** With the SLURM, PBS, LSF, SGE, AWS Batch, and NOAA_SEDNA executors, the run stopped with "Unknown method invocation `multiply` on ConfigObject type" at the step that saves scaffold mappings. The same error could stop the reference database and curation-saving steps of the Annotate workflow. These steps now set their own CPU and memory (1 CPU, 4 GB), and the config templates fall back to the same values for any step without per-sample options. Projects created before this version get the fix from the package update alone; no config change is needed.
+
 - **Fix: "Also use ARAGORN for tRNA prediction" found nothing.** ARAGORN ran with options that search for tmRNA only, and its results were read in the wrong layout, so it never added a tRNA. The default options are now `-mtx` (metazoan mitochondrial tRNAs, low-scoring hits left out) and the results are read correctly. Existing parameter sets keep their saved ARAGORN options: change them to `-mtx` in the Annotation options to get the fix.
 
 - **Curation rules: CGA start codon for COX1.** The Diptera, Malacostraca, Thecostraca, and Pycnogonida rulesets now accept CGA as a start codon for COX1 only. It is annotated as the COX1 start in a minority of RefSeq mitogenomes in these groups.
