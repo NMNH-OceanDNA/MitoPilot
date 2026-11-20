@@ -1,5 +1,7 @@
 # MitoPilot (development version)
 
+- **Curation: badly truncated genes are now extended.** A protein-coding gene called far too short (for example from an internal start codon) scored below the hit threshold only because most of it was missing, so curation skipped it and left it flagged "low reference similarity", even with an identical reference. Curation now attempts the fix when the part that is present matches a reference and the reference extends past one end, and keeps the result only if the gene then clears the hit threshold. The "extending start" note is also no longer lost when a later step adjusts the same gene.
+
 - **Setup: user assemblies are checked for non-DNA characters.** `new_project_userAsmb()` and the other user-assembly setup functions now stop with a clear message when an assembly FASTA contains anything other than DNA bases and ambiguity codes (stray text, gap dashes, line numbers), naming the file and the characters. Before, such a file passed setup and the Assemble workflow, then failed in the Annotate workflow with "object 'type' not found".
 
 # MitoPilot 1.6.0

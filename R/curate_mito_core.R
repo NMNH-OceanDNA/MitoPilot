@@ -464,9 +464,13 @@ curate_mito_core <- function(
 
     # Stop if no hits above threshold
     refHits <- json_parse(refHits[[1]], TRUE)
-    if (nrow(refHits) == 0L || !any(refHits$similarity >= hit_threshold, na.rm = TRUE)) {
+    # A truncated call scores low similarity yet matches the part it covers;
+    # let it through, and keep the result only if it then clears the threshold.
+    low_sim <- nrow(refHits) == 0L || !any(refHits$similarity >= hit_threshold, na.rm = TRUE)
+    if (low_sim && !truncated_match(refHits, hit_threshold)) {
       return(cur)
     }
+    cur_in <- cur
 
     # start / stop codon options
     start_opts <- rules[[gene]][["start_codons"]]
@@ -492,7 +496,7 @@ curate_mito_core <- function(
             gaps_target <- gaps_target - 1
             next
           }
-          cur$notes <- semicolon_paste(cur$notes, stringr::str_glue("extending start {pos1 - pos1_new} bp"))
+          cur$notes <- notes <- semicolon_paste(notes, stringr::str_glue("extending start {pos1 - pos1_new} bp"))
           cur$pos1 <- pos1 <- circ_pos(contig, pos1_new)
           cur$length <- length <- feat_len(contig, pos1, pos2)
           cur$start_codon <- start_codon <- new_start_codon
@@ -856,6 +860,9 @@ curate_mito_core <- function(
       }
     }
 
+    if (low_sim && !any(refHits$similarity >= hit_threshold, na.rm = TRUE)) {
+      return(cur_in)
+    }
     cur$refHits <- json_string(refHits)
 
     return(cur)
@@ -1125,4 +1132,12 @@ curate_mito_core <- function(
     message("curate: re-rotated ", seqid, " to the start of ", anchor[[seqid]])
   }
   list(assembly = assembly, annotations = annotations, coverage = coverage)
+}
+
+#' TRUE when a hit matches the part of the query it covers but the query is
+#' missing an end, i.e. the low similarity comes from truncation
+#' @noRd
+truncated_match <- function(refHits, hit_threshold) {
+  nrow(refHits) > 0L && any(refHits$pctid >= hit_threshold &
+    (refHits$gap_leading > 0L | refHits$gap_trailing > 0L), na.rm = TRUE)
 }
