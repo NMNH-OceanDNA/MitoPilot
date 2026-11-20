@@ -172,3 +172,17 @@ test_that("MitoFinder db writer drops blank lines between records", {
   expect_match(got[1], "^LOCUS ")
   expect_true(all(nzchar(got)))
 })
+
+test_that("assembly check rejects non-DNA characters", {
+  d <- withr::local_tempdir()
+  writeLines(c(">a", "ACGTNRYacgt", "ACGT  "), file.path(d, "ok.fa"))
+  writeLines(c(">a", "ACGT", "8196, PV568198-PV568252"), file.path(d, "junk.fa"))
+  chk <- function(f) {
+    i <- .issues()
+    .check_assembly_files(f, "S1", "circular", d, FALSE, i)
+    i$errors
+  }
+  expect_length(chk("ok.fa"), 0)
+  expect_match(chk("junk.fa"), "not DNA", fixed = TRUE)
+  expect_match(chk("junk.fa"), "-", fixed = TRUE)
+})

@@ -473,6 +473,17 @@ check_user_annotations <- function(mapping, assembly_path, annotation_path, iss,
       NA_integer_
     })
     if (is.na(n)) next
+    # ponytail: reads the whole file into memory; sample or stream if
+    # multi-gigabase assemblies make this slow.
+    bad <- tryCatch(setdiff(
+      toupper(Biostrings::uniqueLetters(Biostrings::readBStringSet(paths[i]))),
+      c(strsplit("ACGTUMRWSYKVHDBN", "")[[1]], " ", "\t", "\r")
+    ), error = function(e) character(0))
+    if (length(bad)) {
+      iss$err("assemblies: ", files[i], " (", labels[i], ") contains characters that ",
+              "are not DNA bases or ambiguity codes: ", .lst(sQuote(bad, FALSE)),
+              "; remove any stray text, gaps, or line numbers from the sequence")
+    }
     if (n == 0L) {
       iss$err("assemblies: ", files[i], " (", labels[i], ") holds no sequences")
     } else if (n > 1L && nzchar(topo[i]) && !single_contig) {

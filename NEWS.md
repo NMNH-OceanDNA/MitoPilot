@@ -1,3 +1,7 @@
+# MitoPilot (development version)
+
+- **Setup: user assemblies are checked for non-DNA characters.** `new_project_userAsmb()` and the other user-assembly setup functions now stop with a clear message when an assembly FASTA contains anything other than DNA bases and ambiguity codes (stray text, gap dashes, line numbers), naming the file and the characters. Before, such a file passed setup and the Assemble workflow, then failed in the Annotate workflow with "object 'type' not found".
+
 # MitoPilot 1.6.0
 
 Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`
