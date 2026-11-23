@@ -266,7 +266,7 @@ $(document).on('click', '.mp-token-chip', function(e) {
   var box = document.getElementById($(this).closest('.mp-token-list').attr('data-target'));
   if (!box) return;
   var ins = this.getAttribute('data-insert');
-  var s = box.selectionStart, t = box.selectionEnd, v = box.value;
+  var n = mpHlLock(box), s = Math.max(n, box.selectionStart), t = Math.max(n, box.selectionEnd), v = box.value;
   box.value = v.slice(0, s) + ins + v.slice(t);
   box.selectionStart = box.selectionEnd = s + ins.length;
   box.focus();
@@ -330,8 +330,9 @@ function mpHlRender(box) {
   var sb = Math.max(0, box.offsetWidth - box.clientWidth - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth));
   back.style.paddingRight = (parseFloat(cs.paddingRight) + sb) + 'px';
   var map = mpTokMap($(box).closest('.modal'));
-  var esc = box.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  back.innerHTML = esc
+  var n = mpHlLock(box);
+  var esc = box.value.slice(n).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  back.innerHTML = (n ? '<span class="mp-hl-lock">' + box.value.slice(0, n) + '</span>' : '') + esc
     .replace(/\[[^\[\]{}=]*=/g, '<span class="mp-hl-mod">$&</span>')
     .replace(/\{[^{}]*\}/g, function(t) { return '<mark class="' + mpTokSrc(map, t) + '">' + t + '</mark>'; }) + '\n';
   back.scrollTop = box.scrollTop;
@@ -352,6 +353,24 @@ function mpHlInit(modal) {
   }
 }
 $(document).on('shown.bs.modal', function(e) { mpHlInit($(e.target)); });
+// The record name that opens a header is locked: edits that reach into it are refused.
+function mpHlLock(box) {
+  var k = box.getAttribute('data-lock');
+  return k && box.value.indexOf(k + ' ') === 0 ? k.length + 1 : 0;
+}
+$(document).on('beforeinput', 'textarea.mp-hl', function(e) {
+  var n = mpHlLock(this), s = this.selectionStart;
+  var back = s === this.selectionEnd && /Backward/.test(e.originalEvent.inputType || '');
+  if (n && (s < n || (back && s === n))) e.preventDefault();
+});
+// A FASTA header is one line: no Enter, and pasted line breaks become spaces.
+$(document).on('keydown', 'textarea.mp-hl', function(e) { if (e.key === 'Enter') e.preventDefault(); });
+$(document).on('input', 'textarea.mp-hl', function() {
+  if (!/[\r\n\t]/.test(this.value)) return;
+  var s = this.selectionStart;
+  this.value = this.value.replace(/[\r\n\t]+/g, ' ');
+  this.selectionStart = this.selectionEnd = s;
+});
 $(document).on('input change focus mouseup', 'textarea.mp-hl', function() { mpHlRender(this); });
 document.addEventListener('scroll', function(e) {
   if (e.target.classList && e.target.classList.contains('mp-hl')) mpHlRender(e.target);

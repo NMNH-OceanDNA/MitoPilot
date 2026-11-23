@@ -708,6 +708,7 @@ export_server <- function(id) {
         htmltools::tagQuery(
           textAreaInput(ns(id), label, value, width = "100%")
         )$find("textarea")$addClass("mp-hl")$addAttrs(spellcheck = "false", autocomplete = "off",
+          `data-lock` = "{seqid}", title = "{seqid} at the start is the record name and cannot be changed.",
           `aria-describedby` = ns(paste0(id, "_status"))
         )$before(uiOutput(ns(paste0(id, "_status"))))$after(
           tags$details(class = "mp-hdr-preview", open = NA,
@@ -802,6 +803,8 @@ export_server <- function(id) {
         )),
         div(class = "mp-card mp-card-plain",
             hdr_box("fasta_header", mp_help_label("Mitogenome FASTA header", mp_help_bullets(
+              tagList(tags$code("{seqid}"), " at the start is locked: it is the record name, and it must ",
+                      "match the name in the feature table or GenBank cannot pair the two files."),
               tagList(tags$code("{completeness}"), ": \"complete genome\" for circular, \"partial genome\" for linear."),
               "The Partial flag forces partial; the curation \"linear complete\" setting forces complete.",
               tagList("For GenBank, put ", tags$code("{completeness}"), " at the end of the header.")
