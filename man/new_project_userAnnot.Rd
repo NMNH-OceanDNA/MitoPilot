@@ -133,4 +133,6 @@ file (GFF3, BED, or 5-column feature table). The annotation tools are not
 run: the pipeline curates, validates, and exports the imported features.
 Gene names found in the files are guessed at setup and must be reviewed in
 the app before the pipeline runs.
+The names MitoPilot recognizes are listed under "Accepted gene names" in
+`vignette("Your-Own-Annotations")`.
 }

@@ -197,7 +197,7 @@ parse_user_annotation <- function(fn, contig_length = NULL) {
 
   id <- vapply(a, .ua_get, character(1), "ID")
   par <- sub(",.*$", "", vapply(a, .ua_get, character(1), "Parent"))
-  up <- match(par, id)
+  up <- match(par, id, incomparables = NA)
   is_parent <- lt %in% c("gene", "mrna", "pseudogene") | grepl("_gene$", lt)
   is_child <- lt %in% c("cds", "trna", "rrna")
   span <- paste(start, end)

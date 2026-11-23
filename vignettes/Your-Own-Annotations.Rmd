@@ -85,6 +85,8 @@ GenBank feature table, the `>Feature` line at the top of the file:
 			product	tRNA-Phe
 ```
 
+See [Accepted gene names](#accepted-gene-names) for details about gene names.
+
 Copies of your original files are kept in `<project>/user_annotations/raw/`.
 
 ```r
@@ -131,6 +133,8 @@ only for reference.
 MitoPilot guesses a canonical gene name for every feature when the project is
 created. The first time you open the app, the **Imported gene names** window
 lists every name from your annotation files with its guess.
+See [Accepted gene names](#accepted-gene-names) for a list of gene names recognized
+by MitoPilot.
 
 ![](figures/user-annot/gene-names.png)
 
@@ -220,3 +224,37 @@ mitogenome with small simulated reads:
 | `GB_DROP` | Feature table with features that are dropped or flagged on import: gaps, a pseudogene, ribosomal slippage, partial ends, a gene spanning the origin, and two control-region features |
 | `GB_MITOS` | MITOS2-style GFF with lowercase names and numbered tRNAs |
 | `GB_GAPS` | GFF3 missing five genes (cox2, nad3, trnD, trnK, rrnS); turn on **Run annotation tools** to see MitoPilot fill them in |
+
+## Accepted gene names
+
+You do not need to rename your features before import. MitoPilot recognizes the
+common names for each mitochondrial gene, ignores letter case, and ignores a
+trailing word such as `gene` or `CDS` (so `COX1 CDS` is read as `COX1`). The
+table lists the name MitoPilot uses and examples of names it recognizes. 
+Any name that MitoPilot cannot parse is shown as
+Unmapped in the **Imported gene names** window, where you can assign it by hand.
+
+| MitoPilot name | Examples of recognized names |
+|---|---|
+| `cox1` | COX1, COXI, COI, CO1, MT-CO1, cytochrome c oxidase subunit I |
+| `cox2` | COX2, COII, CO2, MT-CO2, cytochrome c oxidase subunit II |
+| `cox3` | COX3, COIII, CO3, MT-CO3, cytochrome c oxidase subunit III |
+| `cob` | COB, CYTB, CYB, Cyt b, MT-CYB, cytochrome b |
+| `atp6` | ATP6, ATPase6, MT-ATP6, ATP synthase F0 subunit 6 |
+| `atp8` | ATP8, ATPase8, MT-ATP8, ATP synthase F0 subunit 8 |
+| `atp9` | ATP9 |
+| `nad1` to `nad6` | ND1, NAD1, NADH1, MT-ND1, NADH dehydrogenase subunit 1 |
+| `nad4l` | ND4L, NAD4L, NADH4L, MT-ND4L, NADH dehydrogenase subunit 4L |
+| `msh1` | msh1, MutS |
+| `dpo` | dpo, polB |
+| `rrnS` | rrnS, 12S, 12S rRNA, s-rRNA, SSU, MT-RNR1, small subunit ribosomal RNA |
+| `rrnL` | rrnL, 16S, 16S rRNA, l-rRNA, LSU, MT-RNR2, large subunit ribosomal RNA |
+| `trnA` to `trnY` | trnL, trnL1, trnL(uaa), trnL-UAA, tRNA-Leu, tRNA_Leu, tRNA-Leu (CUN) |
+| `ctrl` | D-loop, control region, displacement loop, CR, OH |
+
+tRNAs are named by the one-letter amino acid code (`trnL` for leucine, `trnS`
+for serine, and so on). The two leucine and two serine tRNAs both import as
+`trnL` and `trnS`. Anticodons are imported when your file provides them.
+
+The gene picker in the **Imported gene names** window also offers `mttb`,
+`lagli`, `rvt`, `im`, and `trnX` (a tRNA of unknown type).
