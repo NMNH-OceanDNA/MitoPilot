@@ -70,7 +70,7 @@ get_export_opts <- function(con, name = "default") {
   )
   if (is.null(row) || nrow(row) == 0) return(defaults)
   pick <- function(x, default) {
-    if (length(x) == 0 || is.na(x[1]) || !nzchar(x[1])) default else x[1]
+    if (length(x) == 0 || is.na(x[1]) || !nzchar(x[1])) default else header_lock(x[1])
   }
   list(
     fasta_header = pick(row$fasta_header, defaults$fasta_header),
@@ -178,6 +178,7 @@ validate_fasta_header <- function(template, data = NULL, require_completeness = 
   if (is.null(template) || !nzchar(trimws(template))) {
     return(err("Template is empty."))
   }
+  template <- header_clean(template)
   # Braces must balance: every { needs a matching }. Point at the first
   # unmatched one so the user can find it.
   brace <- find_unmatched_brace(template)
@@ -189,8 +190,19 @@ validate_fasta_header <- function(template, data = NULL, require_completeness = 
     )))
   }
   row <- if (!is.null(data) && nrow(data) > 0) data[1, , drop = FALSE] else data.frame()
+  tok <- regmatches(template, gregexpr("\\{[^{}]*\\}", template))[[1]]
+  unk <- setdiff(substr(tok, 2L, nchar(tok) - 1L), names(row))
+  if (ncol(row) && length(unk)) {
+    return(err(sprintf(
+      '{%s} is not one of the available fields. Pick one from the "Available metadata" panel.', unk[1]
+    )))
+  }
   tryCatch({
     stringr::str_glue_data(row, template)
+    has_data <- !is.null(data) && nrow(data) > 0
+    hdr <- if (has_data) header_clean(stringr::str_glue_data(data, template)) else character()
+    fmt <- header_format_check(template, hdr, data$ID)
+    if (identical(fmt$level, "error")) return(fmt)
     # A template without {seqid} gives every unit of a multi-assembly sample the
     # same defline, while the .tbl still carries the per-unit >Feature seqid. The
     # two must agree exactly or table2asn rejects the submission. seqid is the
@@ -208,8 +220,7 @@ validate_fasta_header <- function(template, data = NULL, require_completeness = 
       }
       return(list(ok = TRUE, level = "warn", message = msg))
     }
-    if (!is.null(data) && nrow(data) > 0) {
-      hdr <- stringr::str_glue_data(data, template)
+    if (has_data) {
       dm <- unique(unlist(duplicate_modifiers(hdr)))
       nm <- dm[gsub("_", "", dm) %in% c("specimenvoucher", "voucheruri")]
       if (length(nm)) {
@@ -222,6 +233,9 @@ validate_fasta_header <- function(template, data = NULL, require_completeness = 
                 "and take the other out."),
           paste0("[", dm, "=]", collapse = ", "))))
       }
+    }
+    if (!is.null(fmt)) return(fmt)
+    if (has_data) {
       mf <- missing_fields(template, data)
       if (!is.null(mf)) return(list(ok = TRUE, level = "warn", message = mf))
     }
@@ -242,7 +256,7 @@ validate_fasta_header <- function(template, data = NULL, require_completeness = 
     if (length(col) > 0) {
       name <- sub("object '([^']+)' not found", "\\1", col)
       return(err(sprintf(
-        '{%s} is not one of the available fields. See "Available metadata" below.',
+        '{%s} is not one of the available fields. Pick one from the "Available metadata" panel.',
         name
       )))
     }
