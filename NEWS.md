@@ -1,10 +1,8 @@
-# MitoPilot (development version)
-
-- **User annotations: GFF files with no `ID` or `Parent` attributes import correctly.** Files such as Geneious exports, where features carry only a `Name`, had every feature named after the first row in the file. Each feature now keeps its own name. Recreate affected projects with `force = TRUE`. `vignette("Your-Own-Annotations")` gains an "Accepted gene names" table.
-
 # MitoPilot 1.6.0
 
 Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`
+
+- **User annotations: GFF files with no `ID` or `Parent` attributes import correctly.** Files such as Geneious exports, where features carry only a `Name`, had every feature named after the first row in the file. Each feature now keeps its own name. Recreate affected projects with `force = TRUE`. `vignette("Your-Own-Annotations")` gains an "Accepted gene names" table.
 
 - **Export: FASTA headers are kept to one line and checked against GenBank format.** Line breaks and tabs in a header template or a metadata value are now turned into spaces, and stray spacing inside and between `[modifier=value]` blocks is tidied, both in the header box and in the exported files. Before, a line break in the template went into the FASTA and split the header. The header status line also reports new problems: unmatched or empty square brackets and brackets inside a metadata value (blocking), and a header that does not start with `{seqid}`, record names over 25 characters or with characters NCBI does not allow, modifier names NCBI does not list or has retired (such as `country`), title text placed before the last modifier, and non-ASCII characters (warnings). `{seqid}` at the start of a header is now locked in the header box, since the record name must match the feature table; a saved template that starts with anything else has its first word replaced by `{seqid}` when loaded.
 
