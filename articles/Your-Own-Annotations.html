@@ -414,6 +414,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#running-the-pipeline" id="toc-running-the-pipeline" class="nav-link" data-scroll-target="#running-the-pipeline">Running the pipeline</a></li>
   <li><a href="#filling-gaps-with-mitopilots-tools" id="toc-filling-gaps-with-mitopilots-tools" class="nav-link" data-scroll-target="#filling-gaps-with-mitopilots-tools">Filling gaps with MitoPilot’s tools</a></li>
   <li><a href="#test-project-details" id="toc-test-project-details" class="nav-link" data-scroll-target="#test-project-details">Test project details</a></li>
+  <li><a href="#accepted-gene-names" id="toc-accepted-gene-names" class="nav-link" data-scroll-target="#accepted-gene-names">Accepted gene names</a></li>
   </ul>
 </nav>
     </div>
@@ -504,6 +505,7 @@ NC_002333   1019    1971    12S rRNA    0   +</code></pre>
             gene    trnF
 951 1019    tRNA
             product tRNA-Phe</code></pre>
+<p>See <a href="#accepted-gene-names">Accepted gene names</a> for details about gene names.</p>
 <p>Copies of your original files are kept in <code>&lt;project&gt;/user_annotations/raw/</code>.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">new_project_userAnnot</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="st">"~/my_annotated/run_01"</span>,</span>
@@ -529,7 +531,7 @@ NC_002333   1019    1971    12S rRNA    0   +</code></pre>
 </section>
 <section id="reviewing-gene-names" class="level2">
 <h2 class="anchored" data-anchor-id="reviewing-gene-names">Reviewing gene names</h2>
-<p>MitoPilot guesses a canonical gene name for every feature when the project is created. The first time you open the app, the <strong>Imported gene names</strong> window lists every name from your annotation files with its guess.</p>
+<p>MitoPilot guesses a canonical gene name for every feature when the project is created. The first time you open the app, the <strong>Imported gene names</strong> window lists every name from your annotation files with its guess. See <a href="#accepted-gene-names">Accepted gene names</a> for a list of gene names recognized by MitoPilot.</p>
 <p><img src="figures/user-annot/gene-names.png" class="img-fluid"></p>
 <p>Fix any wrong guesses with the picker in the gene column or select <code>(drop)</code> for any features you do not wish to include. Expand a row to see which samples and features carry that name. Rows you edit count as Edited and leave the Unmapped view. When you are finished, press <strong>Confirm</strong>.</p>
 <p>Pipeline runs are blocked until you confirm. The app header shows a notice with a <strong>Review</strong> button until then. Use the <strong>Gene names</strong> toolbar button to reopen this window at any time. Confirming a second time re-queues only the samples whose gene names actually changed.</p>
@@ -602,6 +604,86 @@ NC_002333   1019    1971    12S rRNA    0   +</code></pre>
 </tr>
 </tbody>
 </table>
+</section>
+<section id="accepted-gene-names" class="level2">
+<h2 class="anchored" data-anchor-id="accepted-gene-names">Accepted gene names</h2>
+<p>You do not need to rename your features before import. MitoPilot recognizes the common names for each mitochondrial gene, ignores letter case, and ignores a trailing word such as <code>gene</code> or <code>CDS</code> (so <code>COX1 CDS</code> is read as <code>COX1</code>). The table lists the name MitoPilot uses and examples of names it recognizes. Any name that MitoPilot cannot parse is shown as Unmapped in the <strong>Imported gene names</strong> window, where you can assign it by hand.</p>
+<table class="table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>MitoPilot name</th>
+<th>Examples of recognized names</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>cox1</code></td>
+<td>COX1, COXI, COI, CO1, MT-CO1, cytochrome c oxidase subunit I</td>
+</tr>
+<tr class="even">
+<td><code>cox2</code></td>
+<td>COX2, COII, CO2, MT-CO2, cytochrome c oxidase subunit II</td>
+</tr>
+<tr class="odd">
+<td><code>cox3</code></td>
+<td>COX3, COIII, CO3, MT-CO3, cytochrome c oxidase subunit III</td>
+</tr>
+<tr class="even">
+<td><code>cob</code></td>
+<td>COB, CYTB, CYB, Cyt b, MT-CYB, cytochrome b</td>
+</tr>
+<tr class="odd">
+<td><code>atp6</code></td>
+<td>ATP6, ATPase6, MT-ATP6, ATP synthase F0 subunit 6</td>
+</tr>
+<tr class="even">
+<td><code>atp8</code></td>
+<td>ATP8, ATPase8, MT-ATP8, ATP synthase F0 subunit 8</td>
+</tr>
+<tr class="odd">
+<td><code>atp9</code></td>
+<td>ATP9</td>
+</tr>
+<tr class="even">
+<td><code>nad1</code> to <code>nad6</code></td>
+<td>ND1, NAD1, NADH1, MT-ND1, NADH dehydrogenase subunit 1</td>
+</tr>
+<tr class="odd">
+<td><code>nad4l</code></td>
+<td>ND4L, NAD4L, NADH4L, MT-ND4L, NADH dehydrogenase subunit 4L</td>
+</tr>
+<tr class="even">
+<td><code>msh1</code></td>
+<td>msh1, MutS</td>
+</tr>
+<tr class="odd">
+<td><code>dpo</code></td>
+<td>dpo, polB</td>
+</tr>
+<tr class="even">
+<td><code>rrnS</code></td>
+<td>rrnS, 12S, 12S rRNA, s-rRNA, SSU, MT-RNR1, small subunit ribosomal RNA</td>
+</tr>
+<tr class="odd">
+<td><code>rrnL</code></td>
+<td>rrnL, 16S, 16S rRNA, l-rRNA, LSU, MT-RNR2, large subunit ribosomal RNA</td>
+</tr>
+<tr class="even">
+<td><code>trnA</code> to <code>trnY</code></td>
+<td>trnL, trnL1, trnL(uaa), trnL-UAA, tRNA-Leu, tRNA_Leu, tRNA-Leu (CUN)</td>
+</tr>
+<tr class="odd">
+<td><code>ctrl</code></td>
+<td>D-loop, control region, displacement loop, CR, OH</td>
+</tr>
+</tbody>
+</table>
+<p>tRNAs are named by the one-letter amino acid code (<code>trnL</code> for leucine, <code>trnS</code> for serine, and so on). The two leucine and two serine tRNAs both import as <code>trnL</code> and <code>trnS</code>. Anticodons are imported when your file provides them.</p>
+<p>The gene picker in the <strong>Imported gene names</strong> window also offers <code>mttb</code>, <code>lagli</code>, <code>rvt</code>, <code>im</code>, and <code>trnX</code> (a tRNA of unknown type).</p>
 
 
 </section>
