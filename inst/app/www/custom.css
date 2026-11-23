@@ -1127,6 +1127,7 @@ details.mp-meta-panel > summary { border-bottom: none; margin: 0; padding: 0; }
 .mp-hl-back mark.mp-src-other { box-shadow: none; border-bottom: 1px dashed var(--mp-src-fg); }
 .mp-hl-back mark.mp-hl-miss, .mp-hl-tok.mp-hl-miss { border-bottom: 3px solid #E69F00; }
 .mp-hl-mod { background: var(--mp-surface-alt); border-radius: 3px; }
+.mp-hl-lock { background: #bdbdbd; border-radius: 3px; box-shadow: 0 0 0 1px #7a7a7a; }
 
 details.mp-hdr-preview { margin: 2px 0 8px; }
 details.mp-hdr-preview > summary {

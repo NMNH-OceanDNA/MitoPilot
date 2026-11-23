@@ -63,10 +63,98 @@ nmnh_template_pref <- function(con, template) {
 header_fill <- function(dat, template) {
   tok <- regmatches(template, gregexpr("\\{[A-Za-z.][A-Za-z0-9._]*\\}", template))[[1]]
   for (n in setdiff(substr(tok, 2L, nchar(tok) - 1L), names(dat))) dat[[n]] <- ""
-  header_strip_empty(stringr::str_glue_data(dat, template))
+  header_clean(header_strip_empty(stringr::str_glue_data(dat, template)))
 }
 
 header_strip_empty <- function(x) gsub("\\s*\\[[^]=[]+=\\s*(NA)?\\s*\\]", "", x)
+
+# A header is one line: line breaks and tabs become a space, and the spacing in
+# and between [modifier=value] blocks is made regular.
+header_clean <- function(x) {
+  x <- trimws(gsub("[[:space:]]+", " ", x))
+  x <- gsub("\\[ *([^]=[]*?) *= *", "[\\1=", x, perl = TRUE)
+  gsub("][", "] [", gsub(" +]", "]", x), fixed = TRUE)
+}
+
+# The header box locks the record name at the start of a template. A saved
+# template that opens with anything else has its first word swapped for it.
+header_lock <- function(template, lock = "{seqid}") {
+  template <- trimws(template)
+  if (startsWith(paste0(template, " "), paste0(lock, " "))) return(template)
+  trimws(paste(lock, sub("^[^[ ]+ *", "", template)))
+}
+
+# Modifier names NCBI lists for FASTA deflines, plus the ones table2asn and the
+# apps use. Compared without case, hyphens, or underscores.
+.HEADER_MODS <- gsub("-", "", c(
+  "altitude", "bio-material", "breed", "cell-line", "cell-type", "chromosome", "clone",
+  "collected-by", "collection-date", "cultivar", "culture-collection", "dev-stage",
+  "ecotype", "endogenous-virus-name", "fwd-pcr-primer-name", "fwd-pcr-primer-seq",
+  "genotype", "geo-loc-name", "haplogroup", "haplotype", "host", "isolate",
+  "isolation-source", "lab-host", "lat-lon", "linkage-group", "map", "mating-type", "note",
+  "organism", "plasmid-name", "plastid-name", "rev-pcr-primer-name", "rev-pcr-primer-seq",
+  "segment", "serotype", "serovar", "sex", "specimen-voucher", "strain", "sub-species",
+  "tissue-type", "variety", "environmental-sample", "germline", "metagenomic", "rearranged",
+  "transgenic", "topology", "location", "moltype", "mol-type", "tech", "gcode", "mgcode",
+  "pgcode", "completeness", "voucheruri", "bioproject", "biosample", "sra"
+), fixed = TRUE)
+.HEADER_MODS_OLD <- gsub("-", "", c(
+  "country", "acronym", "anamorph", "authority", "biotype", "biovar", "chemovar", "clone-lib",
+  "common", "forma", "forma-specialis", "group", "identified-by", "pathovar", "pop-variant",
+  "serogroup", "subclone", "subgroup", "substrain", "subtype", "synonym", "teleomorph",
+  "tissue-lib", "type"
+), fixed = TRUE)
+
+# GenBank format problems in a header template and the headers it fills.
+# Returns NULL or list(ok, level, message): the first error, else every warning.
+header_format_check <- function(template, hdr = character(), ids = NULL) {
+  err <- function(m) list(ok = FALSE, level = "error", message = m)
+  who <- function(i) paste(utils::head(unique(ids[i]), 3), collapse = ", ")
+  stray <- function(x) grepl("[][]", gsub("\\[[^][]*\\]", "", x))
+  if (stray(template)) {
+    return(err("Unmatched '[' or ']'. Write each source modifier as [modifier=value]."))
+  }
+  bad <- regmatches(template, gregexpr("\\[[^]=[]*\\]", template))[[1]]
+  if (length(bad)) {
+    return(err(sprintf("%s has no '='. Write each source modifier as [modifier=value].", bad[1])))
+  }
+  i <- stray(hdr)
+  if (any(i)) {
+    return(err(sprintf(paste("A metadata value contains '[' or ']' (%s), which breaks the header.",
+      "Fix the value or take the field out."), who(i))))
+  }
+  w <- character()
+  named <- grepl("^\\{seqid\\}[^[ ]*( |$)", template)
+  if (grepl("{seqid}", template, fixed = TRUE) && !named) {
+    w <- c(w, paste("Start the header with {seqid} followed by a space, or the record names",
+      "will not match the feature table."))
+  }
+  nm <- regmatches(template, gregexpr("\\[[^]=[{]+=", template))[[1]]
+  nm <- unique(substr(nm, 2L, nchar(nm) - 1L))
+  key <- tolower(gsub("[-_]", "", nm))
+  if (any(key == "country")) w <- c(w, "NCBI replaced [country=] with [geo-loc-name=].")
+  old <- nm[key %in% setdiff(.HEADER_MODS_OLD, "country")]
+  if (length(old)) {
+    w <- c(w, sprintf("NCBI no longer accepts %s.", paste0("[", old, "=]", collapse = ", ")))
+  }
+  unk <- nm[!key %in% c(.HEADER_MODS, .HEADER_MODS_OLD)]
+  if (length(unk)) {
+    w <- c(w, sprintf("%s is not on NCBI's list of source modifiers: check the spelling.",
+      paste0("[", unk, "=]", collapse = ", ")))
+  }
+  if (grepl("^\\S+ [^[]+\\[|\\][^][]*[^][ ][^][]*\\[", template)) {
+    w <- c(w, "Put the title text after the last [modifier=value], not before or between them.")
+  }
+  sid <- sub(" .*$", "", hdr)
+  i <- named & (nchar(sid) > 25 | grepl("[^A-Za-z0-9._:*#-]", sid))
+  if (any(i)) {
+    w <- c(w, sprintf(paste("Record name longer than 25 characters, or with characters other",
+      "than letters, digits, and - _ . : * # (%s)."), who(i)))
+  }
+  i <- grepl("[^\\x20-\\x7E]", hdr, perl = TRUE)
+  if (any(i)) w <- c(w, sprintf("Accented or other non-ASCII characters in the header (%s).", who(i)))
+  if (length(w)) list(ok = TRUE, level = "warn", message = paste(w, collapse = " "))
+}
 
 # GBIF collectionCode (upper case) -> NCBI BioCollections code
 .NMNH_CODES <- c(FISH = "FISH", BIRDS = "Birds", MAMM = "MAMM", HERP = "Herp", IZ = "IZ",
