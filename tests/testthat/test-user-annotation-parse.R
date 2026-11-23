@@ -99,3 +99,15 @@ test_that("notes lose tabs and line breaks", {
   expect_equal(x$note, "a b  c")
   expect_false(grepl("[\t\r\n]", x$note))
 })
+
+test_that("GFF with no ID or Parent keeps each feature's own name", {
+  fn <- withr::local_tempfile(fileext = ".gff")
+  row <- function(type, s, e, nm) paste("c1", "x", type, s, e, ".", "+", ".", paste0("Name=", nm), sep = "\t")
+  writeLines(c("##gff-version 3",
+               row("CDS", 1, 300, "COX1 CDS"), row("gene", 1, 300, "COX1 gene"),
+               row("tRNA", 310, 370, "tRNA-Thr"),
+               row("CDS", 400, 700, "CYTB CDS"), row("gene", 400, 700, "CYTB gene")), fn)
+  x <- parse_user_annotation(fn, 2000)
+  expect_equal(x$feature_type, c("CDS", "tRNA", "CDS"))
+  expect_equal(guess_gene(x$raw_name, x$feature_type, x$raw_product)$gene, c("cox1", "trnT", "cob"))
+})
