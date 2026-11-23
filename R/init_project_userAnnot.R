@@ -5,6 +5,8 @@
 #' run: the pipeline curates, validates, and exports the imported features.
 #' Gene names found in the files are guessed at setup and must be reviewed in
 #' the app before the pipeline runs.
+#' The names MitoPilot recognizes are listed under "Accepted gene names" in
+#' `vignette("Your-Own-Annotations")`.
 #'
 #' @inheritParams new_project_userAsmb
 #' @param mapping_fn Path to a mapping file. Should be a csv that minimally

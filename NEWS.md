@@ -1,3 +1,7 @@
+# MitoPilot (development version)
+
+- **User annotations: GFF files with no `ID` or `Parent` attributes import correctly.** Files such as Geneious exports, where features carry only a `Name`, had every feature named after the first row in the file. Each feature now keeps its own name. Recreate affected projects with `force = TRUE`. `vignette("Your-Own-Annotations")` gains an "Accepted gene names" table.
+
 # MitoPilot 1.6.0
 
 Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`
