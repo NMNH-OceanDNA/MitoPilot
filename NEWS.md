@@ -1,4 +1,6 @@
-# MitoPilot (development version)
+# MitoPilot 1.6.0
+
+Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`
 
 - **Export: FASTA headers are kept to one line and checked against GenBank format.** Line breaks and tabs in a header template or a metadata value are now turned into spaces, and stray spacing inside and between `[modifier=value]` blocks is tidied, both in the header box and in the exported files. Before, a line break in the template went into the FASTA and split the header. The header status line also reports new problems: unmatched or empty square brackets and brackets inside a metadata value (blocking), and a header that does not start with `{seqid}`, record names over 25 characters or with characters NCBI does not allow, modifier names NCBI does not list or has retired (such as `country`), title text placed before the last modifier, and non-ASCII characters (warnings). `{seqid}` at the start of a header is now locked in the header box, since the record name must match the feature table; a saved template that starts with anything else has its first word replaced by `{seqid}` when loaded.
 
@@ -9,10 +11,6 @@
 - **Shorter "Container version does not match" popup.** The startup warning was too tall for a standard screen. Same information, less text.
 
 - **Fix: gene boundaries could not be edited from the Export outlier review.** Assemblies in Export are always locked, and the annotation details window treated them as read-only even when opened from the outlier review, so start/stop edits did nothing. The flagged gene can be edited there again; the assembly stays locked. Linearize, Rotate, Trim unannotated ends, Restore assembly, and the Partial flag stay off for a locked assembly in the review. Locked assemblies opened from the Annotate table are still read-only.
-
-# MitoPilot 1.6.0
-
-Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`
 
 - **Fix: Assemble workflow crashed on scheduler executors after scaffold joining.** With the SLURM, PBS, LSF, SGE, AWS Batch, and NOAA_SEDNA executors, the run stopped with "Unknown method invocation `multiply` on ConfigObject type" at the step that saves scaffold mappings. The same error could stop the reference database and curation-saving steps of the Annotate workflow. These steps now set their own CPU and memory (1 CPU, 4 GB), and the config templates fall back to the same values for any step without per-sample options. Projects created before this version get the fix from the package update alone; no config change is needed.
 
