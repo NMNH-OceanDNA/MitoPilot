@@ -93,3 +93,37 @@ mp_toast <- function(text, type = c("message", "warning", "error", "success"),
 mp_flag_next <- function(x, on = "yes", off = "no") {
   if (any(x == on, na.rm = TRUE)) off else on
 }
+
+#' Startup warning: the project's container tag is not the one this package expects.
+#'
+#' @param cgap result of `container_version_gap()`
+#' @noRd
+container_gap_alert <- function(cgap, session = getDefaultReactiveDomain()) {
+  mp_alert(
+    title = "Container version does not match MitoPilot",
+    text = shiny::tags$div(
+      style = "font-size: 15px; text-align: left;",
+      shiny::tags$p(
+        "This project runs the pipeline from ", shiny::tags$code(cgap$configured, .noWS = "after"),
+        ", but MitoPilot ", as.character(utils::packageVersion("MitoPilot")),
+        " expects ", shiny::tags$code(cgap$expected, .noWS = "after"), "."
+      ),
+      shiny::tags$p(
+        "The app works either way, but pipeline runs will use the older ",
+        "image's tools and workflow code."
+      ),
+      shiny::tags$p(
+        shiny::tags$b("To switch, edit the container line in the project's .config.")
+      ),
+      shiny::tags$p(
+        "Or regenerate the whole config. This resets tuned cpus, memory, and ",
+        "clusterOptions (the old file is backed up). On a cluster, name your ",
+        "own profile instead of \"local\":"
+      ),
+      shiny::tags$pre('MitoPilot::backwards_compatibility(executor = "local")')
+    ),
+    html = TRUE,
+    type = "info",
+    session = session
+  )
+}

@@ -8,6 +8,13 @@ mp_named_input <- function(x, label, sel = "input") {
   htmltools::tagQuery(x)$find(sel)$addAttrs(`aria-label` = label)$allTags()
 }
 
+# Export shows only locked units, so the outlier review edits through the lock.
+# whole = TRUE is for whole-assembly edits, which the review does not open up.
+details_locked <- function(unit, session, whole = FALSE) {
+  isTRUE(unit[["annotate_lock"]] == 1) &&
+    (whole || !isTRUE(session$userData$in_outlier_review))
+}
+
 annotations_details_server <- function(id, rv, table_id = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -22,9 +29,10 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
 
     # A locked assembly is read-only in this window, the same rule the Annotate
     # toolbar enforces (theme T02).
-    locked <- reactive(isTRUE(rv$updating[["annotate_lock"]] == 1))
-    lock_blocked <- function() {
-      if (!locked()) return(FALSE)
+    # Not a reactive: the review flag is plain session state and would go stale.
+    locked <- function(whole = FALSE) details_locked(rv$updating, session, whole)
+    lock_blocked <- function(whole = FALSE) {
+      if (!locked(whole)) return(FALSE)
       mp_toast(paste("This assembly is locked.", MP_LOCK_DEF("annotate")),
                type = "warning")
       TRUE
@@ -386,7 +394,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         title = paste0(title, ". Click to ", if (on) "clear" else "set", "."),
         `aria-pressed` = if (on) "true" else "false"
       )
-      if (locked()) shinyjs::disabled(btn) else btn
+      if (locked(whole = endsWith(id, "partial"))) shinyjs::disabled(btn) else btn
     }
 
     output$status_toggles <- shiny::renderUI({
@@ -1766,7 +1774,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
 
     # Linearize ----
     observeEvent(input$linearize, {
-      if (lock_blocked()) req(F)
+      if (lock_blocked(TRUE)) req(F)
       if (rv$updating$topology != "circular") {
         mp_toast("This assembly is already linear.", type = "warning")
         req(F)
@@ -1953,7 +1961,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     reorient_genes <- reactiveVal(NULL)
     reorient_target <- NULL
     observeEvent(input$reorient, {
-      if (lock_blocked()) req(F)
+      if (lock_blocked(TRUE)) req(F)
       if (!unit_is_circ()) {
         mp_toast("Only circular assemblies can be rotated.", type = "warning")
         req(F)
@@ -2668,7 +2676,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     output$asmb_edit_controls <- renderUI({
       st <- asmb_state()
       e <- st$ends
-      reason <- if (locked()) {
+      reason <- if (locked(TRUE)) {
         "This assembly is locked. Unlock it in the Annotate table to edit it."
       } else if (is.null(e)) {
         "This assembly has no sequence on record."
@@ -2707,7 +2715,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
         if (isTRUE(st$edited)) {
           b <- actionButton(ns("restore_asmb"), "Restore assembly", icon = icon("rotate-left"))
           div(
-            if (locked()) shinyjs::disabled(b) else b,
+            if (locked(TRUE)) shinyjs::disabled(b) else b,
             mp_help_tip(
               paste(
                 "Puts the assembly and its annotations back to how they were",
@@ -2722,7 +2730,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     })
 
     observeEvent(input$trim_ends, {
-      if (lock_blocked()) req(F)
+      if (lock_blocked(TRUE)) req(F)
       req(rv$updating$ID)
       e <- asmb_state()$ends
       if (is.null(e) || !isTRUE(e$topology == "linear") || is.na(e$from) ||
@@ -2788,7 +2796,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     })
 
     observeEvent(input$restore_asmb, {
-      if (lock_blocked()) req(F)
+      if (lock_blocked(TRUE)) req(F)
       ops <- assembly_backup_ops(
         session$userData$con, rv$updating$ID, rv$updating$path, rv$updating$scaffold
       )
@@ -2864,7 +2872,7 @@ annotations_details_server <- function(id, rv, table_id = NULL) {
     # One write path for all four flags: mp_flag_next() decides the value, the
     # same rows_update carries it, and every write says what it did (theme T02).
     write_flag <- function(field, label, value) {
-      if (lock_blocked()) return(invisible(NULL))
+      if (lock_blocked(field == "partial")) return(invisible(NULL))
       rv$updating[[field]] <- value
       update_annotate_unit(field)
       rv$data <- rv$data |>
@@ -4801,7 +4809,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     class = paste0("mp-pill mp-pill-", if (topo == "circular") "info" else "neutral"),
     paste(topo_icon, topo)
   )
-  is_locked <- isTRUE(rv$updating[["annotate_lock"]] == 1)
+  is_locked <- details_locked(rv$updating, session)
   # Nucleotide nudge button / step box, matching the codon-search controls.
   nt_button <- function(id, icon_name, title) {
     tags$button(
@@ -4820,6 +4828,9 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
     )
   }
   off <- function(x) if (is_locked) shinyjs::disabled(x) else x
+  asmb_off <- function(x) {
+    if (details_locked(rv$updating, session, whole = TRUE)) shinyjs::disabled(x) else x
+  }
 
   modalDialog(
     # The four review flags sit in the header beside the badges they mirror, so
@@ -4898,7 +4909,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
         "gap: 24px; margin: 4px 0 8px 0;"
       ),
       div(
-        off(actionButton(ns("linearize"), "Linearize",
+        asmb_off(actionButton(ns("linearize"), "Linearize",
                          icon = icon("arrows-left-right-to-line"))),
         mp_help_tip(
           "Breaks a circular assembly before or after the selected feature.",
@@ -4906,7 +4917,7 @@ annotate_details_modal <- function(rv, session = getDefaultReactiveDomain(), tab
         )
       ),
       div(
-        off(actionButton(ns("reorient"), "Rotate", icon = icon("rotate"))),
+        asmb_off(actionButton(ns("reorient"), "Rotate", icon = icon("rotate"))),
         mp_help_tip(
           "Rotates a circular assembly to start on a chosen feature.",
           label = "Rotate"

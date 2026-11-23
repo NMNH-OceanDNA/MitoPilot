@@ -1,0 +1,10 @@
+test_that("a locked unit is read-only except in the export outlier review", {
+  sess <- function(review) list(userData = list(in_outlier_review = review))
+  locked <- data.frame(annotate_lock = 1)
+  expect_true(details_locked(locked, sess(NULL)))
+  expect_true(details_locked(locked, sess(FALSE)))
+  expect_false(details_locked(locked, sess(TRUE)))
+  expect_false(details_locked(data.frame(annotate_lock = 0), sess(FALSE)))
+  expect_true(details_locked(locked, sess(TRUE), whole = TRUE))
+  expect_false(details_locked(data.frame(annotate_lock = 0), sess(TRUE), whole = TRUE))
+})

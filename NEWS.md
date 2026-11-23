@@ -6,6 +6,10 @@
 
 - **Setup: user assemblies are checked for non-DNA characters.** `new_project_userAsmb()` and the other user-assembly setup functions now stop with a clear message when an assembly FASTA contains anything other than DNA bases and ambiguity codes (stray text, gap dashes, line numbers), naming the file and the characters. Before, such a file passed setup and the Assemble workflow, then failed in the Annotate workflow with "object 'type' not found".
 
+- **Shorter "Container version does not match" popup.** The startup warning was too tall for a standard screen. Same information, less text.
+
+- **Fix: gene boundaries could not be edited from the Export outlier review.** Assemblies in Export are always locked, and the annotation details window treated them as read-only even when opened from the outlier review, so start/stop edits did nothing. The flagged gene can be edited there again; the assembly stays locked. Linearize, Rotate, Trim unannotated ends, Restore assembly, and the Partial flag stay off for a locked assembly in the review. Locked assemblies opened from the Annotate table are still read-only.
+
 # MitoPilot 1.6.0
 
 Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`
