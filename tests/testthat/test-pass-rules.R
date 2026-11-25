@@ -172,3 +172,80 @@ test_that("export_flags maps flag kinds to why codes and writes the report", {
   expect_equal(basename(r$report), "AA_alignments_g1.html")
   expect_equal(dirname(r$report), file.path(f$dir_out, "export", "g1"))
 })
+
+test_that("switch codes outside 2 and 3 are not_run (allow-list)", {
+  f <- local_project_fixture(ids = c("A", "B"), annotated = TRUE)
+  DBI::dbExecute(f$con, "UPDATE annotate SET annotate_switch = 4 WHERE ID = 'A'")
+  DBI::dbExecute(f$con, "UPDATE assemble SET assemble_switch = 4 WHERE ID = 'A'")
+  expect_equal(annotation_pass(f$con)$reasons, c("not_run", ""))
+  expect_equal(assembly_pass(f$con)$reasons, c("not_run", ""))
+})
+
+test_that("NA annotate_switch is not_run", {
+  f <- local_project_fixture(ids = "A", annotated = TRUE)
+  DBI::dbExecute(f$con, "UPDATE annotate SET annotate_switch = NULL")
+  expect_equal(annotation_pass(f$con)$reasons, "not_run")
+})
+
+test_that("auto_accept locks nothing when dir_out is missing", {
+  f <- local_project_fixture(ids = "A", on_disk = "A", assembled = TRUE)
+  r <- auto_accept(f$con, file.path(f$path, "nope"), "assemble")
+  expect_equal(nrow(r$accepted), 0)
+  expect_equal(r$parked$reasons, "output_missing")
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT assemble_lock FROM assemble")[[1]], 0)
+})
+
+test_that("override on unknown or unaccepted units is blocked and not logged", {
+  f <- local_project_fixture(ids = c("A", "B"), annotated = TRUE)
+  DBI::dbExecute(f$con, "UPDATE assemble SET assemble_lock = 0 WHERE ID = 'B'")
+  r <- override_accept(f$con, f$dir_out, "assemble", data.frame(ID = "ZZ"))
+  expect_equal(r$blocked$reasons, "unknown_unit")
+  u <- data.frame(ID = c("B", "Q"), path = 1, scaffold = 1)
+  r <- override_accept(f$con, f$dir_out, "annotate", u)
+  expect_setequal(r$blocked$reasons, c("assembly_not_accepted", "unknown_unit"))
+  expect_equal(nrow(r$accepted), 0)
+  expect_equal(nrow(DBI::dbGetQuery(f$con, "SELECT * FROM review_log")), 0)
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT annotate_lock FROM annotate WHERE ID = 'B'")[[1]], 0)
+})
+
+test_that("blocked samples are not marked partial", {
+  f <- local_project_fixture(ids = c("A", "B"), on_disk = "A", assembled = TRUE, topology = "linear")
+  DBI::dbExecute(f$con, "INSERT INTO annotate (ID, path, scaffold, partial) VALUES ('A', 1, 1, 'no'), ('B', 1, 1, 'no')")
+  set_project_setting(f$con, "accept_linear", 1)
+  auto_accept(f$con, f$dir_out, "assemble")
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT ID, partial FROM annotate ORDER BY ID")$partial, c("yes", "no"))
+})
+
+test_that("bad min_mean_depth setting gives low_coverage, never NA", {
+  f <- local_project_fixture(ids = "A", assembled = TRUE)
+  DBI::dbExecute(f$con, "UPDATE project_settings SET value = 'abc' WHERE key = 'min_mean_depth'")
+  expect_equal(suppressWarnings(assembly_pass(f$con))$reasons, "low_coverage")
+  f2 <- local_project_fixture(ids = "A", assembled = TRUE)
+  DBI::dbExecute(f2$con, "UPDATE assemblies SET depth = '80 NA 80'")
+  expect_equal(assembly_pass(f2$con)$reasons, "low_coverage")
+})
+
+test_that("sample with no or all-ignored assemblies, blank or NA depth, parks", {
+  f <- local_project_fixture(ids = "A", assembled = TRUE)
+  DBI::dbExecute(f$con, "UPDATE assemblies SET depth = ''")
+  expect_equal(assembly_pass(f$con)$reasons, "low_coverage")
+  DBI::dbExecute(f$con, "UPDATE assemblies SET depth = 'NA'")
+  expect_equal(assembly_pass(f$con)$reasons, "low_coverage")
+  DBI::dbExecute(f$con, "UPDATE assemblies SET ignore = 1")
+  expect_equal(assembly_pass(f$con)$reasons, "low_coverage")
+  DBI::dbExecute(f$con, "DELETE FROM assemblies")
+  expect_equal(assembly_pass(f$con)$reasons, "low_coverage")
+})
+
+test_that("failed poor reference value parks", {
+  f <- local_project_fixture(ids = "A", assembled = TRUE)
+  DBI::dbExecute(f$con, "UPDATE assemble SET poor_blast_ref = 'failed'")
+  expect_equal(assembly_pass(f$con)$reasons, "poor_reference")
+})
+
+test_that("a failed log write undoes the lock", {
+  f <- local_project_fixture(ids = "A", on_disk = "A", assembled = TRUE)
+  DBI::dbExecute(f$con, "DROP TABLE review_log")
+  expect_error(auto_accept(f$con, f$dir_out, "assemble"))
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT assemble_lock FROM assemble")[[1]], 0)
+})

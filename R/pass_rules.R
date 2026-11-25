@@ -18,7 +18,7 @@ depth_below <- function(depth, min_depth) {
   if (length(depth) == 0L) return(TRUE)
   any(vapply(depth, function(d) {
     v <- parse_stored_depth(d)
-    length(v) == 0L || all(is.na(v)) || !(mean(v, na.rm = TRUE) >= min_depth)
+    length(v) == 0L || anyNA(v) || !isTRUE(mean(v) >= min_depth)
   }, logical(1)))
 }
 
@@ -36,7 +36,7 @@ assembly_pass <- function(con, ids = NULL, settings = project_settings(con)) {
     u <- units[units$ID == id, , drop = FALSE]
     sw <- asm$assemble_switch[i]
     codes <- c(
-      not_run = is.na(sw) || sw %in% c(0, 1, 4),
+      not_run = is.na(sw) || !sw %in% c(2, 3),
       failed = !is.na(sw) && sw == 3,
       multiple_paths = length(unique(u$path)) > 1L,
       multiple_scaffolds = length(unique(u$scaffold)) > 1L,
@@ -68,7 +68,7 @@ annotation_pass <- function(con, units = NULL) {
     sw <- an$annotate_switch[i]
     w <- an$warnings[i]
     codes <- c(
-      not_run = is.na(sw) || sw %in% c(0, 1),
+      not_run = is.na(sw) || !sw %in% c(2, 3),
       failed = !is.na(sw) && sw == 3,
       warnings = is.na(w) || w > 0,
       problematic = identical(an$problematic[i], "yes")
@@ -169,6 +169,28 @@ stage_locked <- function(con, stage) {
   }
 }
 
+#' Lock units and log them; a failed log write undoes the lock
+#' @return list(written, blocked)
+#' @noRd
+lock_and_log <- function(con, dir_out, stage, units, action, rules = NULL, reason = NA, partial = FALSE) {
+  key <- if (stage == "assemble") "ID" else UNIT_KEY
+  r <- lock_units(con, dir_out, stage, units)
+  if (nrow(r$written) == 0L) return(r)
+  tryCatch({
+    if (partial) mark_partial_linear(con, unique(r$written$ID))
+    rl <- if (is.null(rules)) "" else {
+      x <- rules$reasons[match(do.call(paste, r$written[key]), do.call(paste, rules[key]))]
+      ifelse(is.na(x), "", x)
+    }
+    log_review(con, r$written, stage, action, rules = rl, reason = reason)
+  }, error = function(e) {
+    if (stage == "assemble") lock_assemblies(con, dir_out, r$written$ID, lock = FALSE)
+    else lock_annotations(con, r$written, lock = FALSE)
+    stop(e)
+  })
+  r
+}
+
 #' Lock every passing, not yet locked unit and log it as auto
 #'
 #' @return list(accepted, parked); parked units carry their reason codes.
@@ -182,9 +204,13 @@ auto_accept <- function(con, dir_out, stage = c("assemble", "annotate")) {
   res <- res[!do.call(paste, res[key]) %in% do.call(paste, locked[key]), , drop = FALSE]
   cand <- res[res$pass, key, drop = FALSE]
   parked <- res[!res$pass, c(key, "reasons"), drop = FALSE]
-  if (nrow(cand) > 0L && isTRUE(settings$accept_linear)) mark_partial_linear(con, unique(cand$ID))
-  r <- lock_units(con, dir_out, stage, cand)
-  log_review(con, r$written, stage, "auto")
+  if (stage == "assemble" && !dir.exists(dir_out)) {
+    blocked <- cand
+    blocked$reasons <- rep("output_missing", nrow(blocked))
+    r <- list(written = cand[0, , drop = FALSE], blocked = blocked)
+  } else {
+    r <- lock_and_log(con, dir_out, stage, cand, "auto", partial = isTRUE(settings$accept_linear))
+  }
   parked <- rbind(parked, r$blocked[c(key, "reasons")])
   rownames(parked) <- NULL
   list(accepted = r$written, parked = parked)
@@ -192,18 +218,32 @@ auto_accept <- function(con, dir_out, stage = c("assemble", "annotate")) {
 
 #' Lock units regardless of the pass rules and log the failing codes
 #'
+#' Units that do not exist, or whose sample is not assembly-locked, come back
+#' in `blocked` and are neither locked nor logged.
 #' @return list(accepted, blocked)
 #' @noRd
 override_accept <- function(con, dir_out, stage = c("assemble", "annotate"), units, reason = NA) {
   stage <- match.arg(stage)
   key <- if (stage == "assemble") "ID" else UNIT_KEY
-  units <- units[key]
+  units <- unique(units[key])
   res <- if (stage == "assemble") assembly_pass(con) else annotation_pass(con)
-  r <- lock_units(con, dir_out, stage, units)
-  w <- r$written
-  rules <- res$reasons[match(do.call(paste, w[key]), do.call(paste, res[key]))]
-  log_review(con, w, stage, "override", rules = ifelse(is.na(rules), "", rules), reason = reason)
-  list(accepted = w, blocked = r$blocked)
+  known <- if (stage == "assemble") {
+    DBI::dbGetQuery(con, "SELECT ID FROM assemble")
+  } else {
+    DBI::dbGetQuery(con, "SELECT ID, path, scaffold FROM annotate")
+  }
+  k <- do.call(paste, units[key])
+  unknown <- !k %in% do.call(paste, known[key])
+  not_ok <- !unknown & !k %in% do.call(paste, res[key])
+  pre <- rbind(
+    cbind(units[unknown, , drop = FALSE], reasons = rep("unknown_unit", sum(unknown))),
+    cbind(units[not_ok, , drop = FALSE], reasons = rep("assembly_not_accepted", sum(not_ok)))
+  )
+  ok <- units[!unknown & !not_ok, , drop = FALSE]
+  r <- lock_and_log(con, dir_out, stage, ok, "override", rules = res, reason = reason)
+  blocked <- rbind(pre, r$blocked)
+  rownames(blocked) <- NULL
+  list(accepted = r$written, blocked = blocked)
 }
 
 #' One row per unit with its furthest stage, lock, and who accepted it
