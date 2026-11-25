@@ -289,3 +289,18 @@ test_that("--all-parked override counts a sample once", {
     annotate_units = data.frame(ID = "A", path = 1, scaffold = 1:2))
   expect_equal(nrow(cli_parked_units(f$con, "assemble")), 1L)
 })
+
+test_that("init copies the saved submit template for --executor", {
+  td <- withr::local_tempdir()
+  prof <- file.path(td, "prof"); dir.create(prof)
+  writeLines("#SBATCH x", file.path(prof, "slurm.submit.template"))
+  proj <- file.path(td, "proj")
+  local_mocked_bindings(
+    new_test_project = function(path = ".", n = Inf, full_size = FALSE, executor = "local",
+                                container = "", Rproj = FALSE, force = FALSE, fetch_metadata = TRUE) {
+      dir.create(path)
+    },
+    mitopilot_config_dir = function() prof)
+  expect_message(cli_cmd_init(c(proj, "--test", "reads", "--executor", "slurm")), "submit template")
+  expect_true(file.exists(submit_template_path(proj)))
+})

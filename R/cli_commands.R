@@ -90,6 +90,9 @@ cli_cmd_init <- function(args) {
     cli_fail(paste0("'", fn, "' does not accept: ", paste0("--", gsub("_", "-", bad), collapse = ", ")))
   }
   do.call(fun, a)
+  if (!is.null(a$executor) && cluster_copy_submit_template(a$executor, a$path %||% ".")) {
+    message("Copied the saved '", a$executor, "' submit template into the project")
+  }
   0L
 }
 
@@ -383,11 +386,7 @@ cli_cmd_group <- function(args) {
   on.exit(DBI::dbDisconnect(proj$con), add = TRUE)
   con <- proj$con
   if (isTRUE(o[["all_accepted"]])) {
-    u <- DBI::dbGetQuery(con, paste(
-      "SELECT an.ID, an.path, an.scaffold FROM annotate an",
-      "LEFT JOIN export e ON e.ID = an.ID AND e.path = an.path AND e.scaffold = an.scaffold",
-      "WHERE an.annotate_lock = 1 AND e.export_group IS NULL ORDER BY an.ID, an.path, an.scaffold"
-    ))
+    u <- cli_ungrouped_units(con)
     if (nrow(u) == 0L) { message("No accepted units without a group"); return(0L) }
   } else {
     u <- cli_resolve_units(con, trimws(strsplit(o[["samples"]], ",")[[1]]), "annotate")[UNIT_KEY]
@@ -395,20 +394,38 @@ cli_cmd_group <- function(args) {
     off <- u[!do.call(paste, u) %in% do.call(paste, lk), , drop = FALSE]
     if (nrow(off)) cli_fail(paste0("Not accepted yet: ", paste(cli_unit_label(off), collapse = ", ")))
   }
+  groups <- cli_assign_group(con, u, name, isTRUE(o[["split"]]))
+  message(sprintf("%d unit(s) assigned to: %s", nrow(u), paste(unique(groups), collapse = ", ")))
+  0L
+}
+
+#' Accepted annotation units that have no export group
+#' @noRd
+cli_ungrouped_units <- function(con) {
+  DBI::dbGetQuery(con, paste(
+    "SELECT an.ID, an.path, an.scaffold FROM annotate an",
+    "LEFT JOIN export e ON e.ID = an.ID AND e.path = an.path AND e.scaffold = an.scaffold",
+    "WHERE an.annotate_lock = 1 AND e.export_group IS NULL ORDER BY an.ID, an.path, an.scaffold"
+  ))
+}
+
+#' Put units in group `name`, or NAME-complete and NAME-partial when mixed
+#' @return group name per unit
+#' @noRd
+cli_assign_group <- function(con, u, name, split) {
   ex <- fetch_export_data(con, session = NULL)
   comp <- ex$completeness[match(do.call(paste, u), do.call(paste, ex[UNIT_KEY]))]
   n_c <- sum(comp == "complete genome", na.rm = TRUE)
   n_p <- sum(comp == "partial genome", na.rm = TRUE)
   groups <- name
   if (n_c > 0L && n_p > 0L) {
-    if (!isTRUE(o[["split"]])) {
+    if (!split) {
       cli_fail(sprintf("%d complete and %d partial genomes cannot share a group; use --split", n_c, n_p))
     }
     groups <- ifelse(comp == "complete genome", paste0(name, "-complete"), paste0(name, "-partial"))
   }
   assign_export_group(con, u, groups)
-  message(sprintf("%d unit(s) assigned to: %s", nrow(u), paste(unique(groups), collapse = ", ")))
-  0L
+  rep_len(groups, nrow(u))
 }
 
 #' @noRd
@@ -439,6 +456,22 @@ cli_self_command <- function() {
   if (nzchar(w)) return(shQuote(normalizePath(w)))
   paste(shQuote(file.path(R.home("bin"), "Rscript")), "-e",
         shQuote("quit(status = MitoPilot:::cli_main())"))
+}
+
+#' Run a workflow when units are queued; returns the run's exit status
+#' @noRd
+cli_run_queued <- function(proj, wf, queued, resume) {
+  if (queued == 0L) {
+    message("Nothing queued for ", wf)
+    return(0L)
+  }
+  message(sprintf("Running %s: %d unit(s) queued", wf, queued))
+  res <- run_pipeline(proj$path, wf, resume = resume, user_asmb = proj$user_asmb)
+  status <- as.integer(res$status)
+  base <- res$base %||% NA_character_
+  where <- if (is.na(base)) "" else paste0("; run report: ", run_report_paths(proj$path, base)[["txt"]])
+  message(if (status == 0L) "Run finished" else paste0("Run failed (exit status ", status, "); log: ", res$log), where)
+  status
 }
 
 #' @noRd
@@ -498,16 +531,7 @@ cli_cmd_run <- function(args) {
     message("Warning: executor is '", executor, "' but this is not a scheduler job; ",
             "the Nextflow head process will run on this node (see --submit)")
   }
-  status <- 0L
-  if (queued == 0L) {
-    message("Nothing queued for ", wf)
-  } else {
-    message(sprintf("Running %s: %d unit(s) queued", wf, queued))
-    res <- run_pipeline(proj$path, wf, resume = resume, user_asmb = proj$user_asmb)
-    status <- as.integer(res$status)
-    where <- if (is.na(res$base)) "" else paste0("; run report: ", run_report_paths(proj$path, res$base)[["txt"]])
-    message(if (status == 0L) "Run finished" else paste0("Run failed (exit status ", status, "); log: ", res$log), where)
-  }
+  status <- cli_run_queued(proj, wf, queued, resume)
   if (status != 0L) return(1L)
   if (isTRUE(o[["auto_accept"]])) {
     r <- auto_accept(con, proj$dir_out, wf)
@@ -654,4 +678,129 @@ cli_cmd_export <- function(args) {
   n <- if (is.null(export_ids)) nrow(units) else sum(units$ID %in% export_ids)
   message(sprintf("Exported %d record(s) to %s", n, file.path(proj$dir_out, "export", group)))
   status
+}
+
+#' Groups with accepted units that were never exported
+#' @noRd
+cli_unexported_groups <- function(con) {
+  g <- DBI::dbGetQuery(con, paste(
+    "SELECT DISTINCT e.export_group FROM export e",
+    "JOIN annotate an ON an.ID = e.ID AND an.path = e.path AND an.scaffold = e.scaffold",
+    "WHERE e.export_group IS NOT NULL AND an.annotate_lock = 1 AND e.export_time_stamp IS NULL",
+    "ORDER BY 1"))$export_group
+  g[vapply(g, function(x) nrow(export_group_units(con, x)) > 0L, logical(1))]
+}
+
+#' @noRd
+cli_cmd_auto <- function(args) {
+  desc <- c(CLI_DESC_PROJECT,
+    group = "export group name (default: the project directory name)",
+    flagged = "flagged samples at export: stop, drop, or keep (default: stop)",
+    resume = "resume previous runs (default; --no-resume starts fresh)",
+    submit = "submit as a scheduler job instead of running here",
+    "dry-run" = "print what would run and stop",
+    yes = "do not ask for confirmation")
+  p <- cli_parse_cmd(args, "auto", desc, flags = c("resume", "submit", "dry-run", "yes"))
+  if (is.null(p)) return(0L)
+  o <- p$opts
+  if (length(p$pos)) cli_fail(paste0("auto takes no arguments, got: ", paste(p$pos, collapse = " ")))
+  flagged <- o[["flagged"]] %||% "stop"
+  if (!flagged %in% c("stop", "drop", "keep")) cli_fail("--flagged must be one of: stop, drop, keep")
+  yes <- isTRUE(o[["yes"]])
+  dry <- isTRUE(o[["dry_run"]])
+  resume <- !identical(o[["resume"]], FALSE)
+  proj <- open_project(o[["project"]] %||% ".")
+  on.exit(DBI::dbDisconnect(proj$con), add = TRUE)
+  con <- proj$con
+  group <- o[["group"]] %||% basename(normalizePath(proj$path))
+  if (!valid_group_name(group)) {
+    cli_fail(paste0("Group name '", group, "' may use only letters, numbers, dots, hyphens, and underscores; give --group"))
+  }
+  if (!dry) {
+    live <- run_active(proj$path)
+    if (!is.na(live)) cli_fail(paste0("A run is still in progress in this project: ", live))
+    if (flagged == "keep") {
+      if (!cli_confirm("--flagged keep exports flagged samples and logs an override. Continue?", yes)) {
+        message("Cancelled")
+        return(1L)
+      }
+    }
+  }
+  queued <- c(assemble = length(pipeline_queue(con, "assemble", proj$user_asmb)),
+              annotate = length(pipeline_queue(con, "annotate", proj$user_asmb)))
+
+  if (isTRUE(o[["submit"]])) {
+    cmd <- paste(c(cli_self_command(), "auto", if (!is.null(o[["group"]])) c("--group", shQuote(group)),
+                   if (!is.null(o[["flagged"]])) c("--flagged", flagged), if (!resume) "--no-resume",
+                   "--yes", "--project", shQuote(proj$path)), collapse = " ")
+    res <- submit_pipeline(proj$path, cmd, "auto", dry_run = dry)
+    if (dry) {
+      cat(res$lines, sep = "\n")
+      message(sprintf("Dry run: %d assemble and %d annotate unit(s) queued; script %s",
+                      queued[["assemble"]], queued[["annotate"]], res$script))
+      return(0L)
+    }
+    message(if (res$submitted) "Submitted: " else "Submit failed: ", paste(res$output, collapse = " "),
+            "\nScript: ", res$script)
+    return(if (res$submitted) 0L else 1L)
+  }
+
+  if (dry) {
+    for (wf in c("assemble", "annotate")) {
+      a <- nextflow_cmd(wf, path = proj$path, userAsmbs = proj$user_asmb)
+      if (!resume) a <- stringr::str_remove(a, "-resume")
+      cat("nextflow", a, "\n")
+    }
+    message(sprintf("Dry run: %d assemble and %d annotate unit(s) queued; group '%s', flagged: %s",
+                    queued[["assemble"]], queued[["annotate"]], group, flagged))
+    return(0L)
+  }
+
+  executor <- read_config_executor(file.path(proj$path, ".config"))$executor
+  if (!identical(tolower(executor), "local") && !any(nzchar(Sys.getenv(CLI_JOB_VARS)))) {
+    message("Warning: executor is '", executor, "' but this is not a scheduler job; ",
+            "the Nextflow head process will run on this node (see --submit)")
+  }
+  n_acc <- 0L
+  for (wf in c("assemble", "annotate")) {
+    if (wf == "annotate" && annot_import_pending(con)) {
+      message("Skipping annotate: imported gene names are not confirmed yet; confirm them in the app")
+    } else {
+      n <- length(pipeline_queue(con, wf, proj$user_asmb))
+      if (cli_run_queued(proj, wf, n, resume) != 0L) return(1L)
+    }
+    r <- auto_accept(con, proj$dir_out, wf)
+    n_acc <- n_acc + nrow(r$accepted)
+    message(sprintf("Auto-accepted %d %s unit(s), parked %d", nrow(r$accepted), wf, nrow(r$parked)))
+  }
+
+  u <- cli_ungrouped_units(con)
+  new_groups <- character()
+  if (nrow(u)) {
+    new_groups <- unique(cli_assign_group(con, u, group, split = TRUE))
+    message(sprintf("%d unit(s) assigned to: %s", nrow(u), paste(new_groups, collapse = ", ")))
+  } else {
+    message("No accepted units without a group")
+  }
+  todo <- unique(c(new_groups, cli_unexported_groups(con)))
+  results <- integer()
+  for (g in todo) {
+    message("Exporting group: ", g)
+    ea <- c(g, "--project", proj$path, "--flagged", flagged, if (yes) "--yes")
+    results[g] <- tryCatch(cli_cmd_export(ea), mitopilot_cli_error = function(e) {
+      message("Export of '", g, "' failed: ", conditionMessage(e))
+      1L
+    })
+  }
+
+  st <- project_status(con)
+  parked <- st[!st$locked & nzchar(st$reasons), , drop = FALSE]
+  message(sprintf("Summary: %d unit(s) accepted, %d parked, %d group(s) exported, %d group(s) held back",
+                  n_acc, nrow(parked), sum(results == 0L), sum(results != 0L)))
+  if (nrow(parked)) {
+    codes <- table(unlist(strsplit(parked$reasons, ",")))
+    message("Parked: ", paste0(names(codes), " (", as.integer(codes), ")", collapse = ", "))
+    message("Run 'mitopilot status --parked' for details.")
+  }
+  if (any(results == 1L)) 1L else if (nrow(parked) || any(results == 2L)) 2L else 0L
 }
