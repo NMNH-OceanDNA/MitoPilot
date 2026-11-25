@@ -6,7 +6,7 @@
 
 - **Export window remembers its thresholds and options.** The outlier thresholds and export options set in the app's Export Data window are saved with the project, so the command line uses the same values.
 
-- **Run Reports label command-line runs.** Runs started with `mitopilot` are marked as such, and an interrupted run is recorded as stopped.
+- **Run Reports label command-line runs.** Runs started with `mitopilot` show "Command line" in the Launched column, and a run stopped with Ctrl-C is recorded as stopped.
 
 - **Fix: `export_files()` honours `IDs` together with `group`.** Passing both writes only the named samples of the group.
 

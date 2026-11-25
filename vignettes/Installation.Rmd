@@ -129,7 +129,7 @@ To run projects from the shell without opening the app, install the command once
 Rscript -e 'MitoPilot::install_cli()'
 ```
 
-It is written to `~/.local/bin`; add that folder to your `PATH` if the command
+The Docker image already includes it. Otherwise it is written to `~/.local/bin`; add that folder to your `PATH` if the command
 says so. See [Command-Line Mode](Command-Line.html).
 
 ## Updating, pinning, and rolling back
