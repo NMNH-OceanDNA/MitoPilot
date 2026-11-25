@@ -37,7 +37,8 @@ lock_assemblies <- function(con, dir_out, ids, lock = TRUE) {
     )
   }
   if (is.null(stale)) stale <- data.frame(ID = character(0))
-  upd <- data.frame(ID = ids[!ids %in% stale$ID], assemble_lock = as.numeric(lock))
+  keep <- ids[!ids %in% stale$ID]
+  upd <- data.frame(ID = keep, assemble_lock = rep(as.numeric(lock), length(keep)))
   # A locked sample is never admitted by WF1, so a queued join could never run.
   if (lock) upd$join_switch <- rep(NA_integer_, nrow(upd))
   upd$time_stamp <- rep(as.integer(Sys.time()), nrow(upd))
@@ -94,6 +95,7 @@ valid_group_name <- function(name) grepl("^[A-Za-z0-9._-]+$", name)
 #' @noRd
 assign_export_group <- function(con, units, group) {
   upd <- units[UNIT_KEY]
+  stopifnot(length(group) %in% c(1L, nrow(upd)))
   upd$export_group <- rep_len(as.character(group), nrow(upd))
   dplyr::tbl(con, "export") |>
     dplyr::rows_upsert(upd, in_place = TRUE, copy = TRUE, by = UNIT_KEY)

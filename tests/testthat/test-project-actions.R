@@ -60,3 +60,28 @@ test_that("assign_export_group takes one group per unit", {
   expect_equal(DBI::dbGetQuery(f$con, "SELECT export_group FROM export ORDER BY scaffold")[[1]],
                c("g-complete", "g-partial"))
 })
+test_that("lock_assemblies with every ID stale writes nothing", {
+  f <- local_project_fixture(ids = c("A", "B"))
+  before <- DBI::dbReadTable(f$con, "assemble")
+  r <- lock_assemblies(f$con, f$dir_out, c("A", "B"))
+  expect_equal(nrow(r$written), 0); expect_equal(r$stale$ID, c("A", "B"))
+  expect_equal(DBI::dbReadTable(f$con, "assemble"), before)
+})
+test_that("shared actions accept no units", {
+  f <- local_project_fixture(ids = "A", annotate_units = data.frame(ID = "A", path = 1, scaffold = 1))
+  none <- data.frame(ID = character(0), path = integer(0), scaffold = integer(0))
+  expect_equal(nrow(lock_assemblies(f$con, f$dir_out, character(0))$written), 0)
+  expect_equal(nrow(lock_assemblies(f$con, f$dir_out, character(0), lock = FALSE)$written), 0)
+  expect_equal(nrow(set_unit_state(f$con, "assemble", none, 0)), 0)
+  expect_equal(nrow(set_unit_state(f$con, "annotate", none, 0)), 0)
+  expect_equal(nrow(lock_annotations(f$con, none)$written), 0)
+  expect_equal(nrow(lock_annotations(f$con, none, lock = FALSE)$written), 0)
+  expect_equal(nrow(assign_export_group(f$con, none, "g1")), 0)
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT assemble_switch, assemble_lock FROM assemble")[1, ], data.frame(assemble_switch = 1L, assemble_lock = 0L))
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT COUNT(*) AS n FROM export")$n, 0)
+})
+test_that("assign_export_group refuses a group vector of the wrong length", {
+  f <- local_project_fixture(ids = "A", annotate_units = data.frame(ID = "A", path = 1, scaffold = 1:3))
+  expect_error(assign_export_group(f$con, data.frame(ID = "A", path = 1, scaffold = 1:3), c("g1", "g2")))
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT COUNT(*) AS n FROM export")$n, 0)
+})
