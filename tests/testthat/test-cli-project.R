@@ -62,3 +62,30 @@ test_that("run_active is NA with no runs and finds an unreported live run", {
   Sys.setFileTime(log, Sys.time() - 7200)
   expect_true(is.na(run_active(td)))
 })
+
+test_that("open_project tolerates a config without asmbDir", {
+  td <- withr::local_tempdir()
+  con <- local_test_db()
+  file.copy(DBI::dbGetInfo(con)$dbname, file.path(td, ".sqlite"))
+  writeLines(c("params {", "    publishDir = 'out'", "}"), file.path(td, ".config"))
+  p <- suppressMessages(open_project(td))
+  withr::defer(DBI::dbDisconnect(p$con))
+  expect_false(p$user_asmb)
+})
+
+test_that("open_project fails cleanly on a config without publishDir", {
+  td <- withr::local_tempdir()
+  con <- local_test_db()
+  file.copy(DBI::dbGetInfo(con)$dbname, file.path(td, ".sqlite"))
+  writeLines(c("params {", "}"), file.path(td, ".config"))
+  expect_error(open_project(td), class = "mitopilot_cli_error")
+})
+
+test_that("a failing open_project leaves the MitoPilot.db option unchanged", {
+  td <- withr::local_tempdir()
+  file.create(file.path(td, ".sqlite"))
+  writeLines(c("params {", "    publishDir = 'out'", "}"), file.path(td, ".config"))
+  withr::local_options(MitoPilot.db = "before")
+  expect_error(open_project(td))
+  expect_equal(getOption("MitoPilot.db"), "before")
+})

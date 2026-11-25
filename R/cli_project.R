@@ -35,7 +35,16 @@ open_project <- function(path = ".", migrate = TRUE) {
   if (!file.exists(db) || !file.exists(cfg)) {
     cli_fail(paste0("Not a MitoPilot project (no .sqlite and .config): ", path))
   }
-  options(MitoPilot.db = db)
+  conf <- readLines(cfg)
+  dir_out <- conf |>
+    stringr::str_extract("publishDir.*") |>
+    na.omit() |>
+    stringr::str_remove("^[^'|^\"]+['\"]") |>
+    stringr::str_extract("^[^'|^\"]+")
+  if (length(dir_out) == 0) cli_fail(paste0("No publishDir in .config: ", cfg))
+  asmb_line <- grep("asmbDir", conf, value = TRUE)[1]
+  asmb <- if (is.na(asmb_line)) NA_character_ else stringr::str_trim(stringr::str_split(
+    stringr::str_split(asmb_line, "=")[[1]][2], "'")[[1]][2])
   if (migrate) {
     gaps <- local({
       con <- DBI::dbConnect(RSQLite::SQLite(), dbname = db)
@@ -45,16 +54,9 @@ open_project <- function(path = ".", migrate = TRUE) {
     if (length(gaps) > 0) backwards_compatibility(path = path, update_config = FALSE)
   }
   con <- DBI::dbConnect(RSQLite::SQLite(), dbname = db)
-  conf <- readLines(cfg)
-  dir_out <- conf |>
-    stringr::str_extract("publishDir.*") |>
-    na.omit() |>
-    stringr::str_remove("^[^'|^\"]+['\"]") |>
-    stringr::str_extract("^[^'|^\"]+")
-  asmb <- stringr::str_trim(stringr::str_split(
-    stringr::str_split(conf[grep("asmbDir", conf)], "=")[[1]][2], "'")[[1]][2])
-  list(path = path, db = db, con = con, dir_out = file.path(path, dir_out),
-       user_asmb = !is.na(asmb) && asmb != "NA")
+  options(MitoPilot.db = db)
+  list(path = path, db = db, con = con, dir_out = file.path(path, dir_out[1]),
+       user_asmb = length(asmb) == 1 && !is.na(asmb) && asmb != "NA")
 }
 
 #' @noRd
