@@ -17,7 +17,7 @@ pass_collapse <- function(codes) paste(codes, collapse = ",")
 depth_below <- function(depth, min_depth) {
   if (length(depth) == 0L) return(TRUE)
   any(vapply(depth, function(d) {
-    v <- parse_stored_depth(d)
+    v <- parse_stored_depth(gsub("#", "", d, fixed = TRUE))
     length(v) == 0L || anyNA(v) || !isTRUE(mean(v) >= min_depth)
   }, logical(1)))
 }

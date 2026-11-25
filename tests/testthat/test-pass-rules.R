@@ -146,6 +146,11 @@ test_that("parse_stored_depth handles missing and blank", {
   expect_length(parse_stored_depth(""), 0)
 })
 
+test_that("depth_below reads outlier-masked depth values", {
+  expect_false(depth_below("80 #300 85", 10))
+  expect_true(depth_below("5 #6 7", 10))
+})
+
 test_that("warning_tally counts semicolon separated warnings", {
   f <- local_project_fixture(ids = "A")
   DBI::dbAppendTable(f$con, "annotations", data.frame(
