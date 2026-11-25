@@ -58,18 +58,43 @@ run_pipeline <- function(project, workflow, resume = TRUE, user_asmb = FALSE, ec
   if (queued == 0) {
     return(list(status = 0L, base = NA_character_, log = NA_character_, queued = 0L))
   }
-  base <- run_basename(workflow)
-  log <- file.path(run_dir(project, "nextflow"), paste0(base, ".nextflow.log"))
+  repeat {
+    base <- run_basename(workflow)
+    log <- file.path(run_dir(project, "nextflow"), paste0(base, ".nextflow.log"))
+    if (!file.exists(log) && !file.exists(file.path(run_dir(project, "jobs"), paste0(base, ".sh")))) break
+    Sys.sleep(1)
+  }
   args <- nextflow_cmd(workflow, path = project, userAsmbs = user_asmb, base = base)
   if (!resume) args <- stringr::str_remove(args, "-resume")
-  res <- processx::run("nextflow", args, wd = project, env = nextflow_env(project),
-                       error_on_status = FALSE, echo = echo)
+  res <- withCallingHandlers(
+    processx::run("nextflow", args, wd = project, env = nextflow_env(project),
+                  error_on_status = FALSE, echo = echo, cleanup_grace = 20),
+    interrupt = function(e) write_cli_report(project, log, NA_integer_, c("cli", "stopped"))
+  )
   status <- as.integer(res$status)
-  if (file.exists(log)) {
-    tryCatch(write_run_report(project, run_report(project, log, exit_status = status, how = "cli")),
-             error = function(e) message("Run report not written: ", conditionMessage(e)))
-  }
+  write_cli_report(project, log, status, "cli")
   list(status = status, base = base, log = log, queued = as.integer(queued))
+}
+
+#' Write a command-line run's report; on failure a minimal one, so the run
+#' does not stay "in progress"
+#' @noRd
+write_cli_report <- function(project, log, status, how) {
+  if (!file.exists(log)) return(invisible())
+  tryCatch(write_run_report(project, run_report(project, log, exit_status = status, how = how)),
+    error = function(e) {
+      base <- run_log_base(log)
+      p <- run_report_paths(project, base)
+      dir.create(dirname(p[["dcf"]]), recursive = TRUE, showWarnings = FALSE)
+      result <- if ("stopped" %in% how) "stopped" else if (is.na(status) || status != 0L) "failed" else "finished"
+      writeLines(c("MitoPilot run report", paste("Report could not be built:", conditionMessage(e)),
+                   paste("Log:      ", log)), p[["txt"]])
+      write.dcf(data.frame(base = base, workflow = sub("_.*$", "", base), result = result,
+                           exit_status = status, launch = "cli", log = log), p[["dcf"]])
+      message("Run report could not be built (", conditionMessage(e),
+              "); wrote a minimal one: ", p[["txt"]])
+    })
+  invisible()
 }
 
 #' Write a scheduler job script that runs `command`, and submit it

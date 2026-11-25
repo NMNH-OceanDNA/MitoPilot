@@ -260,8 +260,8 @@ fmt_duration <- function(secs) {
 #' @param log The run's Nextflow log, `.runs/nextflow/<base>.nextflow.log`.
 #' @param exit_status Nextflow's exit status; NULL reads the scheduler log
 #'   trailer, else infers it from the log (fatal error = 1, finish marker = 0).
-#' @param how "stopped" when the user stopped the run, "cli" for a command-line
-#'   run, else NULL.
+#' @param how NULL, or any of "stopped" (the user stopped the run) and "cli"
+#'   (launched from the command line).
 #' @param con Project DB connection, for failed samples; NULL opens the
 #'   project `.sqlite` read-only when present.
 #' @return list(meta, text): `meta` is a named list with RUN_META_FIELDS,
@@ -290,7 +290,7 @@ run_report <- function(project, log, exit_status = NULL, how = NULL, con = NULL)
   fsamples <- sample_last_task(f$attempts, bad$ID, bad$note, units = workflow == "annotate")
   cnt <- function(k) sum(f$stats[k], na.rm = TRUE)
 
-  result <- if (identical(how, "stopped")) "stopped" else
+  result <- if ("stopped" %in% how) "stopped" else
     if (is.na(status) && !f$finished) "killed" else
     if ((!is.na(status) && status != 0L) || f$fatal) "failed" else
     if (n_t + n_s > 0) "failures" else "finished"
@@ -305,7 +305,7 @@ run_report <- function(project, log, exit_status = NULL, how = NULL, con = NULL)
     result = result, exit_status = status,
     n_samples = length(f$samples), n_failed_samples = n_s, n_failed_tasks = n_t,
     succeeded = cnt("succeeded"), cached = cnt("cached"), retried = cnt("retries"),
-    launch = if (identical(how, "cli")) "cli" else
+    launch = if ("cli" %in% how) "cli" else
       if (file.exists(file.path(run_dir(project, "jobs"), paste0(base, ".sh")))) "job" else "app",
     log = log, mitopilot_version = mp_ver, nextflow_version = f$version)
 

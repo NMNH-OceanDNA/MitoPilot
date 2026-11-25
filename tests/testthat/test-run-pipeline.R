@@ -83,6 +83,72 @@ test_that("run_pipeline uses the user-assembly entry and keeps -resume by defaul
   expect_true(all(c("WF1_userAsmb", "-resume") %in% args))
 })
 
+fake_nf_log <- function(args, lines = character()) {
+  log <- args[which(args == "-log") + 1]
+  dir.create(dirname(log), recursive = TRUE, showWarnings = FALSE)
+  writeLines(c("Nov-25 10:00:00.000 [main] DEBUG nextflow.cli.Launcher - $> nextflow run x", lines), log)
+}
+
+test_that("an interrupted run writes a stopped command-line report and still interrupts", {
+  f <- local_project_fixture(ids = "A")
+  grace <- NULL
+  local_mocked_bindings(run = function(command, args, ..., cleanup_grace) {
+    grace <<- cleanup_grace
+    fake_nf_log(args)
+    stop(structure(class = c("system_command_interrupt", "interrupt", "condition"),
+                   list(message = "interrupted", call = NULL)))
+  }, .package = "processx")
+  expect_condition(run_pipeline(f$path, "assemble", echo = FALSE), class = "interrupt")
+  expect_gte(grace, 10)
+  dcf <- list.files(run_dir(f$path, "reports"), "_report\\.dcf$", full.names = TRUE)
+  expect_length(dcf, 1)
+  m <- read.dcf(dcf)
+  expect_equal(unname(m[1, c("result", "launch")]), c("stopped", "cli"))
+  expect_true(is.na(run_active(f$path)))
+})
+
+test_that("a non-zero exit that leaves a log gives a failed report", {
+  f <- local_project_fixture(ids = "A")
+  local_mocked_bindings(run = function(command, args, ...) {
+    fake_nf_log(args)
+    list(status = 1L, stdout = "", stderr = "")
+  }, .package = "processx")
+  r <- run_pipeline(f$path, "assemble", echo = FALSE)
+  m <- read.dcf(run_report_paths(normalizePath(f$path), r$base)[["dcf"]])
+  expect_equal(unname(m[1, "result"]), "failed")
+  expect_true(is.na(run_active(f$path)))
+})
+
+test_that("a report that cannot be built still ends the run", {
+  f <- local_project_fixture(ids = "A")
+  local_mocked_bindings(run = function(command, args, ...) {
+    fake_nf_log(args)
+    list(status = 0L, stdout = "", stderr = "")
+  }, .package = "processx")
+  local_mocked_bindings(run_report = function(...) stop("boom"))
+  expect_message(r <- run_pipeline(f$path, "assemble", echo = FALSE), "minimal")
+  m <- read.dcf(run_report_paths(normalizePath(f$path), r$base)[["dcf"]])
+  expect_equal(unname(m[1, c("result", "launch")]), c("finished", "cli"))
+  expect_true(is.na(run_active(f$path)))
+})
+
+test_that("run_pipeline picks a fresh run name when the log exists", {
+  f <- local_project_fixture(ids = "A")
+  taken <- "assemble_2020-01-01_00-00-00"
+  d <- run_dir(f$path, "nextflow")
+  dir.create(d, recursive = TRUE)
+  writeLines("old", file.path(d, paste0(taken, ".nextflow.log")))
+  dir.create(run_dir(f$path, "reports"))
+  writeLines("base: x", run_report_paths(f$path, taken)[["dcf"]])
+  n <- 0
+  local_mocked_bindings(run_basename = function(...) {
+    n <<- n + 1
+    if (n == 1) taken else "assemble_2020-01-01_00-00-01"
+  })
+  local_mocked_bindings(run = function(...) list(status = 0L, stdout = "", stderr = ""), .package = "processx")
+  expect_equal(run_pipeline(f$path, "assemble", echo = FALSE)$base, "assemble_2020-01-01_00-00-01")
+})
+
 test_that("run_pipeline refuses while a run is active", {
   f <- local_project_fixture(ids = "A")
   d <- run_dir(f$path, "nextflow")
