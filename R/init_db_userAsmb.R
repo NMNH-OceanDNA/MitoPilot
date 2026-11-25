@@ -850,6 +850,7 @@ new_db_userAsmb <- function(
       copy = TRUE,
       by = "export_opts"
     )
+  migrate_cli_schema(con)
 
   # Annotations table
   DBI::dbExecute(

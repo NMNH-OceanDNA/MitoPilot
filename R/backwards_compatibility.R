@@ -2291,6 +2291,8 @@ backwards_compatibility <- function(
     }
   }
 
+  migrate_cli_schema(con)
+
   # Sample metadata tables and ID columns (idempotent; also migrates geome_*).
   if (!meta_current) {
     .meta_ensure_tables(con)
@@ -2407,6 +2409,11 @@ schema_gaps <- function(con) {
                 DBI::dbListFields(con, "circularize_overlap"))) ||
        !has("contig" %in% DBI::dbListFields(con, "circularize_depth")))) {
     gaps <- c(gaps, "the circularization evidence tables are missing or out of date")
+  }
+  if (!has(all(c("project_settings", "review_log") %in% DBI::dbListTables(con))) ||
+      !has(all(c("start_aa", "stop_aa", "ident_pct", "aa_alignments", "gene_export") %in%
+               DBI::dbListFields(con, "export_opts")))) {
+    gaps <- c(gaps, "the command-line settings, review log, or export option columns are missing")
   }
   gaps
 }

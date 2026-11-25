@@ -752,6 +752,7 @@ new_db <- function(
       copy = TRUE,
       by = "export_opts"
     )
+  migrate_cli_schema(con)
 
   # Annotations table
   DBI::dbExecute(
