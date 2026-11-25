@@ -66,3 +66,10 @@ local_project_fixture <- function(ids = "A", on_disk = character(),
   }
   list(con = con, path = path, dir_out = dir_out)
 }
+
+local_export_fixture <- function(group = "g1", ids = "A", ..., env = parent.frame()) {
+  f <- local_project_fixture(ids, annotated = TRUE, ..., env = env)
+  DBI::dbExecute(f$con, "UPDATE annotate SET annotate_lock = 1")
+  assign_export_group(f$con, DBI::dbGetQuery(f$con, "SELECT ID, path, scaffold FROM annotate"), group)
+  f
+}

@@ -54,13 +54,15 @@ list_export_templates <- function(con) {
 #' @param con database connection
 #' @param name template name (defaults to "default")
 #'
-#' @return list(fasta_header=, fasta_header_gene=)
+#' @return list(fasta_header=, fasta_header_gene=, start_aa=, stop_aa=,
+#'   ident_pct=, aa_alignments=, gene_export=)
 #'
 #' @noRd
 get_export_opts <- function(con, name = "default") {
   defaults <- list(
     fasta_header = DEFAULT_FASTA_HEADER,
-    fasta_header_gene = DEFAULT_FASTA_HEADER_GENE
+    fasta_header_gene = DEFAULT_FASTA_HEADER_GENE,
+    start_aa = 10, stop_aa = 10, ident_pct = 60, aa_alignments = TRUE, gene_export = FALSE
   )
   row <- tryCatch(
     dplyr::tbl(con, "export_opts") |>
@@ -72,30 +74,41 @@ get_export_opts <- function(con, name = "default") {
   pick <- function(x, default) {
     if (length(x) == 0 || is.na(x[1]) || !nzchar(x[1])) default else header_lock(x[1])
   }
+  num <- function(k) {
+    x <- row[[k]]
+    if (length(x) == 0 || is.na(x[1])) defaults[[k]] else as.numeric(x[1])
+  }
   list(
     fasta_header = pick(row$fasta_header, defaults$fasta_header),
-    fasta_header_gene = pick(row$fasta_header_gene, defaults$fasta_header_gene)
+    fasta_header_gene = pick(row$fasta_header_gene, defaults$fasta_header_gene),
+    start_aa = num("start_aa"), stop_aa = num("stop_aa"), ident_pct = num("ident_pct"),
+    aa_alignments = num("aa_alignments") == 1, gene_export = num("gene_export") == 1
   )
 }
 
-#' Save (upsert) a named FASTA header template to the project DB
+#' Save (upsert) a named FASTA header template and export options to the project DB
 #'
-#' No-op (with a warning) if the table is missing.
+#' Only the values given (not NULL or NA) are written. No-op (with a warning)
+#' if the table is missing.
 #'
 #' @param con database connection
 #' @param fasta_header,fasta_header_gene template strings
 #' @param name template name (defaults to "default")
+#' @param start_aa,stop_aa,ident_pct,aa_alignments,gene_export export options
 #'
 #' @noRd
-set_export_opts <- function(con, fasta_header, fasta_header_gene, name = "default") {
+set_export_opts <- function(con, fasta_header = NULL, fasta_header_gene = NULL, name = "default",
+                            start_aa = NULL, stop_aa = NULL, ident_pct = NULL,
+                            aa_alignments = NULL, gene_export = NULL) {
+  vals <- list(fasta_header = fasta_header, fasta_header_gene = fasta_header_gene,
+               start_aa = start_aa, stop_aa = stop_aa, ident_pct = ident_pct,
+               aa_alignments = aa_alignments, gene_export = gene_export)
+  vals <- Filter(function(v) length(v) == 1 && !is.na(v), vals)
+  vals <- lapply(vals, function(v) if (is.logical(v)) as.integer(v) else v)
   tryCatch(
     dplyr::tbl(con, "export_opts") |>
       dplyr::rows_upsert(
-        data.frame(
-          export_opts = name,
-          fasta_header = fasta_header,
-          fasta_header_gene = fasta_header_gene
-        ),
+        data.frame(export_opts = name, vals),
         in_place = TRUE,
         copy = TRUE,
         by = "export_opts"
@@ -103,6 +116,95 @@ set_export_opts <- function(con, fasta_header, fasta_header_gene, name = "defaul
     error = function(e) warning("Could not save export header templates: ", e$message)
   )
   invisible(NULL)
+}
+
+# Pre-export checks shared by the Export Data window and `mitopilot export`.
+# `d` is the Export table data (export_table_data()).
+
+export_table_data <- function(con) meta_view_join(fetch_export_data(con, session = NULL), con)
+
+export_group_rows <- function(d, group) d[!is.na(d$export_group) & d$export_group == group, , drop = FALSE]
+
+# Samples contributing units from more than one assembly path: blocked, since
+# export_files() rejects them (each path would be a duplicate record).
+export_multi_path_ids <- function(d, group) {
+  d <- export_group_rows(d, group)
+  if (nrow(d) == 0) return(character(0))
+  by_id <- split(d$path, d$ID)
+  names(by_id)[vapply(by_id, function(p) length(unique(p)) > 1, logical(1))]
+}
+
+# Samples whose one path is split across scaffolds, so each exports as several
+# incomplete records: warned, not blocked.
+export_fragmented_ids <- function(d, group) {
+  d <- export_group_rows(d, group)
+  if (nrow(d) == 0) return(character(0))
+  by_id <- split(d, d$ID)
+  names(by_id)[vapply(by_id, function(x) nrow(x) > 1 && length(unique(x$path)) == 1, logical(1))]
+}
+
+export_shown <- function(x, n) {
+  s <- paste(utils::head(x, n), collapse = ", ")
+  if (length(x) > n) paste0(s, ", and ", length(x) - n, " more") else s
+}
+
+export_multi_path_text <- function(mp) {
+  shown <- export_shown(mp, 8)
+  stringr::str_glue(
+    "{mp_n(length(mp), 'sample')} still have more than one assembly path: {shown}.\n\n",
+    "Assembly paths are alternative resolutions of the same genome, so ",
+    "exporting each would submit duplicate records for one specimen. In the ",
+    "Assemble module, open the assembly details and 'ignore' all but the ",
+    "correct path (or build a consensus Path 0), then export again."
+  )
+}
+
+export_fragmented_text <- function(frag) {
+  shown <- export_shown(frag, 5)
+  stringr::str_glue(
+    "{mp_n(length(frag), 'sample')} have more than one assembly and will each ",
+    "produce a SEPARATE GenBank record: {shown}.\n\n",
+    "That is correct when the scaffolds really are different genomes. If a ",
+    "sample is instead ONE genome broken into fragments, each record will ",
+    "be submitted as an incomplete genome. Cancel and use consensus ",
+    "trimming / scaffold joining to combine them, or 'ignore' all but one ",
+    "scaffold."
+  )
+}
+
+export_nmnh_text <- function(r) {
+  sprintf(paste(
+    "%d of %s in this group have NMNH problems. NMNH records should not be",
+    "submitted to GenBank without both a specimen_voucher and a voucherURI.",
+    "Exporting anyway leaves the empty modifiers out of the headers."),
+    sum(!r$ok), mp_n(nrow(r), "sample"))
+}
+
+# Export data with the NMNH values from nmnh_resolve() (NA when not resolved)
+export_with_nmnh <- function(d, r) {
+  for (k in c("nmnh_specimen_voucher", "nmnh_voucherURI")) {
+    d[[k]] <- if (is.null(r)) rep(NA_character_, nrow(d)) else r[[k]][match(d$ID, r$ID)]
+  }
+  d
+}
+
+# Message for the first invalid header template, or NULL. The gene header is
+# only checked when genes are exported.
+export_header_problem <- function(main, gene, gene_export, d) {
+  v_main <- validate_fasta_header(main, d)
+  v_gene <- if (isTRUE(gene_export)) validate_fasta_header(gene, d) else list(ok = TRUE)
+  if (isTRUE(v_main$ok) && isTRUE(v_gene$ok)) return(NULL)
+  bad <- if (!isTRUE(v_main$ok)) v_main$message else v_gene$message
+  which_t <- if (!isTRUE(v_main$ok)) "mitogenome" else "gene"
+  stringr::str_glue("The {which_t} header template is invalid: {bad}")
+}
+
+# Conflicts on the specimen items the header templates use. "not checked" items
+# never count, and a template without specimen tokens never warns.
+export_specimen_rows <- function(con, ids, templates) {
+  concepts <- specimen_template_concepts(templates, specimen_csv_columns(con))
+  if (!length(concepts)) return(NULL)
+  specimen_export_warnings(specimen_conflicts(con, ids), concepts, ids)
 }
 
 # A short "...near here..." context window around a brace position, for messages.

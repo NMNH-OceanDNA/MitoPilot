@@ -119,7 +119,8 @@ export_server <- function(id) {
                            on_back = function() nmnh_show_report(),
                            back_label = "Back to voucher report")
     meta_view_open <- meta_view_setup(input, output, session)
-    fetch_data <- function() meta_view_join(fetch_export_data(), session$userData$con)
+    fetch_data <- function() export_table_data(session$userData$con)
+    saved_opts <- get_export_opts(session$userData$con)
 
     # Prepare data ----
     rv <- reactiveValues(
@@ -144,9 +145,9 @@ export_server <- function(id) {
       export_template = "default",
       # Last-used review options, so the modal reopens with them (not defaults)
       opt_review = TRUE,
-      opt_start = 10,
-      opt_stop = 10,
-      opt_ident = 60,
+      opt_start = saved_opts$start_aa,
+      opt_stop = saved_opts$stop_aa,
+      opt_ident = saved_opts$ident_pct,
       # TRUE only while an export is writing, so the gears turn only then
       exporting = FALSE
     )
@@ -802,7 +803,7 @@ export_server <- function(id) {
           div(class = "mp-card-title", mp_checkbox(
             ns("export_genes"),
             "Export individual protein-coding and rRNA genes",
-            value = snap$export_genes %||% FALSE
+            value = snap$export_genes %||% get_export_opts(con)$gene_export
           )),
           opts_help(
             "Writes one FASTA and one feature table per gene, into a genes ",
@@ -821,7 +822,7 @@ export_server <- function(id) {
         mp_checkbox(
           ns("include_alignments"),
           "Generate group-level PCG alignment summary",
-          value = snap$include_alignments %||% TRUE
+          value = snap$include_alignments %||% get_export_opts(con)$aa_alignments
         ),
         opts_help(
           "Writes one HTML page comparing the amino-acid alignment of every ",
@@ -905,13 +906,7 @@ export_server <- function(id) {
 
     # NMNH values per sample of the chosen group, from nmnh_resolve()
     nmnh_res <- reactiveVal(NULL)
-    with_nmnh <- function(d) {
-      r <- nmnh_res()
-      for (k in c("nmnh_specimen_voucher", "nmnh_voucherURI")) {
-        d[[k]] <- if (is.null(r)) rep(NA_character_, nrow(d)) else r[[k]][match(d$ID, r$ID)]
-      }
-      d
-    }
+    with_nmnh <- function(d) export_with_nmnh(d, nmnh_res())
     group_data <- reactive({
       g <- input$export_group
       with_nmnh(if (isTruthy(g)) rv$data[rv$data$export_group %in% g, , drop = FALSE] else rv$data)
@@ -1030,20 +1025,10 @@ export_server <- function(id) {
     # is invalid (so a bad template can never reach export). The gene header is
     # only checked when genes are being exported: its box is hidden otherwise.
     valid_headers_or_alert <- function() {
-      v_main <- validate_fasta_header(input$fasta_header, with_nmnh(rv$data))
-      v_gene <- if (isTRUE(input$export_genes)) {
-        validate_fasta_header(input$fasta_header_gene, with_nmnh(rv$data))
-      } else {
-        list(ok = TRUE)
-      }
-      if (!isTRUE(v_main$ok) || !isTRUE(v_gene$ok)) {
-        bad <- if (!isTRUE(v_main$ok)) v_main$message else v_gene$message
-        which_t <- if (!isTRUE(v_main$ok)) "mitogenome" else "gene"
-        mp_alert(
-          title = "Invalid FASTA header template",
-          text = stringr::str_glue("The {which_t} header template is invalid: {bad}"),
-          type = "error"
-        )
+      bad <- export_header_problem(input$fasta_header, input$fasta_header_gene,
+                                   input$export_genes, with_nmnh(rv$data))
+      if (!is.null(bad)) {
+        mp_alert(title = "Invalid FASTA header template", text = bad, type = "error")
         return(FALSE)
       }
       TRUE
@@ -1457,6 +1442,9 @@ export_server <- function(id) {
         generateAAalignments = exp_val("include_alignments"),
         gene_export = exp_val("export_genes")
       )
+      set_export_opts(session$userData$con, start_aa = rv$review_start, stop_aa = rv$review_stop,
+                      ident_pct = rv$review_ident, aa_alignments = isTRUE(exp_val("include_alignments")),
+                      gene_export = isTRUE(exp_val("export_genes")))
       # Options are captured; the stash has done its job.
       # Where the files will land; surfaced via a popup once the user is done.
       rv$export_done_path <- file.path(
@@ -1835,33 +1823,6 @@ export_server <- function(id) {
       if (!is.null(input$ident_pct) && !is.na(input$ident_pct)) rv$opt_ident <- input$ident_pct
     })
 
-    # Samples in this group whose scaffolds would export as several records, i.e.
-    # ONE path split across multiple scaffolds. A single fragmented genome exported
-    # this way becomes several incomplete records, so we warn. Multi-PATH samples
-    # are a different, blocked case (multi_path_samples()) and are excluded here.
-    fragmented_samples <- function(group) {
-      d <- rv$data[!is.na(rv$data$export_group) & rv$data$export_group == group, ]
-      if (nrow(d) == 0) return(character(0))
-      by_id <- split(d, d$ID)
-      names(by_id)[vapply(
-        by_id,
-        function(x) nrow(x) > 1 && length(unique(x$path)) == 1,
-        logical(1)
-      )]
-    }
-
-    # Samples in this group contributing units from more than one assembly path.
-    # These cannot be exported (export_files() would reject them, since exporting
-    # each path submits duplicate records for one specimen), so they are blocked
-    # before export rather than warned about.
-    multi_path_samples <- function(group) {
-      d <- rv$data[!is.na(rv$data$export_group) & rv$data$export_group == group, ]
-      if (nrow(d) == 0) return(character(0))
-      by_id <- split(d$path, d$ID)
-      names(by_id)[vapply(by_id, function(p) length(unique(p)) > 1, logical(1))]
-    }
-
-
     check_overwrite_then_export <- function() {
       group <- exp_val("export_group")
       export_path <- file.path(session$userData$dir_out, "export", group)
@@ -1884,31 +1845,18 @@ export_server <- function(id) {
     # Conflicts on the specimen items the active header templates use.
     # "not checked" items never count, and a template without specimen tokens never warns.
     specimen_conflict_rows <- function(group) {
-      ids <- unique(rv$data$ID[!is.na(rv$data$export_group) & rv$data$export_group == group])
-      con <- session$userData$con
+      ids <- unique(export_group_rows(rv$data, group)$ID)
       tmpl <- c(input$fasta_header, if (isTRUE(input$export_genes)) input$fasta_header_gene)
-      concepts <- specimen_template_concepts(tmpl, specimen_csv_columns(con))
-      if (!length(concepts)) return(NULL)
-      specimen_export_warnings(specimen_conflicts(con, ids), concepts, ids)
+      export_specimen_rows(session$userData$con, ids, tmpl)
     }
 
     fragmented_then_export <- function() {
-      frag <- fragmented_samples(input$export_group)
+      frag <- export_fragmented_ids(rv$data, input$export_group)
       if (length(frag) > 0) {
-        shown <- paste(utils::head(frag, 5), collapse = ", ")
-        if (length(frag) > 5) shown <- paste0(shown, ", and ", length(frag) - 5, " more")
         mp_confirm(
           ns("fragmented_confirm"),
           title = "Some samples export as multiple records",
-          text = stringr::str_glue(
-            "{mp_n(length(frag), 'sample')} have more than one assembly and will each ",
-            "produce a SEPARATE GenBank record: {shown}.\n\n",
-            "That is correct when the scaffolds really are different genomes. If a ",
-            "sample is instead ONE genome broken into fragments, each record will ",
-            "be submitted as an incomplete genome. Cancel and use consensus ",
-            "trimming / scaffold joining to combine them, or 'ignore' all but one ",
-            "scaffold."
-          ),
+          text = export_fragmented_text(frag),
           action_label = "Export anyway",
           danger = TRUE
         )
@@ -1925,19 +1873,11 @@ export_server <- function(id) {
       # rejects these, so stop them here with a clear message instead of letting the
       # error surface mid-write. Should be rare, since locking a multi-path sample
       # for annotation is blocked upstream.
-      mp <- multi_path_samples(input$export_group)
+      mp <- export_multi_path_ids(rv$data, input$export_group)
       if (length(mp) > 0) {
-        shown <- paste(utils::head(mp, 8), collapse = ", ")
-        if (length(mp) > 8) shown <- paste0(shown, ", and ", length(mp) - 8, " more")
         mp_alert(
           title = "Cannot export samples with multiple assembly paths",
-          text = stringr::str_glue(
-            "{mp_n(length(mp), 'sample')} still have more than one assembly path: {shown}.\n\n",
-            "Assembly paths are alternative resolutions of the same genome, so ",
-            "exporting each would submit duplicate records for one specimen. In the ",
-            "Assemble module, open the assembly details and 'ignore' all but the ",
-            "correct path (or build a consensus Path 0), then export again."
-          ),
+          text = export_multi_path_text(mp),
           type = "error"
         )
         return()
@@ -1947,11 +1887,7 @@ export_server <- function(id) {
         mp_confirm(
           ns("nmnh_confirm"),
           title = "NMNH values missing or wrong",
-          text = sprintf(paste(
-            "%d of %s in this group have NMNH problems. NMNH records should not be",
-            "submitted to GenBank without both a specimen_voucher and a voucherURI.",
-            "Exporting anyway leaves the empty modifiers out of the headers."),
-            sum(!r$ok), mp_n(nrow(r), "sample")),
+          text = export_nmnh_text(r),
           action_label = "Export anyway",
           cancel_label = "View report",
           danger = TRUE

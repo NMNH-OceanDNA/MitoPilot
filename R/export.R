@@ -397,6 +397,7 @@ export_files <- function(
 
   if (length(group) == 1) {
     units <- export_group_units(con, group)
+    if (!is.null(IDs)) units <- units[units$ID %in% IDs, , drop = FALSE]
     group_pth <- file.path(out_dir, "export", group)
     unlink(group_pth, recursive = TRUE)
     group_gff_pth <- file.path(group_pth, "GFFs")

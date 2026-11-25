@@ -516,3 +516,142 @@ cli_cmd_run <- function(args) {
   st <- project_status(con)
   if (any(st$stage == wf & !st$locked & nzchar(st$reasons))) 2L else 0L
 }
+
+#' Protein-gene records the outlier check skips: no translation, or the only
+#' translated copy of its gene in the group
+#' @param a get_export_PCG_annotations() output
+#' @noRd
+export_unchecked <- function(a) {
+  ok <- !is.na(a$translation) & nzchar(a$translation)
+  n <- table(a$gene[ok])
+  sum(!ok | !a$gene %in% names(n)[n >= 2])
+}
+
+CLI_FLAGGED_MENU <- c(
+  drop = "drop flagged samples, export the rest",
+  keep = "keep all (logged as an override)",
+  cancel = "cancel, export nothing"
+)
+
+#' @noRd
+cli_cmd_export <- function(args) {
+  desc <- c(CLI_DESC_PROJECT,
+    flagged = "flagged samples: ask, stop, drop, or keep (default: ask in a terminal, stop in a script)",
+    yes = "do not ask for confirmation")
+  p <- cli_parse_cmd(args, "export GROUP", desc, flags = "yes")
+  if (is.null(p)) return(0L)
+  o <- p$opts
+  if (length(p$pos) != 1L) cli_fail("export needs exactly one GROUP")
+  group <- p$pos[1]
+  yes <- isTRUE(o[["yes"]])
+  choice <- o[["flagged"]] %||% if (cli_is_interactive()) "ask" else "stop"
+  if (!choice %in% c("ask", "stop", "drop", "keep")) cli_fail("--flagged must be one of: ask, stop, drop, keep")
+  if (choice == "ask" && !cli_is_interactive()) cli_fail("--flagged ask needs a terminal; use stop, drop, or keep")
+  proj <- open_project(o[["project"]] %||% ".")
+  on.exit(DBI::dbDisconnect(proj$con), add = TRUE)
+  con <- proj$con
+  live <- run_active(proj$path)
+  if (!is.na(live)) cli_fail(paste0("A run is still in progress in this project: ", live))
+
+  groups <- DBI::dbGetQuery(con, "SELECT DISTINCT export_group FROM export WHERE export_group IS NOT NULL ORDER BY 1")$export_group
+  if (!group %in% groups) {
+    cli_fail(paste0("No such export group: ", group,
+                    if (length(groups)) paste0(" (groups: ", paste(groups, collapse = ", "), ")")))
+  }
+  units <- export_group_units(con, group)
+  if (nrow(units) == 0L) {
+    out <- export_left_out(con, group)
+    cli_fail(paste0("Export group '", group, "' has nothing to export; left out: ",
+                    paste(sprintf("%s p%s.s%s (%s)", out$ID, out$path, out$scaffold, out$why), collapse = ", ")))
+  }
+  ids <- unique(units$ID)
+  opts <- get_export_opts(con)
+  opts$fasta_header <- nmnh_template_pref(con, opts$fasta_header)
+  d <- export_table_data(con)
+  nmnh <- if (nmnh_template_on(opts$fasta_header)) nmnh_resolve(con, ids)
+  bad <- export_header_problem(opts$fasta_header, opts$fasta_header_gene, opts$gene_export,
+                               export_with_nmnh(d, nmnh))
+  if (!is.null(bad)) cli_fail(paste0("Invalid FASTA header template. ", bad))
+  mp <- export_multi_path_ids(d, group)
+  if (length(mp)) cli_fail(paste0("Cannot export samples with multiple assembly paths. ", export_multi_path_text(mp)))
+
+  warn <- character()
+  if (!is.null(nmnh) && any(!nmnh$ok)) warn <- c(warn, paste("NMNH values missing or wrong.", export_nmnh_text(nmnh)))
+  sp <- tryCatch(
+    export_specimen_rows(con, ids, c(opts$fasta_header, if (opts$gene_export) opts$fasta_header_gene)),
+    error = function(e) { message("Specimen conflict check failed: ", conditionMessage(e)); NULL })
+  if (!is.null(sp) && nrow(sp) > 0) {
+    warn <- c(warn, paste0("Sample metadata disagrees on items the header template uses:\n",
+                           paste(utils::capture.output(print(sp, row.names = FALSE)), collapse = "\n")))
+  }
+  frag <- export_fragmented_ids(d, group)
+  if (length(frag)) warn <- c(warn, paste("Some samples export as multiple records.", export_fragmented_text(frag)))
+  if (length(warn)) {
+    message(paste0("Warning: ", warn, collapse = "\n\n"))
+    if (!cli_confirm("Export anyway?", yes)) { message("Nothing exported"); return(2L) }
+  }
+
+  report <- NULL
+  f <- data.frame(ID = character(), gene = character(), why = character())
+  if (nrow(units) > 1L) {
+    fl <- export_flags(proj, group)
+    report <- fl$report
+    f <- fl$flagged
+    message("Outlier report: ", report)
+    n_un <- export_unchecked(get_export_PCG_annotations(con, group))
+    if (n_un > 0L) {
+      message(sprintf("Note: %d sample-gene pair(s) could not be checked (no translation, or the only copy of the gene in the group)", n_un))
+    }
+  } else {
+    message("Note: one record in the group; the outlier check needs two or more")
+  }
+
+  status <- 0L
+  export_ids <- NULL
+  if (nrow(f) > 0L) {
+    flagged_ids <- unique(f$ID)
+    message("Flagged by the outlier check:\n", paste(utils::capture.output(print(f, row.names = FALSE)), collapse = "\n"))
+    if (choice == "ask") {
+      choice <- cli_ask(sprintf("%d sample(s) flagged. What now?", length(flagged_ids)), CLI_FLAGGED_MENU)
+    }
+    if (choice %in% c("stop", "cancel")) {
+      message("Nothing exported", if (choice == "stop") "; choose with --flagged drop or --flagged keep")
+      return(2L)
+    }
+    if (choice == "drop") {
+      export_ids <- setdiff(ids, flagged_ids)
+      if (length(export_ids) == 0L) {
+        message("Nothing to export: every sample in '", group, "' is flagged")
+        return(2L)
+      }
+      message("Dropping flagged: ", paste(flagged_ids, collapse = ", "))
+      status <- 2L
+    }
+    if (choice == "keep") {
+      if (!cli_confirm(sprintf("Export %d flagged sample(s) anyway? This is logged as an override.",
+                               length(flagged_ids)), yes)) {
+        message("Nothing exported")
+        return(2L)
+      }
+      fu <- units[units$ID %in% flagged_ids, , drop = FALSE]
+      log_review(con, fu, "export", "override",
+                 rules = vapply(fu$ID, function(id) pass_collapse(unique(f$why[f$ID == id])), ""))
+    }
+  }
+
+  kept <- if (!is.null(report) && file.exists(report)) {
+    tmp <- tempfile(fileext = ".html")
+    file.copy(report, tmp)
+    tmp
+  }
+  export_files(
+    group = group, IDs = export_ids,
+    fasta_header = opts$fasta_header, fasta_header_gene = opts$fasta_header_gene,
+    out_dir = proj$dir_out, generateAAalignments = opts$aa_alignments, gene_export = opts$gene_export,
+    review = FALSE, start_aa = opts$start_aa, stop_aa = opts$stop_aa, ident_pct = opts$ident_pct
+  )
+  if (!is.null(kept) && !file.exists(report)) file.copy(kept, report)
+  n <- if (is.null(export_ids)) nrow(units) else sum(units$ID %in% export_ids)
+  message(sprintf("Exported %d record(s) to %s", n, file.path(proj$dir_out, "export", group)))
+  status
+}
