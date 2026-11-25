@@ -11,6 +11,23 @@ ok_tools <- function(...) c(sbatch = TRUE, nextflow = TRUE, java = TRUE, singula
 ok_nf <- function(...) list(ok = TRUE, detail = "nextflow x")
 ok_cfg <- function(...) list(ok = TRUE, detail = "")
 
+local_stub_bin <- function(tools = c("nextflow", "java"), env = parent.frame()) {
+  d <- withr::local_tempdir(.local_envir = env)
+  for (t in tools) {
+    writeLines(c("#!/bin/sh", "echo stub version 1"), file.path(d, t))
+    Sys.chmod(file.path(d, t), "0755")
+  }
+  withr::local_path(d, action = "prefix", .local_envir = env)
+  d
+}
+
+fake_submit <- function(script_path, executor, work_dir) {
+  s <- readLines(script_path)
+  log <- sub("^#SBATCH -o ", "", grep("^#SBATCH -o ", s, value = TRUE))
+  system2("sh", shQuote(script_path), stdout = log, stderr = log)
+  list(success = TRUE, command = "sbatch", output = "Submitted batch job 1")
+}
+
 test_that("cluster_check stops at the first failing step and reports the tool's error", {
   local_saved_profile("mycl", scheduler = "slurm")
   local_mocked_bindings(cluster_tools_found = ok_tools, cluster_nextflow_version = ok_nf,
@@ -33,12 +50,8 @@ test_that("cluster_check stops at tools and names what is missing", {
 
 test_that("cluster_check passes submit when the job log reports success, then runs the pipeline step", {
   local_saved_profile("mycl")
-  fake_submit <- function(script_path, executor, work_dir) {
-    s <- readLines(script_path)
-    log <- sub("^#SBATCH -o ", "", grep("^#SBATCH -o ", s, value = TRUE))
-    system2("sh", shQuote(script_path), stdout = log, stderr = log)
-    list(success = TRUE, command = "sbatch", output = "Submitted batch job 1")
-  }
+  local_stub_bin()
+  local_mocked_bindings(cluster_head_tools = function() c("nextflow", "java"))
   local_mocked_bindings(cluster_tools_found = ok_tools, cluster_nextflow_version = ok_nf,
                         cluster_config_parses = ok_cfg, run_submit = fake_submit,
                         cluster_pipeline_runs = function(...) list(ok = TRUE, detail = "loads"))
@@ -52,9 +65,74 @@ test_that("cluster_check times out when no job log appears", {
   local_mocked_bindings(cluster_tools_found = ok_tools, cluster_nextflow_version = ok_nf,
                         cluster_config_parses = ok_cfg,
                         run_submit = function(...) list(success = TRUE, command = "sbatch", output = "Submitted batch job 9"))
+  cancelled <- NULL
+  local_mocked_bindings(cluster_cancel = function(executor, id) cancelled <<- c(executor, id))
   r <- cluster_check("mycl", wait = 0)
   expect_false(r$ok[3])
+  expect_match(r$detail[3], "timed out after 0 s", fixed = TRUE)
   expect_match(r$detail[3], "Submitted batch job 9", fixed = TRUE)
+  expect_equal(cancelled, c("slurm", "9"))
+})
+
+test_that("a template missing a required token fails the submit stage without submitting", {
+  d <- local_saved_profile("mycl")
+  writeLines(c("#SBATCH -J x", "nextflow run foo"), file.path(d, "mycl.submit.template"))
+  called <- FALSE
+  local_mocked_bindings(cluster_tools_found = ok_tools, cluster_nextflow_version = ok_nf,
+                        cluster_config_parses = ok_cfg,
+                        run_submit = function(...) { called <<- TRUE; list(success = TRUE, output = "1") })
+  r <- cluster_check("mycl")
+  expect_false(r$ok[3])
+  expect_match(r$detail[3], "<<NEXTFLOW_CMD>> and <<LOG_FILE>>", fixed = TRUE)
+  expect_false(called)
+})
+
+test_that("the check job reports missing tools from inside the job", {
+  local_saved_profile("mycl")
+  local_stub_bin()
+  local_mocked_bindings(cluster_head_tools = function() c("nextflow", "java", "no_such_tool_xyz"),
+                        cluster_tools_found = ok_tools, cluster_nextflow_version = ok_nf,
+                        cluster_config_parses = ok_cfg, run_submit = fake_submit)
+  r <- cluster_check("mycl", wait = 20)
+  expect_false(r$ok[3])
+  expect_match(r$detail[3], "missing: no_such_tool_xyz", fixed = TRUE)
+})
+
+test_that("the check job fails when nextflow does not start", {
+  local_saved_profile("mycl")
+  d <- local_stub_bin()
+  writeLines(c("#!/bin/sh", "echo boom >&2", "exit 3"), file.path(d, "nextflow"))
+  local_mocked_bindings(cluster_head_tools = function() c("nextflow", "java"),
+                        cluster_tools_found = ok_tools, cluster_nextflow_version = ok_nf,
+                        cluster_config_parses = ok_cfg, run_submit = fake_submit)
+  r <- cluster_check("mycl", wait = 20)
+  expect_false(r$ok[3])
+  expect_match(r$detail[3], "nextflow -version failed: boom", fixed = TRUE)
+})
+
+test_that("a stage that throws becomes a failed row", {
+  local_saved_profile("mycl")
+  local_mocked_bindings(cluster_tools_found = function(...) stop("cannot launch"))
+  r <- cluster_check("mycl")
+  expect_equal(r$step, "tools"); expect_false(r$ok)
+  expect_match(r$detail, "cannot launch")
+})
+
+test_that("a skipped submit stage is reported as skipped, not passed", {
+  f <- local_project_fixture(executor = "local")
+  local_mocked_bindings(cluster_tools_found = function(...) c(nextflow = TRUE), cluster_nextflow_version = ok_nf,
+                        cluster_config_parses = ok_cfg,
+                        cluster_pipeline_runs = function(...) list(ok = TRUE, detail = "loads"))
+  msgs <- paste(testthat::capture_messages(st <- cli_cmd_cluster(c("check", "--project", f$path))), collapse = "")
+  expect_equal(st, 0L)
+  expect_match(msgs, "submit +skipped")
+  expect_match(msgs, "3 passed, 1 skipped")
+  expect_false(grepl("All checks passed", msgs))
+})
+
+test_that("check rejects both a NAME and --project", {
+  local_saved_profile("mycl")
+  expect_error(cli_cmd_cluster(c("check", "mycl", "--project", ".")), "not both", class = "mitopilot_cli_error")
 })
 
 test_that("cluster_check without a name uses the project's own config and template", {
@@ -90,7 +168,11 @@ test_that("template builder sets time, memory, account, and setup lines per sche
   p <- cluster_build_template("pbs", "q", account = "acct", time = "10:00:00", mem = "8G")
   expect_true(all(c("#PBS -l select=1:ncpus=1:mem=8gb", "#PBS -l walltime=10:00:00", "#PBS -A acct") %in% p))
   s <- cluster_build_template("sge", penv = "smp", time = "10:00:00", mem = "8G")
-  expect_true(all(c("#$ -pe smp 1", "#$ -l h_rt=10:00:00", "#$ -l h_vmem=8G") %in% s))
+  expect_true(all(c("#$ -pe smp 1", "#$ -l h_rt=10:00:00", "#$ -l h_vmem=8G",
+                    'export NXF_OPTS="-Xms256m -Xmx4096m"') %in% s))
+  expect_lt(match('export NXF_OPTS="-Xms256m -Xmx4096m"', s), match("<<NEXTFLOW_CMD>>", s))
+  s2 <- cluster_build_template("sge", mem = "lots")
+  expect_false(any(grepl("h_vmem|NXF_OPTS", s2)))
   l <- cluster_build_template("lsf", time = "10:00:00", mem = "8G")
   expect_true(all(c("#BSUB -M 8000", "#BSUB -W 10:00") %in% l))
   n <- cluster_build_template("slurm", native_prefix = "/opt/mp", setup = "module load x")
@@ -146,6 +228,25 @@ test_that("cluster apply updates a project's config and template", {
   expect_equal(suppressMessages(cli_cmd_cluster(c("apply", "mycl", "--project", f$path, "--yes"))), 0L)
   expect_equal(read_config_executor(file.path(f$path, ".config"))$executor, "slurm")
   expect_true(file.exists(file.path(f$path, ".mitopilot_submit.template")))
+})
+
+test_that("cluster apply backs up an existing project template and keeps it when the profile has none", {
+  d <- local_saved_profile("mycl")
+  f <- local_project_fixture(executor = "local")
+  cfg <- file.path(f$path, ".config")
+  writeLines(fill_config(readLines(cfg), list(CONTAINER_ID = "img", RAW_DIR = "r", ASMB_DIR = "NA",
+                                              MIN_DEPTH = "5", NCBI_API_KEY = "", CONTAINER_ENGINE = "docker { enabled = true }")), cfg)
+  tp <- file.path(f$path, ".mitopilot_submit.template")
+  writeLines("old <<NEXTFLOW_CMD>>", tp)
+  suppressMessages(cli_cmd_cluster(c("apply", "mycl", "--project", f$path, "--yes")))
+  bak <- list.files(f$path, "^\\.mitopilot_submit\\.template\\.bak\\.", all.files = TRUE, full.names = TRUE)
+  expect_length(bak, 1)
+  expect_equal(readLines(bak), "old <<NEXTFLOW_CMD>>")
+  expect_false(identical(readLines(tp), "old <<NEXTFLOW_CMD>>"))
+  unlink(file.path(d, "mycl.submit.template"))
+  writeLines("mine", tp)
+  suppressMessages(cli_cmd_cluster(c("apply", "mycl", "--project", f$path, "--yes")))
+  expect_equal(readLines(tp), "mine")
 })
 
 test_that("cluster check prints a hint and exits 1 on failure", {

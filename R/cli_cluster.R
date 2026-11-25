@@ -10,11 +10,18 @@ cluster_ask <- function(prompt, default = NULL) {
 cluster_hint <- function(step, name = NULL) {
   nm <- name %||% "NAME"
   switch(step,
-    tools = paste0("install or load the missing tools; add 'module load' lines in 'mitopilot cluster edit ", nm, " --submit'"),
+    tools = "load the missing tools in this shell (for example 'module load ...') and rerun",
     config = paste0("fix the profile with 'mitopilot cluster edit ", nm, "'"),
     submit = paste0("check queue name, account, and time limit in 'mitopilot cluster edit ", nm, " --submit'"),
     pipeline = paste0("check the container engine, cache folder, and queue in 'mitopilot cluster edit ", nm, "'")
   )
+}
+
+#' @noRd
+cluster_mem_mb <- function(mem) {
+  m <- regmatches(mem, regexec("^([0-9]+)([GgMmTt])[Bb]?$", mem))[[1]]
+  if (length(m) == 0L) return(NA_integer_)
+  as.integer(as.numeric(m[2]) * c(g = 1024, m = 1, t = 1048576)[[tolower(m[3])]])
 }
 
 #' Job script header for a saved profile, tokenized like a project template
@@ -49,7 +56,8 @@ cluster_build_template <- function(scheduler, queue = NULL, account = NULL, extr
              if (!is.null(extra)) paste0("#BSUB ", extra))
   } else if (scheduler == "sge") {
     s <- sub("^#\\$ -pe mthread 1$", paste0("#$ -pe ", penv, " 1"), s)
-    add <- c(paste0("#$ -l h_rt=", time), paste0("#$ -l h_vmem=", mem),
+    mb <- cluster_mem_mb(mem)
+    add <- c(paste0("#$ -l h_rt=", time), if (!is.na(mb)) paste0("#$ -l h_vmem=", mem),
              if (!is.null(account)) paste0("#$ -P ", account),
              if (!is.null(extra)) paste0("#$ ", extra))
   }
@@ -57,6 +65,10 @@ cluster_build_template <- function(scheduler, queue = NULL, account = NULL, extr
     last <- grep("^#(SBATCH|PBS|BSUB|\\$) ", s)
     last <- last[length(last)]
     s <- append(s, add, after = last)
+  }
+  if (scheduler == "sge" && !is.na(cluster_mem_mb(mem))) {
+    k <- grep("^export NXF_VER|^<<NEXTFLOW_CMD>>", s)[1]
+    s <- append(s, paste0('export NXF_OPTS="-Xms256m -Xmx', cluster_mem_mb(mem) %/% 2L, 'm"'), after = k - 1L)
   }
   if (length(setup)) {
     k <- grep("^# (EDIT: load|Native MitoPilot)", s)[1]
@@ -168,27 +180,67 @@ cluster_submit_lines <- function(ctx, command, job, log) {
 }
 
 #' @noRd
+cluster_head_tools <- function() {
+  w <- unname(Sys.which("mitopilot"))
+  c("nextflow", "java", if (nzchar(w)) normalizePath(w) else file.path(R.home("bin"), "Rscript"))
+}
+
+#' @noRd
+cluster_check_command <- function(tools) {
+  paste0(
+    "m=; for t in ", paste(shQuote(tools, type = "sh"), collapse = " "),
+    '; do command -v "$t" >/dev/null 2>&1 || m="$m $t"; done; ',
+    'if [ -n "$m" ]; then echo "MITOPILOT_CHECK missing:$m"; false; ',
+    'else o=$(nextflow -version 2>&1); r=$?; ',
+    'if [ $r -eq 0 ]; then echo "MITOPILOT_CHECK ok on $(hostname)"; ',
+    'else echo "MITOPILOT_CHECK nextflow -version failed: $(echo $o | tail -c 300)"; false; fi; fi'
+  )
+}
+
+#' @noRd
+cluster_cancel <- function(executor, id) {
+  cmd <- switch(tolower(executor), slurm = "scancel", sge = , pbs = , pbspro = "qdel", lsf = "bkill", NULL)
+  if (is.null(cmd) || is.na(id)) return(invisible(FALSE))
+  tryCatch(system2(cmd, id, stdout = FALSE, stderr = FALSE), error = function(e) NULL)
+  invisible(TRUE)
+}
+
+#' @noRd
 cluster_submit_job <- function(ctx, wait) {
   if (is.null(submit_command(ctx$executor))) {
-    return(list(ok = TRUE, detail = paste0("executor '", ctx$executor, "' has no scheduler; skipped")))
+    return(list(ok = TRUE, detail = paste0("skipped: executor '", ctx$executor, "' has no scheduler")))
+  }
+  if (!is.null(ctx$template)) {
+    raw <- paste(readLines(ctx$template), collapse = "\n")
+    miss <- c("<<NEXTFLOW_CMD>>", "<<LOG_FILE>>")[!vapply(c("<<NEXTFLOW_CMD>>", "<<LOG_FILE>>"),
+      function(t) grepl(t, raw, fixed = TRUE), logical(1))]
+    if (length(miss)) {
+      return(list(ok = FALSE, detail = paste0("submit template ", ctx$template, " lacks ",
+        paste(miss, collapse = " and "), "; nothing was submitted")))
+    }
   }
   job <- "mitopilot_check"
   log <- file.path(ctx$scratch, "check.log")
   script <- file.path(ctx$scratch, "check.sh")
-  writeLines(cluster_submit_lines(ctx, "hostname", job, log), script)
+  writeLines(cluster_submit_lines(ctx, cluster_check_command(cluster_head_tools()), job, log), script)
   res <- run_submit(script, ctx$executor, ctx$scratch)
   if (!isTRUE(res$success)) return(list(ok = FALSE, detail = res$output))
+  id <- regmatches(res$output, regexpr("[0-9]+", res$output))
+  if (!length(id)) id <- NA_character_
+  finished <- FALSE
+  on.exit(if (!finished) cluster_cancel(ctx$executor, id), add = TRUE)
   deadline <- Sys.time() + wait
   repeat {
     txt <- if (file.exists(log)) readLines(log, warn = FALSE) else character()
-    hit <- grep("nextflow exited with status", txt, value = TRUE)
+    hit <- grep("^MITOPILOT_CHECK ", txt, value = TRUE)
     if (length(hit)) {
-      ok <- grepl("status 0$", hit[1])
-      return(list(ok = ok, detail = if (ok) paste0("job ran on ", txt[nzchar(txt) & !grepl("^(---|\\[MitoPilot\\])", txt)][1])
-                                    else paste(txt, collapse = "\n")))
+      finished <- TRUE
+      ok <- grepl("^MITOPILOT_CHECK ok", hit[1])
+      return(list(ok = ok, detail = if (ok) paste0("job ran: ", sub("^MITOPILOT_CHECK ", "", hit[1]))
+                                    else paste0(sub("^MITOPILOT_CHECK ", "", hit[1]), "\n", paste(utils::tail(txt, 15), collapse = "\n"))))
     }
     if (Sys.time() > deadline) {
-      return(list(ok = FALSE, detail = paste0("no result in ", wait, " seconds; scheduler said: ",
+      return(list(ok = FALSE, detail = paste0("timed out after ", wait, " s; job ", id, " was cancelled; scheduler said: ",
                                               paste(res$output, collapse = " "))))
     }
     Sys.sleep(2)
@@ -196,14 +248,31 @@ cluster_submit_job <- function(ctx, wait) {
 }
 
 #' @noRd
-cluster_pipeline_runs <- function(ctx, wait = 1800) {
+cluster_stop <- function(p) {
+  p$interrupt()
+  p$wait(30000)
+  if (p$is_alive()) p$kill()
+  invisible()
+}
+
+#' @noRd
+cluster_pipeline_runs <- function(ctx, wait = 300) {
   wd <- file.path(ctx$scratch, "run")
   dir.create(wd, showWarnings = FALSE)
-  res <- processx::run("nextflow",
+  out <- file.path(wd, "stdout.txt")
+  err <- file.path(wd, "stderr.txt")
+  p <- processx::process$new("nextflow",
     c("run", app_sys("cli", "check.nf"), "-c", ctx$config, "-w", file.path(wd, "work"), "-ansi-log", "false"),
-    wd = wd, env = cluster_env(ctx), error_on_status = FALSE, timeout = wait)
-  list(ok = identical(res$status, 0L),
-       detail = if (res$status == 0L) "MitoPilot loads on a compute node" else cluster_tail(paste(res$stderr, res$stdout), 25L))
+    wd = wd, env = cluster_env(ctx), stdout = out, stderr = err)
+  on.exit(if (p$is_alive()) cluster_stop(p), add = TRUE)
+  p$wait(wait * 1000)
+  txt <- function() cluster_tail(paste(c(readLines(err, warn = FALSE), readLines(out, warn = FALSE)), collapse = "\n"), 25L)
+  if (p$is_alive()) {
+    cluster_stop(p)
+    return(list(ok = FALSE, detail = paste0("timed out after ", wait, " s; Nextflow was asked to cancel its job\n", txt())))
+  }
+  ok <- identical(p$get_exit_status(), 0L)
+  list(ok = ok, detail = if (ok) "MitoPilot loads on a compute node" else txt())
 }
 
 #' @noRd
@@ -220,11 +289,11 @@ cluster_check <- function(name = NULL, project = NULL, wait = 300) {
     },
     config = function() cluster_config_parses(ctx),
     submit = function() cluster_submit_job(ctx, wait),
-    pipeline = function() cluster_pipeline_runs(ctx)
+    pipeline = function() cluster_pipeline_runs(ctx, wait)
   )
   out <- data.frame(step = character(), ok = logical(), detail = character())
   for (s in names(steps)) {
-    r <- steps[[s]]()
+    r <- tryCatch(steps[[s]](), error = function(e) list(ok = FALSE, detail = conditionMessage(e)))
     out[nrow(out) + 1L, ] <- list(s, isTRUE(r$ok), paste(r$detail, collapse = "\n"))
     if (!isTRUE(r$ok)) break
   }
@@ -279,12 +348,13 @@ cluster_setup <- function(name = NULL) {
 #' @noRd
 cluster_report <- function(name, project, wait) {
   r <- cluster_check(name, project, wait)
+  skipped <- r$ok & startsWith(r$detail, "skipped")
   for (i in seq_len(nrow(r))) {
-    message(sprintf("%-9s %s", r$step[i], if (r$ok[i]) "ok" else "FAILED"),
+    message(sprintf("%-9s %s", r$step[i], if (skipped[i]) "skipped" else if (r$ok[i]) "ok" else "FAILED"),
             if (nzchar(r$detail[i])) paste0("\n  ", gsub("\n", "\n  ", r$detail[i])))
   }
   if (all(r$ok) && nrow(r) == length(CLUSTER_STEPS)) {
-    message("All checks passed")
+    message(sum(!skipped), " passed, ", sum(skipped), " skipped")
     return(0L)
   }
   message("Hint: ", cluster_hint(r$step[nrow(r)], name))
@@ -333,7 +403,9 @@ cli_cmd_cluster <- function(args) {
       if (!cli_is_interactive()) cli_fail("cluster edit needs a terminal")
       f <- if (isTRUE(o[["submit"]])) file.path(mitopilot_config_dir(), paste0(nm, ".submit.template")) else cluster_saved_path(nm)
       if (!file.exists(f)) cli_fail(paste0("No such file: ", f))
-      utils::file.edit(f, editor = Sys.getenv("EDITOR", "vi"))
+      ed <- Sys.getenv("EDITOR")
+      if (!nzchar(ed)) ed <- Sys.getenv("VISUAL")
+      utils::file.edit(f, editor = if (nzchar(ed)) ed else "vi")
       0L
     },
     apply = {
@@ -347,12 +419,22 @@ cli_cmd_cluster <- function(args) {
       }
       if (!isTRUE(migrate_config(proj, nm))) cli_fail("Could not regenerate .config")
       tp <- submit_template_path(proj)
-      if (file.exists(tp)) unlink(tp)
-      if (cluster_copy_submit_template(nm, proj)) message("Copied submit template")
+      if (file.exists(file.path(mitopilot_config_dir(), paste0(nm, ".submit.template")))) {
+        if (file.exists(tp)) {
+          file.copy(tp, paste0(tp, ".bak.", format(Sys.time(), "%Y%m%d-%H%M%S")))
+          unlink(tp)
+        }
+        if (cluster_copy_submit_template(nm, proj)) message("Copied submit template")
+      } else {
+        message("Profile has no submit template; project template left as is")
+      }
       0L
     },
-    check = cluster_report(if (is.na(nm)) NULL else nm, o[["project"]],
-                           if (is.null(o[["wait"]])) 300 else cli_num(o[["wait"]], "wait")),
+    check = {
+      if (!is.na(nm) && !is.null(o[["project"]])) cli_fail("Give a profile NAME or --project, not both")
+      cluster_report(if (is.na(nm)) NULL else nm, o[["project"]],
+                           if (is.null(o[["wait"]])) 300 else cli_num(o[["wait"]], "wait"))
+    },
     cli_fail("cluster needs one of: setup, list, show, edit, apply, check")
   )
 }
