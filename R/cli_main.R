@@ -7,7 +7,7 @@ cli_fail <- function(msg, status = 1L, subclass = NULL, detail = NULL) {
 }
 
 #' @noRd
-cli_parse_args <- function(args, flags = character()) {
+cli_parse_args <- function(args, flags = character(), known = NULL) {
   pos <- character()
   opts <- list()
   i <- 1L
@@ -45,6 +45,7 @@ cli_parse_args <- function(args, flags = character()) {
         if (!nm %in% flag_names) cli_fail(paste0("Unknown option: ", a))
         opts[[nm]] <- FALSE
       } else {
+        if (!is.null(known) && !key %in% gsub("-", "_", known)) cli_fail(paste0("Unknown option(s): ", a))
         if (i == length(args) || startsWith(args[i + 1L], "--")) cli_fail(paste0("Option ", a, " needs a value"))
         i <- i + 1L
         opts[[key]] <- args[i]

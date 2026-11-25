@@ -1,6 +1,6 @@
 #' @noRd
 cli_parse_cmd <- function(args, cmd, desc, flags = character()) {
-  p <- cli_parse_args(args, flags = c(flags, "help"))
+  p <- cli_parse_args(args, flags = c(flags, "help"), known = c(names(desc), "help"))
   if (isTRUE(p$opts$help)) {
     message(paste0(
       "Usage: mitopilot ", cmd, " [options]\n\nOptions:\n",

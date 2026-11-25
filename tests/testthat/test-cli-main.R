@@ -15,6 +15,12 @@ test_that("value flag without a value fails with status 1", {
 test_that("value flag followed by another flag fails", {
   expect_error(cli_parse_args(c("--project", "--json")), class = "mitopilot_cli_error")
 })
+test_that("unknown option without a value is reported as unknown", {
+  e <- tryCatch(cli_parse_args("--bogus", known = "project"), mitopilot_cli_error = identity)
+  expect_match(conditionMessage(e), "Unknown option(s): --bogus", fixed = TRUE)
+  e <- tryCatch(cli_parse_args("--project", known = "project"), mitopilot_cli_error = identity)
+  expect_match(conditionMessage(e), "needs a value", fixed = TRUE)
+})
 test_that("unknown --no-x fails", {
   expect_error(cli_parse_args("--no-bogus", flags = "resume"), class = "mitopilot_cli_error")
 })
