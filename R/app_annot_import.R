@@ -1,7 +1,7 @@
 #' TRUE when a user annotation project still needs its gene names confirmed
 #' @noRd
 annot_import_blocks_run <- function(session) {
-  isTRUE(session$userData$user_annot) && !user_annot_confirmed(session$userData$con)
+  isTRUE(session$userData$user_annot) && annot_import_pending(session$userData$con)
 }
 
 #' Header notice for unconfirmed gene names, NULL once confirmed

@@ -106,25 +106,11 @@ pipeline_server_userAsmb <- function(id) {
       # sequence (path/scaffold unit) in Annotate.
       unit_label <- "samples"
       unit_noun <- "sample"
-      if (session$userData$mode == "Assemble") {
-        samples <- dplyr::tbl(session$userData$con, "assemble") |>
-          # join_switch = 1 is a join-only redo: WF1 admits it on its own
-          # regardless of assemble_switch, so it counts as work to be done.
-          dplyr::filter(assemble_switch == 1 |
-                          (join_switch == 1 & assemble_lock == 0)) |>
-          dplyr::pull(ID)
-      }
       if (session$userData$mode == "Annotate") {
         unit_label <- "assemblies"
         unit_noun <- "assembly"
-        samples <- dplyr::left_join(
-          dplyr::tbl(session$userData$con, "assemble"),
-          dplyr::tbl(session$userData$con, "annotate"),
-          by = "ID"
-        ) |>
-          dplyr::filter(assemble_lock == 1 & annotate_switch == 1) |>
-          dplyr::pull(ID)
       }
+      samples <- pipeline_queue(session$userData$con, session$userData$mode, user_asmb = TRUE)
       if (length(samples) == 0) {
         why_txt <- if (session$userData$mode == "Assemble") {
           "No samples are queued. Locked or already-successful samples are skipped. Unlock a sample, or set its state to Ready to run, then press Update."
@@ -287,12 +273,6 @@ pipeline_server_userAsmb <- function(id) {
       }
 
       wd <- normalizePath(dirname(getOption("MitoPilot.db") %||% "."))
-      nat <- read_config_executor(file.path(wd, ".config"))$native_activate
-      nat_env <- if (!is.null(nat)) native_env(nat) else character()
-
-      # Pin the Nextflow engine to a MitoPilot-compatible version for this run.
-      nxf_pin <- if (length(nat_env)) native_nf_pin(nat_env) else nf_pin_version()
-
       run_log <<- claim_run_base(in_app = TRUE)
       session$userData$run_live_log <- run_log
 
@@ -301,18 +281,7 @@ pipeline_server_userAsmb <- function(id) {
         args = c(nf_cmd(), "-ansi-log"),
         stdout = "|",
         stderr = "|",
-        env = c("current",
-                nat_env,
-                if (!is.na(nxf_pin)) c(NXF_VER = nxf_pin),
-                NXF_ANSI_SUMMARY = TRUE,
-                # Keep Nextflow's ANSI log from truncating process names; stable,
-                # full names keep the progress parser's per-process keys consistent.
-                COLUMNS = 500,
-                SGE = "/cm/shared/apps/uge/8.8.1/age",
-                SGE_ARCH = "lx-amd64",
-                SGE_CELL = "age",
-                SGE_ROOT = "/cm/shared/apps/uge/8.8.1"
-        ),
+        env = nextflow_env(wd),
         wd = wd
       )
       process(p)

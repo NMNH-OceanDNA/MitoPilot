@@ -15,9 +15,13 @@ local_test_db <- function(env = parent.frame()) {
 }
 
 local_project_fixture <- function(ids = "A", on_disk = character(),
-                                  annotate_units = NULL, env = parent.frame()) {
+                                  annotate_units = NULL, executor = "local",
+                                  env = parent.frame()) {
   con <- local_test_db(env)
   path <- dirname(con@dbname)
+  cfg <- sub("executor = 'local'", sprintf("executor = '%s'", executor),
+             readLines(app_sys("config.local")), fixed = TRUE)
+  writeLines(cfg, file.path(path, ".config"))
   dir_out <- file.path(path, "out")
   dir.create(dir_out)
   tmpl <- DBI::dbGetQuery(con, "SELECT * FROM assemble")

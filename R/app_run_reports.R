@@ -137,7 +137,7 @@ run_reports_server <- function(id) {
         Samples = df$n_samples,
         `Failed samples` = df$n_failed_samples,
         `Failed tasks` = df$n_failed_tasks,
-        Launched = ifelse(df$launch %in% "job", "Job", "App"),
+        Launched = ifelse(df$launch %in% "job", "Job", ifelse(df$launch %in% "cli", "Command line", "App")),
         check.names = FALSE,
         stringsAsFactors = FALSE
       )
