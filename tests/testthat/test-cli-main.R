@@ -12,6 +12,9 @@ test_that("value flag without a value fails with status 1", {
   e <- tryCatch(cli_parse_args("--project"), mitopilot_cli_error = identity)
   expect_s3_class(e, "mitopilot_cli_error"); expect_equal(e$status, 1L)
 })
+test_that("value flag followed by another flag fails", {
+  expect_error(cli_parse_args(c("--project", "--json")), class = "mitopilot_cli_error")
+})
 test_that("unknown --no-x fails", {
   expect_error(cli_parse_args("--no-bogus", flags = "resume"), class = "mitopilot_cli_error")
 })
@@ -24,6 +27,9 @@ test_that("cli_main dispatches and reports errors", {
   testthat::local_mocked_bindings(get0 = function(x, ...) if (x == "cli_cmd_zzz") fn else NULL, .package = "base")
   expect_equal(cli_main("zzz"), 7L)
   expect_equal(suppressMessages(cli_main(c("zzz", "x"))), 3L)
+  fn1 <- function(args) cli_fail("bad opt")
+  testthat::local_mocked_bindings(get0 = function(x, ...) fn1, .package = "base")
+  expect_message(cli_main("zzz"), "Run 'mitopilot zzz --help' for usage.", fixed = TRUE)
 })
 test_that("cli_check_opts rejects an unknown option", {
   expect_error(cli_check_opts(list(project = "/x", bogus = TRUE), c("project", "json")),

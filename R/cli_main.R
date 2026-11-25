@@ -37,7 +37,7 @@ cli_parse_args <- function(args, flags = character()) {
         if (!nm %in% flag_names) cli_fail(paste0("Unknown option: ", a))
         opts[[nm]] <- FALSE
       } else {
-        if (i == length(args)) cli_fail(paste0("Option ", a, " needs a value"))
+        if (i == length(args) || startsWith(args[i + 1L], "--")) cli_fail(paste0("Option ", a, " needs a value"))
         i <- i + 1L
         opts[[key]] <- args[i]
       }
@@ -85,7 +85,9 @@ cli_main <- function(args = commandArgs(trailingOnly = TRUE)) {
   tryCatch(
     as.integer(fn(args[-1])),
     mitopilot_cli_error = function(e) {
-      message(conditionMessage(e))
+      msg <- conditionMessage(e)
+      if (e$status == 1L) msg <- paste0(msg, "\nRun 'mitopilot ", args[1], " --help' for usage.")
+      message(msg)
       e$status
     },
     error = function(e) {
