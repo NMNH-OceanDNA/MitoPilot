@@ -116,6 +116,7 @@ RUN mamba create -y -n orffinder -c conda-forge curl libuv elfutils patchelf && 
 # Install MitoPilot — kept last so R code edits only invalidate this layer
 COPY docker/MitoPilot_*.tar.gz /pkg.tar.gz
 RUN R -e 'remotes::install_local("/pkg.tar.gz",upgrade="never")'
+RUN Rscript -e 'MitoPilot::install_cli(dir = "/usr/local/bin")'
 RUN rm /pkg.tar.gz
 
 # Default Reference DBs

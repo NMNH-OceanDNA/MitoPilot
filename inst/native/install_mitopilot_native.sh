@@ -213,6 +213,7 @@ if [ "$skip_mp" = 0 ]; then
   fi
   "$main/bin/Rscript" -e "quit(status = !requireNamespace('MitoPilot', quietly = TRUE))" \
     || { echo "MitoPilot did not install into $main; see errors above" >&2; exit 1; }
+  "$main/bin/Rscript" -e "MitoPilot::install_cli(dir = '$main/bin', rscript = '$main/bin/Rscript')"
 fi
 
 say "done"

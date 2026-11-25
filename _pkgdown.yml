@@ -182,6 +182,7 @@ reference:
   - hydra_setup
   - native_setup
   - native_check
+  - install_cli
 
 - title: "Reference databases"
   desc: >

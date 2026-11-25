@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "@RSCRIPT@" --vanilla -e 'quit(status = MitoPilot:::cli_main())' "$@"
