@@ -139,10 +139,14 @@ CLI_DESC_STAGE <- c(stage = "assemble or annotate (default: inferred per sample)
 #' @return data.frame(ID, path, scaffold, stage, named) with `path`/`scaffold` NA
 #'   for assemble units; `named` is TRUE when given in unit spelling.
 #' @noRd
-cli_resolve_units <- function(con, names, stage = NULL) {
+cli_check_stage <- function(stage) {
   if (!is.null(stage) && !stage %in% c("assemble", "annotate")) {
     cli_fail("--stage must be one of: assemble, annotate")
   }
+}
+
+cli_resolve_units <- function(con, names, stage = NULL) {
+  cli_check_stage(stage)
   asm <- DBI::dbGetQuery(con, "SELECT ID, assemble_lock FROM assemble")
   an <- DBI::dbGetQuery(con, paste(
     "SELECT an.ID, an.path, an.scaffold FROM annotate an",
@@ -183,12 +187,13 @@ cli_unit_why <- function(u, why = u$reasons) {
 }
 
 cli_parked_units <- function(con, stage = NULL) {
+  cli_check_stage(stage)
   st <- project_status(con)
   st <- st[!st$locked & nzchar(st$reasons), , drop = FALSE]
   if (!is.null(stage)) st <- st[st$stage == stage, , drop = FALSE]
-  data.frame(ID = st$ID, path = ifelse(st$stage == "annotate", st$path, NA_integer_),
-             scaffold = ifelse(st$stage == "annotate", st$scaffold, NA_integer_),
-             stage = st$stage, named = FALSE)
+  unique(data.frame(ID = st$ID, path = ifelse(st$stage == "annotate", st$path, NA_integer_),
+                    scaffold = ifelse(st$stage == "annotate", st$scaffold, NA_integer_),
+                    stage = st$stage, named = FALSE))
 }
 
 cli_unit_state_switch <- function(con, u) {
@@ -216,6 +221,7 @@ cli_cmd_accept <- function(args) {
   p <- cli_parse_cmd(args, "accept SAMPLE...", desc, flags = c("override", "all-parked", "yes"))
   if (is.null(p)) return(0L)
   o <- p$opts
+  if (!is.null(o[["reason"]]) && !isTRUE(o[["override"]])) cli_fail("--reason needs --override")
   if (isTRUE(o[["all_parked"]])) {
     if (!isTRUE(o[["override"]])) cli_fail("--all-parked needs --override")
     if (length(p$pos)) cli_fail("--all-parked takes no sample names")
@@ -239,45 +245,53 @@ cli_cmd_accept <- function(args) {
                     paste(cli_unit_label(multi), collapse = ", ")))
   }
   settings <- project_settings(con)
-  refused <- character()
-  blocked <- character()
-  n_ok <- 0L
-  cli_by_stage(units, function(st, u) {
+  plan <- lapply(split(units, units$stage), function(u) {
+    st <- u$stage[1]
     key <- if (st == "assemble") "ID" else UNIT_KEY
     u <- u[key]
     res <- if (st == "assemble") assembly_pass(con, u$ID, settings) else annotation_pass(con, u)
     got <- res[match(do.call(paste, u[key]), do.call(paste, res[key])), , drop = FALSE]
     pass <- got$pass %in% TRUE
-    reasons <- ifelse(is.na(got$reasons), "assembly_not_accepted", got$reasons)
     locked <- stage_locked(con, st)
     done <- do.call(paste, u[key]) %in% do.call(paste, locked[key])
     if (any(done)) message("Already accepted: ", paste(cli_unit_label(u[done, , drop = FALSE]), collapse = ", "))
-    ok <- u[pass & !done, , drop = FALSE]
     bad <- u[!pass & !done, , drop = FALSE]
-    bad$reasons <- reasons[!pass & !done]
-    if (nrow(ok)) {
-      if (isTRUE(settings$accept_linear)) mark_partial_linear(con, unique(ok$ID))
-      r <- lock_units(con, proj$dir_out, st, ok)
-      n_ok <<- n_ok + nrow(r$written)
-      blocked <<- c(blocked, cli_unit_why(r$blocked))
-    }
-    if (nrow(bad) == 0L) return()
-    if (!isTRUE(o[["override"]])) {
-      refused <<- c(refused, cli_unit_why(bad))
-      return()
-    }
-    if (!cli_confirm(sprintf("Override pass rules for %d %s unit(s)?", nrow(bad), st), isTRUE(o[["yes"]]))) {
-      refused <<- c(refused, cli_unit_why(bad, "declined"))
-      return()
-    }
-    r <- override_accept(con, proj$dir_out, st, bad, reason = o[["reason"]] %||% NA)
-    n_ok <<- n_ok + nrow(r$accepted)
-    blocked <<- c(blocked, cli_unit_why(r$blocked))
+    bad$reasons <- ifelse(is.na(got$reasons), "assembly_not_accepted", got$reasons)[!pass & !done]
+    list(stage = st, ok = u[pass & !done, , drop = FALSE], bad = bad)
   })
+  n_bad <- sum(vapply(plan, function(x) nrow(x$bad), integer(1)))
+  go <- TRUE
+  if (n_bad > 0L && isTRUE(o[["override"]])) {
+    go <- cli_confirm(sprintf("Override pass rules for %d unit(s)?", n_bad), isTRUE(o[["yes"]]))
+  }
+  refused <- character()
+  declined <- character()
+  blocked <- character()
+  n_ok <- 0L
+  for (x in plan) {
+    st <- x$stage
+    if (nrow(x$ok)) {
+      r <- lock_units(con, proj$dir_out, st, x$ok)
+      if (isTRUE(settings$accept_linear)) mark_partial_linear(con, unique(r$written$ID))
+      n_ok <- n_ok + nrow(r$written)
+      blocked <- c(blocked, cli_unit_why(r$blocked))
+    }
+    if (nrow(x$bad) == 0L) next
+    if (!isTRUE(o[["override"]])) {
+      refused <- c(refused, cli_unit_why(x$bad))
+    } else if (!go) {
+      declined <- c(declined, cli_unit_why(x$bad))
+    } else {
+      r <- override_accept(con, proj$dir_out, st, x$bad, reason = o[["reason"]] %||% NA)
+      n_ok <- n_ok + nrow(r$accepted)
+      blocked <- c(blocked, cli_unit_why(r$blocked))
+    }
+  }
   message(sprintf("Accepted %d unit(s)", n_ok))
   if (length(refused)) message("Refused, fails pass rules (use --override): ", paste(refused, collapse = ", "))
+  if (length(declined)) message("Override declined: ", paste(declined, collapse = ", "))
   if (length(blocked)) message("Could not lock: ", paste(blocked, collapse = ", "))
-  if (length(refused) || length(blocked)) 2L else 0L
+  if (length(refused) || length(declined) || length(blocked)) 2L else 0L
 }
 
 #' @noRd

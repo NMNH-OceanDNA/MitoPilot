@@ -29,6 +29,14 @@ cli_parse_args <- function(args, flags = character()) {
       key <- gsub("-", "_", key)
       flag_names <- gsub("-", "_", flags)
       if (!is.null(val)) {
+        if (key %in% flag_names) {
+          v <- tolower(val)
+          if (v %in% c("yes", "true", "1")) val <- TRUE
+          else if (v %in% c("no", "false", "0")) val <- FALSE
+          else cli_fail(paste0("Option --", gsub("_", "-", key), " takes yes or no, got '", val, "'"))
+        } else if (startsWith(key, "no_") && sub("^no_", "", key) %in% flag_names) {
+          cli_fail(paste0("Option ", sub("=.*$", "", a), " takes no value"))
+        }
         opts[[key]] <- val
       } else if (key %in% flag_names) {
         opts[[key]] <- TRUE

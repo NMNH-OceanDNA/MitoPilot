@@ -50,3 +50,13 @@ test_that("cli_confirm reads y/n when interactive", {
   expect_false(suppressMessages(cli_confirm("Go?")))
   expect_true(suppressMessages(cli_confirm("Go?")))
 })
+
+test_that("cli_parse_args maps --flag=value to a logical and rejects junk", {
+  fl <- c("dry-run", "submit")
+  p <- cli_parse_args(c("a", "--dry-run=true", "--submit=NO"), flags = fl)
+  expect_identical(p$opts$dry_run, TRUE); expect_identical(p$opts$submit, FALSE)
+  expect_identical(cli_parse_args("--submit=1", flags = fl)$opts$submit, TRUE)
+  expect_error(cli_parse_args("--submit=maybe", flags = fl), class = "mitopilot_cli_error")
+  expect_error(cli_parse_args("--no-submit=yes", flags = fl), class = "mitopilot_cli_error")
+  expect_equal(cli_parse_args("--n=5", flags = fl)$opts$n, "5")
+})

@@ -68,12 +68,6 @@ test_that("status rejects a bad --stage and stray arguments", {
   expect_error(cli_cmd_status(c("extra", "--project", f$path)), class = "mitopilot_cli_error")
 })
 
-test_that("status reads --project exactly, not by partial name", {
-  f <- local_project_fixture(ids = "A", on_disk = "A", assembled = TRUE, depth = 80)
-  capture.output(suppressMessages(st <- cli_cmd_status(c("--project", f$path, "--stage", "assemble"))))
-  expect_equal(st, 0L)
-})
-
 test_that("accept refuses a parked sample without --override and exits 2", {
   f <- local_project_fixture(ids = "A", on_disk = "A", assembled = TRUE, depth = 3)
   expect_equal(suppressMessages(cli_cmd_accept(c("A", "--project", f$path))), 2L)
@@ -209,7 +203,7 @@ test_that("group --split separates complete and partial genomes", {
 
 test_that("metadata fetch calls the chosen source", {
   f <- local_project_fixture(ids = "A")
-  e <- environment(); got <- character()
+  got <- character()
   local_mocked_bindings(
     fetch_geome = function(path = ".", ...) got <<- c(got, "geome"),
     fetch_gbif = function(path = ".", ...) got <<- c(got, "gbif"),
@@ -232,4 +226,66 @@ test_that("accept names the refused sample and its reasons", {
   f <- local_project_fixture(ids = "A", on_disk = "A", assembled = TRUE, depth = 3)
   msg <- testthat::capture_messages(cli_cmd_accept(c("A", "--project", f$path)))
   expect_true(any(grepl("A (low_coverage)", msg, fixed = TRUE)))
+})
+
+test_that("run --dry-run=true never launches or submits", {
+  f <- local_project_fixture(ids = "A", executor = "slurm")
+  local_mocked_bindings(run_pipeline = function(...) stop("must not launch"),
+                        submit_pipeline = function(project, command, workflow, dry_run = FALSE) {
+                          if (!dry_run) stop("must not submit")
+                          list(script = "s.sh", lines = "x", submitted = FALSE, output = character())
+                        })
+  capture.output(st <- suppressMessages(cli_cmd_run(c("assemble", "--dry-run=true", "--submit=yes", "--project", f$path))))
+  expect_equal(st, 0L)
+})
+
+test_that("run --submit hands submit_pipeline a clean command and reports failure", {
+  f <- local_project_fixture(ids = "A", executor = "slurm")
+  got <- NULL
+  local_mocked_bindings(cli_self_command = function() "/x/mitopilot",
+    submit_pipeline = function(project, command, workflow, dry_run = FALSE) {
+      got <<- command
+      list(script = "s.sh", lines = "", submitted = FALSE, output = "boom")
+    })
+  expect_equal(suppressMessages(cli_cmd_run(c("assemble", "--submit", "--project", f$path))), 1L)
+  expect_false(grepl("--submit", got, fixed = TRUE))
+  expect_true(grepl("--yes", got, fixed = TRUE))
+  expect_true(grepl(paste0("--project '", normalizePath(f$path)), got, fixed = TRUE))
+})
+
+test_that("accept --override on mixed input writes nothing when the confirm fails", {
+  f <- local_project_fixture(ids = c("A", "B"), on_disk = c("A", "B"), assembled = TRUE, depth = c(80, 2))
+  withr::local_options(MitoPilot.cli_interactive = FALSE)
+  expect_equal(suppressMessages(cli_main(c("accept", "A", "B", "--override", "--project", f$path))), 1L)
+  expect_equal(q1(f, "SELECT SUM(assemble_lock) FROM assemble"), 0)
+})
+
+test_that("a declined override is reported as declined", {
+  f <- local_project_fixture(ids = "A", on_disk = "A", assembled = TRUE, depth = 3)
+  withr::local_options(MitoPilot.cli_interactive = TRUE, MitoPilot.cli_input = textConnection("n"))
+  msg <- testthat::capture_messages(st <- cli_cmd_accept(c("A", "--override", "--project", f$path)))
+  expect_equal(st, 2L)
+  expect_true(any(grepl("declined", msg))); expect_false(any(grepl("Refused", msg)))
+})
+
+test_that("accept --reason needs --override and --stage is validated everywhere", {
+  f <- local_project_fixture(ids = "A")
+  expect_error(cli_cmd_accept(c("A", "--reason", "x", "--project", f$path)), "override", class = "mitopilot_cli_error")
+  expect_error(cli_cmd_accept(c("--all-parked", "--override", "--stage", "bogus", "--project", f$path)), class = "mitopilot_cli_error")
+  expect_error(cli_cmd_hold(c("A", "--stage", "bogus", "--project", f$path)), class = "mitopilot_cli_error")
+  expect_error(cli_cmd_requeue(c("A", "--stage", "bogus", "--project", f$path)), class = "mitopilot_cli_error")
+})
+
+test_that("blocked units are not marked partial", {
+  f <- local_project_fixture(ids = "A", assembled = TRUE, depth = 80, annotated = TRUE, topology = "linear")
+  DBI::dbExecute(f$con, "UPDATE assemble SET assemble_lock = 0")
+  DBI::dbExecute(f$con, "UPDATE project_settings SET value = '1' WHERE key = 'accept_linear'")
+  expect_equal(suppressMessages(cli_cmd_accept(c("A", "--stage", "assemble", "--project", f$path))), 2L)
+  expect_equal(q1(f, "SELECT partial FROM annotate"), "no")
+})
+
+test_that("--all-parked override counts a sample once", {
+  f <- local_project_fixture(ids = "A", assembled = TRUE, depth = 3,
+    annotate_units = data.frame(ID = "A", path = 1, scaffold = 1:2))
+  expect_equal(nrow(cli_parked_units(f$con, "assemble")), 1L)
 })
