@@ -477,7 +477,7 @@ export_server <- function(id) {
     })
     observeEvent(input$clear_group_confirm, {
       req(input$clear_group_confirm)
-      assign_export_group(rep(NA_character_, nrow(rv$updating)))
+      apply_group(rep(NA_character_, nrow(rv$updating)))
     })
 
     init("group_modal")
@@ -544,22 +544,11 @@ export_server <- function(id) {
     # Persist an export_group assignment for the current selection (rv$updating)
     # and refresh the table. `groups` is a character vector aligned to the rows
     # of rv$updating.
-    assign_export_group <- function(groups) {
-      rv$updating$export_group <- groups
-      unit_key <- c("ID", "path", "scaffold")
-      upd <- rv$updating[, c(unit_key, "export_group")]
+    apply_group <- function(groups) {
+      upd <- assign_export_group(session$userData$con, rv$updating, groups)
+      rv$updating$export_group <- upd$export_group
       rv$data <- rv$data |>
-        dplyr::rows_update(upd, by = unit_key)
-      # Export state is keyed per unit, so selecting several scaffolds of one sample
-      # yields distinct keys rather than duplicate IDs. Upsert, not update: a unit
-      # that has never been grouped has no export row yet.
-      dplyr::tbl(session$userData$con, "export") |>
-        dplyr::rows_upsert(
-          upd,
-          in_place = TRUE,
-          copy = TRUE,
-          by = unit_key
-        )
+        dplyr::rows_update(upd, by = c("ID", "path", "scaffold"))
       deselect_next <<- !all(is.na(groups))
       trigger("update_export_table")
       removeModal()
@@ -574,7 +563,7 @@ export_server <- function(id) {
     observeEvent(input$make_group, {
       name <- req(input$group_name)
       # Backstop: the selectize createFilter already refuses these keystrokes.
-      if (any(!(grepl("^[A-Za-z0-9._-]+$", name)))) {
+      if (!all(valid_group_name(name))) {
         mp_alert(
           title = "Invalid group name",
           text = "Use only letters, numbers, dots, hyphens, and underscores.",
@@ -611,7 +600,7 @@ export_server <- function(id) {
         ) |> showModal()
         return()
       }
-      assign_export_group(rep(name, nrow(rv$updating)))
+      apply_group(rep(name, nrow(rv$updating)))
     })
 
     # Mixed-group warning actions.
@@ -623,13 +612,13 @@ export_server <- function(id) {
         paste0(name, "-complete"),
         paste0(name, "-partial")
       )
-      assign_export_group(groups)
+      apply_group(groups)
       rv$pending_group_name <- NULL
     })
     # Override: keep the mixed selection as a single group.
     observeEvent(input$group_keep_one, {
       name <- req(rv$pending_group_name)
-      assign_export_group(rep(name, nrow(rv$updating)))
+      apply_group(rep(name, nrow(rv$updating)))
       rv$pending_group_name <- NULL
     })
     # Cancel: return to the group-name modal so the selection can be adjusted.

@@ -744,15 +744,9 @@ annotate_server <- function(id) {
         return()
       }
       n <- nrow(rv$updating)
-      rv$updating$annotate_switch <- as.numeric(input$new_state)
-      dplyr::tbl(session$userData$con, "annotate") |>
-        dplyr::rows_update(
-          rv$updating,
-          unmatched = "ignore",
-          in_place = TRUE,
-          copy = TRUE,
-          by = c("ID", "path", "scaffold")
-        )
+      rv$updating <- set_unit_state(
+        session$userData$con, "annotate", rv$updating, as.numeric(input$new_state)
+      )
       rv$data <- filtered_data() |>
         dplyr::rows_update(
           rv$updating,
@@ -771,16 +765,10 @@ annotate_server <- function(id) {
     # Export and lets the next update overwrite curated annotations (T02).
     write_lock <- function(upd, n = nrow(upd)) {
       locking <- upd$annotate_lock[1] == 1
-      dplyr::tbl(session$userData$con, "annotate") |>
-        dplyr::rows_update(
-          upd,
-          unmatched = "ignore",
-          in_place = TRUE,
-          copy = TRUE,
-          by = c("ID", "path", "scaffold")
-        )
+      res <- lock_annotations(session$userData$con, upd, lock = locking)
+      if (length(res$multi_path) > 0) return(res$multi_path)
       rv$data <- filtered_data() |>
-        dplyr::rows_update(upd, by = c("ID", "path", "scaffold"))
+        dplyr::rows_update(res$written, by = c("ID", "path", "scaffold"))
       trigger("update_annotate_table")
       trigger("refresh_export")
       if (n > 0L) {
@@ -792,6 +780,7 @@ annotate_server <- function(id) {
           }
         )
       }
+      character(0)
     }
 
     init("lock")
@@ -802,26 +791,15 @@ annotate_server <- function(id) {
       lock_current <- as.numeric(names(which.max(table(rv$updating$annotate_lock))))
       locking <- as.numeric(!lock_current) == 1
 
-      # Only LOCKED units advance to Export (fetch_export_data filters
-      # annotate_lock == 1), and a sample cannot export more than one assembly path
-      # (paths are competing resolutions of one genome). Locking a single path is
-      # therefore the natural way to choose it; only locking MORE THAN ONE path of a
-      # sample is a problem. Block just that case, using the resulting locked state
-      # (this action applied on top of what is already locked), and name the samples.
+      new_lock <- as.numeric(!lock_current)
+      # Rows already at the new value are rewritten but change nothing.
+      n_changed <- sum(!rv$updating$annotate_lock %in% new_lock)
+      upd <- rv$updating
+      upd$annotate_lock <- new_lock
       if (locking) {
-        ids <- unique(rv$updating$ID)
-        locked_after <- dplyr::tbl(session$userData$con, "annotate") |>
-          dplyr::filter(ID %in% !!ids) |>
-          dplyr::select(ID, path, scaffold, annotate_lock) |>
-          dplyr::collect()
-        sel_key <- paste(rv$updating$ID, rv$updating$path, rv$updating$scaffold)
-        is_sel <- paste(locked_after$ID, locked_after$path, locked_after$scaffold) %in% sel_key
-        locked_after$annotate_lock[is_sel] <- 1L
-        locked_after <- locked_after[locked_after$annotate_lock == 1, , drop = FALSE]
-        multi_path <- names(which(
-          tapply(locked_after$path, locked_after$ID,
-                 function(p) length(unique(p))) > 1
-        ))
+        # A sample cannot export more than one assembly path, so locking a
+        # second path of one sample is refused and nothing is written.
+        multi_path <- write_lock(upd, n_changed)
         if (length(multi_path) > 0) {
           shown <- paste(utils::head(multi_path, 8), collapse = ", ")
           if (length(multi_path) > 8) {
@@ -840,15 +818,9 @@ annotate_server <- function(id) {
           )
           req(FALSE)
         }
-      }
-
-      new_lock <- as.numeric(!lock_current)
-      # Rows already at the new value are rewritten but change nothing.
-      n_changed <- sum(!rv$updating$annotate_lock %in% new_lock)
-      rv$updating$annotate_lock <- new_lock
-      if (locking) {
-        write_lock(rv$updating, n_changed)
+        rv$updating <- upd
       } else {
+        rv$updating <- upd
         rv$lock_pending <- rv$updating
         rv$lock_pending_n <- n_changed
         skipped <- mp_confirm(

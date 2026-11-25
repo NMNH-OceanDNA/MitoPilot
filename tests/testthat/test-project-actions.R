@@ -1,0 +1,62 @@
+test_that("lock_assemblies holds back samples whose output is not on disk", {
+  f <- local_project_fixture(ids = c("A", "B"), on_disk = "A")   # B has no output dir
+  r <- lock_assemblies(f$con, f$dir_out, c("A", "B"))
+  expect_equal(r$written$ID, "A"); expect_equal(r$stale$ID, "B")
+  got <- DBI::dbGetQuery(f$con, "SELECT ID, assemble_lock, join_switch FROM assemble ORDER BY ID")
+  expect_equal(got$assemble_lock, c(1, 0)); expect_true(is.na(got$join_switch[1]))
+})
+test_that("lock_assemblies unlocks without a stale check and keeps join_switch", {
+  f <- local_project_fixture(ids = c("A", "B"))
+  DBI::dbExecute(f$con, "UPDATE assemble SET assemble_lock = 1, join_switch = 1")
+  r <- lock_assemblies(f$con, f$dir_out, c("A", "B"), lock = FALSE)
+  expect_equal(nrow(r$stale), 0); expect_equal(r$written$ID, c("A", "B"))
+  got <- DBI::dbGetQuery(f$con, "SELECT assemble_lock, join_switch FROM assemble ORDER BY ID")
+  expect_equal(got$assemble_lock, c(0, 0)); expect_equal(got$join_switch, c(1, 1))
+})
+test_that("lock_annotations refuses two paths of one sample and writes nothing", {
+  f <- local_project_fixture(ids = "A", annotate_units = data.frame(ID = "A", path = 1:2, scaffold = 1))
+  r <- lock_annotations(f$con, data.frame(ID = "A", path = 1:2, scaffold = 1))
+  expect_equal(r$multi_path, "A"); expect_equal(nrow(r$written), 0)
+  expect_equal(sum(DBI::dbGetQuery(f$con, "SELECT annotate_lock FROM annotate")$annotate_lock, na.rm = TRUE), 0)
+})
+test_that("lock_annotations counts already locked paths", {
+  f <- local_project_fixture(ids = "A", annotate_units = data.frame(ID = "A", path = 1:2, scaffold = 1))
+  lock_annotations(f$con, data.frame(ID = "A", path = 1, scaffold = 1))
+  expect_equal(lock_annotations(f$con, data.frame(ID = "A", path = 2, scaffold = 1))$multi_path, "A")
+})
+test_that("lock_annotations locks scaffolds of one path and unlocks", {
+  f <- local_project_fixture(ids = "A", annotate_units = data.frame(ID = "A", path = 1, scaffold = 1:2))
+  u <- data.frame(ID = "A", path = 1, scaffold = 1:2)
+  expect_equal(nrow(lock_annotations(f$con, u)$written), 2)
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT annotate_lock FROM annotate")[[1]], c(1, 1))
+  lock_annotations(f$con, u[1, ], lock = FALSE)
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT annotate_lock FROM annotate ORDER BY scaffold")[[1]], c(0, 1))
+})
+test_that("set_unit_state writes only the named units", {
+  f <- local_project_fixture(ids = c("A", "B"))
+  set_unit_state(f$con, "assemble", data.frame(ID = "A"), 0)
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT assemble_switch FROM assemble ORDER BY ID")[[1]], c(0, 1))
+})
+test_that("set_unit_state writes annotate units by path and scaffold", {
+  f <- local_project_fixture(ids = "A", annotate_units = data.frame(ID = "A", path = 1:2, scaffold = 1))
+  w <- set_unit_state(f$con, "annotate", data.frame(ID = "A", path = 2, scaffold = 1), 4)
+  expect_equal(w$annotate_switch, 4)
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT annotate_switch FROM annotate ORDER BY path")[[1]], c(1, 4))
+  expect_error(set_unit_state(f$con, "annotate", w, 7))
+})
+test_that("assign_export_group upserts and clears", {
+  f <- local_project_fixture(ids = "A", annotate_units = data.frame(ID = "A", path = 1, scaffold = 1))
+  u <- data.frame(ID = "A", path = 1, scaffold = 1)
+  assign_export_group(f$con, u, "g1")
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT export_group FROM export")[[1]], "g1")
+  assign_export_group(f$con, u, NA)
+  expect_true(is.na(DBI::dbGetQuery(f$con, "SELECT export_group FROM export")[[1]]))
+  expect_false(valid_group_name("bad name")); expect_true(valid_group_name("fish_2026-A.1"))
+})
+test_that("assign_export_group takes one group per unit", {
+  f <- local_project_fixture(ids = "A", annotate_units = data.frame(ID = "A", path = 1, scaffold = 1:2))
+  w <- assign_export_group(f$con, data.frame(ID = "A", path = 1, scaffold = 1:2), c("g-complete", "g-partial"))
+  expect_equal(w$export_group, c("g-complete", "g-partial"))
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT export_group FROM export ORDER BY scaffold")[[1]],
+               c("g-complete", "g-partial"))
+})

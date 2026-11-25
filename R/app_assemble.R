@@ -601,15 +601,9 @@ assemble_server <- function(id) {
         return()
       }
       n <- nrow(rv$updating)
-      rv$updating$assemble_switch <- as.numeric(input$new_state)
-      dplyr::tbl(session$userData$con, "assemble") |>
-        dplyr::rows_update(
-          rv$updating,
-          unmatched = "ignore",
-          in_place = TRUE,
-          copy = TRUE,
-          by = "ID"
-        )
+      rv$updating <- set_unit_state(
+        session$userData$con, "assemble", rv$updating, as.numeric(input$new_state)
+      )
       rv$data <- rv$data |>
         dplyr::rows_update(
           rv$updating,

@@ -1004,14 +1004,8 @@ assemble_lock_begin <- function(rv, rows, unit = "assembly",
   }
   # Locking hands the sample to WF2, which rebuilds the published output path
   # from assemble_opts. Samples whose output is not on disk are held back.
-  stale <- tryCatch(
-    stale_assemble_dirs(
-      session$userData$con, session$userData$dir_out,
-      ids = upd$ID, pending_only = FALSE
-    ),
-    error = function(e) NULL
-  )
-  if (!is.null(stale) && nrow(stale) > 0L) {
+  stale <- apply_assemble_lock(rv, upd, 1, session)$stale
+  if (nrow(stale) > 0L) {
     upd <- upd |> dplyr::filter(!ID %in% stale$ID)
     mp_alert(
       title = "Assembly output not found",
@@ -1045,7 +1039,6 @@ assemble_lock_begin <- function(rv, rows, unit = "assembly",
   changed <- upd |> dplyr::filter(!assemble_lock %in% 1)
   joins <- sum(changed$join_switch %in% 1, na.rm = TRUE)
   units <- count_annotate_units(session$userData$con, changed$ID)
-  apply_assemble_lock(rv, upd |> dplyr::select(ID, assemble_lock), 1, session)
   if (nrow(changed) > 0L) {
     mp_toast(
       assemble_lock_message(nrow(changed), units, unit, joins),
@@ -1078,29 +1071,22 @@ assemble_lock_finish <- function(rv, session = getDefaultReactiveDomain()) {
 #' Write one lock value to the database and to the table data
 #'
 #' @param rv the local reactive vals object
-#' @param upd data frame of ID / assemble_lock rows
+#' @param upd data frame with the samples' `ID`
 #' @param lock 1 to lock, 0 to unlock
 #' @param session current shiny session
 #'
+#' @return The [lock_assemblies()] result, invisibly.
 #' @noRd
 apply_assemble_lock <- function(rv, upd, lock, session = getDefaultReactiveDomain()) {
-  upd$assemble_lock <- as.numeric(lock)
-  # A locked sample is never admitted by WF1, so a queued join could never run
-  # and the flag would sit at 1 forever. Locking resolves it.
-  if (lock == 1) {
-    upd$join_switch <- NA_integer_
+  res <- lock_assemblies(session$userData$con, session$userData$dir_out,
+                         upd$ID, lock = lock == 1)
+  if (nrow(res$written) > 0L) {
+    rv$data <- rv$data |> dplyr::rows_update(res$written, by = "ID")
+    trigger("update_assemble_table")
+    trigger("refresh_annotate")
+    trigger("refresh_export")
   }
-  upd$time_stamp <- as.integer(Sys.time())
-  dplyr::tbl(session$userData$con, "assemble") |>
-    dplyr::rows_update(
-      upd,
-      unmatched = "ignore", in_place = TRUE, copy = TRUE, by = "ID"
-    )
-  rv$data <- rv$data |> dplyr::rows_update(upd, by = "ID")
-  trigger("update_assemble_table")
-  trigger("refresh_annotate")
-  trigger("refresh_export")
-  invisible(upd)
+  invisible(res)
 }
 
 #' The sentence a lock reports
