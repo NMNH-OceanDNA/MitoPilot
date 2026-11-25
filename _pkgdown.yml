@@ -65,6 +65,8 @@ navbar:
         href: articles/Curation-and-Validation.html
       - text: "Building custom databases"
         href: articles/custom_dbs.html
+      - text: "Command-line mode"
+        href: articles/Command-Line.html
       - text: -------
       - text: Metadata
       - text: "Sample metadata"
@@ -115,6 +117,7 @@ articles:
   - 'Ruleset-Browser'
   - 'Curation-and-Validation'
   - 'custom_dbs'
+  - 'Command-Line'
 
 - title: "Metadata"
   contents:

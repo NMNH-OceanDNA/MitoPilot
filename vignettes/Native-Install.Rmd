@@ -252,6 +252,19 @@ will report the other version and console calls to <code>nextflow</code> will
 download it. Remove the setting on a cluster that uses the native install.
 </div>
 
+## The `mitopilot` command (optional)
+
+To run projects from the shell without opening the app, install the command once
+from the native environment:
+
+```{bash eval=FALSE}
+source <install_dir>/activate.sh
+Rscript -e 'MitoPilot::install_cli()'
+```
+
+Later, `source <install_dir>/activate.sh` is enough as long as `~/.local/bin` is
+on your `PATH`. See [Command-Line Mode](Command-Line.html).
+
 ## Updating
 
 Update the R package inside the bundled R with

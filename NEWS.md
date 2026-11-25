@@ -1,5 +1,13 @@
 # MitoPilot (development version)
 
+- **New: command-line mode.** The `mitopilot` command runs a project without the app: `init`, `auto`, `status`, `run`, `accept`, `hold`, `requeue`, `rules`, `group`, `metadata`, `export`, and `cluster`. Samples that pass the pass rules move on by themselves; the rest are parked with a reason. Overrides and dropped samples are logged. See `vignette("Command-Line")`.
+
+- **New: `install_cli()`.** Writes the `mitopilot` command into a folder on your `PATH` (default `~/.local/bin`).
+
+- **Export window remembers its thresholds and options.** The outlier thresholds and export options set in the app's Export Data window are saved with the project, so the command line uses the same values.
+
+- **Run Reports label command-line runs.** Runs started with `mitopilot` are marked as such, and an interrupted run is recorded as stopped.
+
 - **Fix: `export_files()` honours `IDs` together with `group`.** Passing both writes only the named samples of the group.
 
 # MitoPilot 1.6.0

@@ -121,6 +121,17 @@ You should see a welcome message naming the Nextflow version MitoPilot will use.
 If Nextflow cannot be found, make sure it is on your `PATH` in the same R session
 (check with `Sys.which("nextflow")`).
 
+## The `mitopilot` command (optional)
+
+To run projects from the shell without opening the app, install the command once:
+
+```bash
+Rscript -e 'MitoPilot::install_cli()'
+```
+
+It is written to `~/.local/bin`; add that folder to your `PATH` if the command
+says so. See [Command-Line Mode](Command-Line.html).
+
 ## Updating, pinning, and rolling back
 
 ```r

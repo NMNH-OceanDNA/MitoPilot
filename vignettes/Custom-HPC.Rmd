@@ -123,6 +123,13 @@ interactively? Pass `interactive = TRUE` and leave the cluster values unset.
   <strong>Note:</strong> Saved cluster configs need no extra binding if running R with Docker/Singularity. The `generate_config()` writes its profiles to `~/.config/R/MitoPilot` inside your home directory, and Singularity mounts your home automatically. A profile you save once therefore persists and is found by `new_project()` on every later run, with no `--bind` needed. (This only breaks if you deliberately launch with `--contain` or `--no-home`, which detach the home directory.)
 </div>
 
+<div class="alert alert-note">
+<strong>From the shell.</strong> <code>mitopilot cluster setup</code> and
+<code>mitopilot cluster check</code> do the same job without opening R: they
+save a cluster profile and test it on a compute node. See
+<a href="Command-Line.html#running-on-a-cluster">Command-Line Mode</a>.
+</div>
+
 ## Reuse your cluster config for every project
 
 Once saved, the profile name behaves like any built-in executor:

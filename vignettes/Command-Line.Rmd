@@ -1,0 +1,378 @@
+---
+title: "Command-Line Mode"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Command-Line Mode}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# What command-line mode is
+
+The `mitopilot` command runs a project from raw reads to GenBank files without
+opening the app or an R console. It is made for people who are comfortable in a
+shell, and for anyone who wants to run many samples overnight on a cluster.
+
+The idea is simple. MitoPilot runs every step. A sample that passes a set of
+checks moves on by itself. A sample that fails a check is **parked** with a
+reason, and a person looks at it. Nothing is hidden: every parked sample, every
+override, and every dropped sample is recorded in the project.
+
+The app and the command line share one project. You can start a project in the
+shell, open it in the app to fix a parked sample, then go back to the shell. You
+can also do it the other way round.
+
+<div class="alert alert-note">
+<strong>Note.</strong> Editing settings from the terminal and a guided review
+walk-through are planned but not here yet. Until then, change settings and
+review parked samples in the app, as usual.
+</div>
+
+# Getting the `mitopilot` command
+
+## Container-based install
+
+Run this once, from an R session that has MitoPilot installed:
+
+```{bash eval=FALSE}
+Rscript -e 'MitoPilot::install_cli()'
+```
+
+This writes a small `mitopilot` command to `~/.local/bin`. If that folder is not
+on your `PATH`, the command prints the line to add to your shell startup file:
+
+```{bash eval=FALSE}
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Check that it works:
+
+```{bash eval=FALSE}
+mitopilot --help
+```
+
+## Native install (no containers)
+
+Source the environment first, then install the command with the Rscript from
+that environment:
+
+```{bash eval=FALSE}
+source <install_dir>/activate.sh
+Rscript -e 'MitoPilot::install_cli()'
+```
+
+In later sessions, `source <install_dir>/activate.sh` is all you need if
+`~/.local/bin` is on your `PATH`. See
+[Installing without containers](Native-Install.html).
+
+# Quick start
+
+MitoPilot ships three small test projects. Pick one and run it from start to
+finish:
+
+```{bash eval=FALSE}
+mitopilot init my_test --test reads        # or: assemblies, annotations
+cd my_test
+mitopilot auto
+mitopilot status
+```
+
+- `--test reads` starts from raw reads, so MitoPilot assembles and annotates.
+- `--test assemblies` starts from finished assemblies, so it annotates only.
+- `--test annotations` starts from finished annotations.
+
+`auto` can take a while on a laptop. Use `mitopilot auto --dry-run` to see what
+it would do without running anything.
+
+# How `auto` works
+
+`mitopilot auto` does the whole job in order:
+
+1. Runs the assemble pipeline for every sample that is waiting.
+2. Accepts each assembly that passes the pass rules. The others are parked.
+3. Runs the annotate pipeline for the accepted assemblies.
+4. Accepts each annotation that passes the pass rules. The others are parked.
+5. Puts accepted samples into an export group. The group is named after the
+   project folder; use `--group NAME` to choose another name.
+6. Runs the outlier check on each group and exports GenBank files. Samples
+   flagged by the check are handled as `--flagged` says (see below).
+7. Prints a summary: how many were accepted, how many are parked, and how many
+   groups were exported or held back.
+
+It is safe to run `auto` again at any time. It picks up where it stopped, skips
+finished work, and leaves alone any sample you put on hold. After you fix a
+parked sample, run `mitopilot auto` again to carry it on.
+
+Useful options:
+
+| Option | What it does |
+|---|---|
+| `--group NAME` | Name of the export group (default: the project folder name) |
+| `--flagged stop\|drop\|keep` | What to do with samples flagged at export (default: `stop`) |
+| `--no-resume` | Start the pipelines fresh instead of resuming |
+| `--submit` | Send the whole job to the cluster scheduler instead of running it here |
+| `--dry-run` | Show what would run, then stop |
+| `--yes` | Answer yes to every confirmation |
+| `--project DIR` | Use a project other than the current folder |
+
+# The pass rules
+
+A sample passes only if none of the rules below fire. When a rule fires, its
+code is shown in the `reasons` column of `mitopilot status`.
+
+| Stage | Reason code | What it means |
+|---|---|---|
+| Assemble | `not_run` | The assembly step has not run yet. |
+| Assemble | `failed` | The assembly step ran and failed. |
+| Assemble | `multiple_paths` | The assembler found more than one possible path; a person must choose. |
+| Assemble | `multiple_scaffolds` | The assembly has more than one scaffold. |
+| Assemble | `linear` | The assembly is not circular (unless you allow linear assemblies). |
+| Assemble | `low_coverage` | Mean read depth is below the minimum. |
+| Assemble | `poor_reference` | The closest reference found by BLAST is poor or missing. |
+| Annotate | `not_run` | The annotate step has not run yet. |
+| Annotate | `failed` | The annotate step ran and failed. |
+| Annotate | `warnings` | Curation and validation left one or more warnings, or the count is missing. |
+| Annotate | `problematic` | The annotation is marked as problematic. |
+| Either | `output_missing` | An expected output file is missing, so the sample cannot be accepted. |
+| Annotate | `assembly_not_accepted` | The assembly behind this annotation was not accepted. |
+| Export | `start_offset`, `stop_offset`, `low_identity`, `internal_stop` | Outlier check flags: a gene starts or stops far from its neighbours, matches the group poorly, or has a stop codon inside. |
+
+Two switches change the rules. Both are set with `mitopilot rules`:
+
+```{bash eval=FALSE}
+mitopilot rules                              # show the current values
+mitopilot rules --min-coverage 20            # raise the minimum mean depth (default 10)
+mitopilot rules --accept-linear              # let linear assemblies pass
+mitopilot rules --no-accept-linear           # go back to requiring circular ones
+```
+
+# Reading `status`
+
+```{bash eval=FALSE}
+mitopilot status
+mitopilot status --parked
+mitopilot status --stage annotate
+mitopilot status --json
+```
+
+`status` prints one row per sample, or per annotation unit when a sample has
+more than one. The columns show the stage, whether the sample is accepted
+(locked), who accepted it, the reason codes of any parked sample, and its export
+group. A line at the end counts the units, and a second line tallies warnings
+across the project.
+
+- `--parked` shows only the samples waiting for a decision.
+- `--stage` limits the table to `assemble`, `annotate`, or `export`.
+- `--json` prints machine-readable output for scripts.
+
+# Dealing with parked samples
+
+For anything that needs eyes, such as picking between assembly paths or fixing
+a gene boundary, open the project in the app as usual. Everything you do there
+is picked up by the next `mitopilot auto`.
+
+For the rest, three commands cover it. Name samples by ID, or as
+`ID:path:scaffold` to pick one annotation unit of a sample that has several.
+
+```{bash eval=FALSE}
+mitopilot accept S01 S02 --override --reason "checked in the app, fine"
+mitopilot accept --all-parked --override --reason "reviewed all"
+mitopilot hold S03
+mitopilot requeue S04
+```
+
+- `accept` moves a sample on. Without `--override` it only accepts samples that
+  already pass the rules. With `--override` it accepts samples that fail, and
+  `--reason` records why.
+- `hold` stops a sample from being queued until you decide.
+- `requeue` sends a sample back to run again, for example after you changed its
+  settings in the app.
+
+Every override is written to a review log in the project, with the rules that
+failed, your reason, and the time. Nothing is accepted past the rules silently.
+
+# Grouping and export
+
+Accepted samples are put into export groups. `auto` does this for you. To do it
+by hand:
+
+```{bash eval=FALSE}
+mitopilot group batch1 --all-accepted
+mitopilot group batch1 --samples S01,S02,S03
+mitopilot group batch1 --all-accepted --split
+```
+
+GenBank does not take complete and partial genomes in one submission, so a
+group cannot hold both. If your samples are mixed, `--split` makes two groups,
+`batch1-complete` and `batch1-partial`. `auto` always splits when it needs to.
+A sample whose completeness is not known is left without a group.
+
+Export one group with:
+
+```{bash eval=FALSE}
+mitopilot export batch1 --flagged ask
+```
+
+Before writing files, MitoPilot runs the outlier check on the group and writes
+an HTML alignment report next to the export. The `--flagged` option says what to
+do with samples the check flags:
+
+| Value | What happens |
+|---|---|
+| `ask` | Ask you in the terminal (the default when you are at a terminal). |
+| `stop` | Export nothing and exit with status 2 (the default in scripts and in `auto`). |
+| `drop` | Leave the flagged samples out and export the rest. |
+| `keep` | Export everything, flagged samples included. This is logged as an override and needs confirmation (or `--yes`). |
+
+The export uses the FASTA header template you last used in the app's export
+window, and it says which template it picked. The thresholds and options from
+that window are used too. Samples dropped at export are recorded in the review
+log, so a later `auto` does not try to export them again. The alignment report
+still shows dropped samples.
+
+Fetch sample metadata from online sources before export if you use it:
+
+```{bash eval=FALSE}
+mitopilot metadata fetch --source geome
+```
+
+# Running individual steps
+
+`auto` is a loop over smaller commands. You can run the pieces yourself:
+
+```{bash eval=FALSE}
+mitopilot run assemble
+mitopilot run annotate --auto-accept
+mitopilot run assemble --dry-run
+```
+
+- `--auto-accept` accepts the samples that pass the rules once the run ends.
+- `--dry-run` shows what would run and stops.
+- `--no-resume` starts the pipeline fresh instead of resuming.
+- `--submit` sends the run to your cluster scheduler (see below).
+- `--yes` skips confirmation questions.
+
+`run` exits with status 2 when some samples of that stage are parked.
+
+# Running on a cluster
+
+If your project uses a scheduler such as Slurm, SGE, PBS, or LSF, set up a
+cluster profile once, then check it before a real run.
+
+```{bash eval=FALSE}
+mitopilot cluster setup
+mitopilot cluster list
+mitopilot cluster show my_cluster
+mitopilot cluster check my_cluster
+```
+
+`cluster setup` asks which scheduler you use, the queue, time, memory, account,
+and any lines to run first (such as `module load` lines). It saves a cluster
+profile and a job submit template, then offers to run the check.
+
+`cluster check` tests four things in order and stops at the first failure. On a
+busy queue add `--wait 900` to give the test job more time.
+
+| Stage | What a pass means |
+|---|---|
+| `tools` | The scheduler commands, Nextflow, Java, and your container engine were found. |
+| `config` | The cluster configuration file reads without errors. |
+| `submit` | A small job ran on a compute node and found Nextflow, Java, and the `mitopilot` command there. |
+| `pipeline` | MitoPilot started inside a real pipeline task on a compute node. |
+
+A healthy check ends with `4 passed, 0 skipped`. A project that uses the local
+executor shows `submit` as skipped, because there is no scheduler. If the test
+job times out, MitoPilot cancels the job it submitted. Look at your queue
+(`squeue`, `qstat`, or `bjobs`) to confirm that none is left.
+
+<div class="alert alert-note">
+<strong>LSF sites.</strong> MitoPilot submits with <code>bsub script</code>. Some
+LSF versions only read the <code>#BSUB</code> lines when the script comes in on
+standard input. If the check job runs with default resources, that is the
+cause. Edit the submit template (below) or ask your cluster staff.
+</div>
+
+Use a saved profile with a project:
+
+```{bash eval=FALSE}
+mitopilot init my_proj --test reads --executor my_cluster
+mitopilot cluster apply my_cluster --project my_proj
+mitopilot cluster check --project my_proj
+```
+
+`apply` copies the profile's submit template into the project. An existing
+project template is backed up first.
+
+To change a profile later, open it in your editor (`$EDITOR`, then `$VISUAL`,
+then `vi`):
+
+```{bash eval=FALSE}
+mitopilot cluster edit my_cluster            # the cluster configuration
+mitopilot cluster edit my_cluster --submit   # the job submit template
+```
+
+Run any step on the cluster, instead of on the node where you typed it, with
+`--submit`. Add `--dry-run` first to read the job script:
+
+```{bash eval=FALSE}
+mitopilot run assemble --submit --dry-run
+mitopilot auto --submit
+```
+
+If MitoPilot's built-in scheduler types do not fit your site, choose the closest
+one in `cluster setup`, then open the submit template with
+`mitopilot cluster edit NAME --submit` and change the header lines and the
+setup lines to match your site. The template needs the two placeholders
+`<<NEXTFLOW_CMD>>` and `<<LOG_FILE>>`; keep them where they are.
+[HPC cluster support](Custom-HPC.html) explains the cluster configuration in
+more detail.
+
+# Using the command in scripts
+
+Every command returns an exit status:
+
+| Status | Meaning |
+|---|---|
+| 0 | Done, nothing left to decide. |
+| 1 | An error: bad input, a failed run, or a missing file. |
+| 2 | Finished, but a person needs to look: parked samples, flagged samples, or nothing exported. |
+
+A short example that branches on status 2:
+
+```{bash eval=FALSE}
+mitopilot auto --yes --project /data/my_project
+status=$?
+if [ "$status" -eq 0 ]; then
+  echo "All done"
+elif [ "$status" -eq 2 ]; then
+  echo "Some samples need review"
+  mitopilot status --parked --project /data/my_project
+else
+  echo "Something went wrong" >&2
+  exit 1
+fi
+```
+
+Other points for scripts:
+
+- `--yes` answers yes to every confirmation. Without a terminal, commands that
+  would ask refuse to guess and tell you which choice to pass instead.
+- `--project DIR` points a command at a project, so you do not need to `cd`
+  into it. Without it, the current folder is the project.
+- Only one pipeline run can be active in a project at a time.
+- Press Ctrl-C to stop a running pipeline. It stops cleanly and writes a
+  stopped run report, so the run appears in the app's Run Reports window. Run
+  the same command again to resume.
+
+Run Reports in the app mark runs started from the command line, so you can tell
+them from runs started in the app.
+
+# What is coming later
+
+Two things are planned for a later release: editing project settings from the
+terminal, and a guided walk-through for reviewing parked samples. Until then,
+change settings and review parked samples in the app. The two ways of working
+share the same project, so you can switch at any time.

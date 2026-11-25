@@ -28,3 +28,4 @@ $run_dev.*
 ^tests/testthat/_problems$
 ^tests/testthat/testthat-problems\.rds$
 ^website$
+^\.superpowers$

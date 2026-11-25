@@ -112,6 +112,17 @@ Sample metadata can be imported directly from GEOME, GBIF, or NCBI BioSample rec
 [Sample
 Metadata](https://nmnh-oceandna.github.io/MitoPilot/articles/Specimen-Metadata.html).
 
+# Command-line mode
+
+The `mitopilot` command runs a project from raw reads to GenBank files without
+opening the app. Samples that pass the checks move on by themselves; the rest
+are parked for a person. The app and the command line share one project. See
+[Command-Line Mode](https://nmnh-oceandna.github.io/MitoPilot/articles/Command-Line.html).
+
+```bash
+mitopilot init my_test --test reads && cd my_test && mitopilot auto
+```
+
 # Taxonomic Scope
 
 MitoPilot was initially built for fish mitogenomes, but It has since
