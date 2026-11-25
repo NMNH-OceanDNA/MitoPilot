@@ -131,3 +131,37 @@ test_that("export options round-trip, with today's values as defaults", {
   DBI::dbExecute(con, "ALTER TABLE export_opts DROP COLUMN start_aa")
   expect_equal(get_export_opts(con)$start_aa, 10)
 })
+
+test_that("export uses the last-picked header template and says so", {
+  f <- local_export_fixture(group = "g1", ids = c("A", "B")); got <- NULL
+  d <- DBI::dbReadTable(f$con, "export_opts")
+  d$export_opts <- "mine"; d$fasta_header <- "{seqid} [organism={Taxon}] mine"
+  DBI::dbAppendTable(f$con, "export_opts", d)
+  export_set_last_template(f$con, "mine")
+  local_mocked_bindings(export_flags = flagged_none, export_files = function(...) got <<- list(...))
+  msgs <- testthat::capture_messages(cli_cmd_export(c("g1", "--project", f$path)))
+  expect_equal(got$fasta_header, "{seqid} [organism={Taxon}] mine")
+  expect_true(any(grepl("Header template: mine", msgs, fixed = TRUE)))
+  export_set_last_template(f$con, "gone")
+  msgs <- testthat::capture_messages(cli_cmd_export(c("g1", "--project", f$path)))
+  expect_true(any(grepl("Header template: default", msgs, fixed = TRUE)))
+})
+
+test_that("keep logs the override only after the export succeeds", {
+  f <- local_export_fixture(group = "g1", ids = c("A", "B"))
+  local_mocked_bindings(export_flags = flagged_two, export_files = function(...) stop("disk full"))
+  expect_error(suppressMessages(cli_cmd_export(c("g1", "--flagged", "keep", "--yes", "--project", f$path))), "disk full")
+  expect_equal(DBI::dbGetQuery(f$con, "SELECT COUNT(*) n FROM review_log")$n, 0L)
+})
+
+test_that("drop says the alignment report still shows the dropped samples", {
+  f <- local_export_fixture(group = "g1", ids = c("A", "B"))
+  local_mocked_bindings(export_flags = flagged_two, export_files = function(...) NULL)
+  msgs <- testthat::capture_messages(cli_cmd_export(c("g1", "--flagged", "drop", "--project", f$path)))
+  expect_true(any(grepl("still shows the dropped", msgs)))
+})
+
+test_that("a confirmation failure in a script carries the needs-confirm class", {
+  withr::local_options(MitoPilot.cli_interactive = FALSE)
+  expect_error(cli_confirm("Go?", FALSE, detail = "x"), class = "mitopilot_needs_confirm")
+})

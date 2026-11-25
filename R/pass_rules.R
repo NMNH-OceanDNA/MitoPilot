@@ -84,7 +84,7 @@ annotation_pass <- function(con, units = NULL) {
 #' @noRd
 export_flags <- function(project, group) {
   con <- project$con
-  o <- DBI::dbGetQuery(con, "SELECT start_aa, stop_aa, ident_pct FROM export_opts WHERE export_opts = 'default'")
+  o <- get_export_opts(con)
   out_path <- file.path(project$dir_out, "export", group)
   dir.create(out_path, recursive = TRUE, showWarnings = FALSE)
   make_PCG_alignments(group, project$db, out_path, o$start_aa, o$stop_aa, o$ident_pct)

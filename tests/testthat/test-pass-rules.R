@@ -249,3 +249,18 @@ test_that("a failed log write undoes the lock", {
   expect_error(auto_accept(f$con, f$dir_out, "assemble"))
   expect_equal(DBI::dbGetQuery(f$con, "SELECT assemble_lock FROM assemble")[[1]], 0)
 })
+
+test_that("export_flags uses the export defaults when thresholds are NULL", {
+  f <- local_project_fixture(ids = "A")
+  DBI::dbExecute(f$con, "UPDATE export_opts SET start_aa = NULL, stop_aa = NULL, ident_pct = NULL")
+  proj <- list(con = f$con, db = f$con@dbname, dir_out = f$dir_out)
+  got <- NULL
+  local_mocked_bindings(
+    make_PCG_alignments = function(group, db, out_path, start_aa, stop_aa, ident_pct) got <<- c(start_aa, stop_aa, ident_pct),
+    flag_PCG_outliers = function(...) list(
+      flags = dplyr::tibble(ID = character(), gene = character(), start_flag = logical(), stop_flag = logical(),
+                            identity_flag = logical(), internal_stop_flag = logical()),
+      internal_stops = data.frame(ID = character(), gene = character())))
+  export_flags(proj, "g1")
+  expect_equal(got, c(10, 10, 60))
+})

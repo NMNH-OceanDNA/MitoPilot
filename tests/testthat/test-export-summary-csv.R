@@ -92,3 +92,28 @@ test_that("the summary CSV leaves out the app-only specimen status columns", {
   res <- run_summary_export(annotate_lock = 1L, assemble_lock = 1L)
   expect_false(any(c("specimen", "specimen_message", "specimen_icons", "geome", "geome_message") %in% names(res$summary)))
 })
+
+test_that("export_files with group and IDs writes only those records", {
+  d <- withr::local_tempdir()
+  out_dir <- file.path(d, "out")
+  dir.create(out_dir)
+  summary_fixture(d, annotate_lock = 1L, assemble_lock = 1L)
+  con <- DBI::dbConnect(RSQLite::SQLite(), file.path(d, ".sqlite"))
+  for (t in c("annotations", "assemblies", "annotate", "samples", "assemble")) {
+    x <- DBI::dbReadTable(con, t)
+    x$ID <- "s2"
+    if ("contig" %in% names(x)) x$contig <- "s2.1.1"
+    DBI::dbAppendTable(con, t, x)
+  }
+  DBI::dbAppendTable(con, "export", data.frame(
+    ID = c("s1", "s2"), path = 1L, scaffold = 1L, export_group = "g", export_time_stamp = NA_integer_))
+  DBI::dbDisconnect(con)
+  suppressMessages(export_files(
+    group = "g", IDs = "s2", out_dir = out_dir, generateAAalignments = FALSE,
+    gene_export = FALSE, review = FALSE, summary_csv = TRUE
+  ))
+  tbl <- readLines(file.path(out_dir, "export", "g", "g.tbl"))
+  expect_true(any(grepl(">Feature s2", tbl, fixed = TRUE)))
+  expect_false(any(grepl("s1", tbl, fixed = TRUE)))
+  expect_equal(utils::read.csv(file.path(out_dir, "export", "g", "g_sample_info.csv"))$ID, "s2")
+})

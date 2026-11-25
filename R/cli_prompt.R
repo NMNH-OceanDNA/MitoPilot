@@ -26,8 +26,10 @@ cli_ask <- function(prompt, choices) {
 }
 
 #' @noRd
-cli_confirm <- function(prompt, yes = FALSE) {
+cli_confirm <- function(prompt, yes = FALSE, detail = NULL) {
   if (yes) return(TRUE)
-  if (!cli_is_interactive()) cli_fail(paste0(prompt, " (needs --yes)"))
+  if (!cli_is_interactive()) {
+    cli_fail(paste0(prompt, " (needs --yes)"), subclass = "mitopilot_needs_confirm", detail = detail)
+  }
   tolower(trimws(cli_readline(paste0(prompt, " [y/N] ")))) %in% c("y", "yes")
 }

@@ -1,8 +1,8 @@
 #' @noRd
-cli_fail <- function(msg, status = 1L) {
+cli_fail <- function(msg, status = 1L, subclass = NULL, detail = NULL) {
   stop(structure(
-    class = c("mitopilot_cli_error", "error", "condition"),
-    list(message = msg, call = NULL, status = as.integer(status))
+    class = c(subclass, "mitopilot_cli_error", "error", "condition"),
+    list(message = msg, call = NULL, status = as.integer(status), detail = detail)
   ))
 }
 

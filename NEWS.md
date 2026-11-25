@@ -1,3 +1,7 @@
+# MitoPilot (development version)
+
+- **Fix: `export_files()` honours `IDs` together with `group`.** Passing both writes only the named samples of the group.
+
 # MitoPilot 1.6.0
 
 Released 2026-11-18. Container: `macguigand/mitopilot:1.6.0`

@@ -409,23 +409,48 @@ cli_ungrouped_units <- function(con) {
   ))
 }
 
-#' Put units in group `name`, or NAME-complete and NAME-partial when mixed
-#' @return group name per unit
+#' Put units in group `name`, or NAME-complete and NAME-partial when genomes mix
+#'
+#' Members already in the groups are taken into account. Units whose
+#' completeness is unknown are left ungrouped (`strict` fails instead), and so
+#' are all units when `split` is FALSE and genomes would mix.
+#' @return group name per unit, NA for a unit left ungrouped
 #' @noRd
-cli_assign_group <- function(con, u, name, split) {
+cli_assign_group <- function(con, u, name, split, strict = TRUE) {
   ex <- fetch_export_data(con, session = NULL)
-  comp <- ex$completeness[match(do.call(paste, u), do.call(paste, ex[UNIT_KEY]))]
-  n_c <- sum(comp == "complete genome", na.rm = TRUE)
-  n_p <- sum(comp == "partial genome", na.rm = TRUE)
-  groups <- name
-  if (n_c > 0L && n_p > 0L) {
-    if (!split) {
-      cli_fail(sprintf("%d complete and %d partial genomes cannot share a group; use --split", n_c, n_p))
-    }
-    groups <- ifelse(comp == "complete genome", paste0(name, "-complete"), paste0(name, "-partial"))
+  kind <- function(x) c("complete genome" = "complete", "partial genome" = "partial")[x]
+  comp <- unname(kind(ex$completeness[match(do.call(paste, u), do.call(paste, ex[UNIT_KEY]))]))
+  mem <- function(g) {
+    k <- unname(kind(ex$completeness[!is.na(ex$export_group) & ex$export_group == g]))
+    k[!is.na(k)]
   }
-  assign_export_group(con, u, groups)
-  rep_len(groups, nrow(u))
+  groups <- rep(NA_character_, nrow(u))
+  unknown <- is.na(comp)
+  if (any(unknown) && strict) {
+    cli_fail(paste0("Completeness is unknown for: ", paste(cli_unit_label(u[unknown, , drop = FALSE]), collapse = ", ")))
+  }
+  have <- mem(name)
+  batch <- unique(comp[!unknown])
+  if (!split) {
+    mixed <- unique(c(batch, have))
+    if (length(mixed) > 1L) {
+      cli_fail(sprintf("%s would mix complete and partial genomes (group holds %d complete, %d partial; adding %d complete, %d partial); use --split",
+                       name, sum(have == "complete"), sum(have == "partial"),
+                       sum(comp == "complete", na.rm = TRUE), sum(comp == "partial", na.rm = TRUE)))
+    }
+    groups[!unknown] <- name
+  } else {
+    sep <- length(c(mem(paste0(name, "-complete")), mem(paste0(name, "-partial")))) > 0L
+    for (k in batch) {
+      groups[!unknown & comp == k] <-
+        if (length(have)) {
+          if (all(have == k) && !sep) name else paste0(name, "-", k)
+        } else if (sep || length(batch) > 1L) paste0(name, "-", k) else name
+    }
+  }
+  ok <- !is.na(groups)
+  if (any(ok)) assign_export_group(con, u[ok, , drop = FALSE], groups[ok])
+  groups
 }
 
 #' @noRd
@@ -561,8 +586,9 @@ CLI_FLAGGED_MENU <- c(
 cli_cmd_export <- function(args) {
   desc <- c(CLI_DESC_PROJECT,
     flagged = "flagged samples: ask, stop, drop, or keep (default: ask in a terminal, stop in a script)",
+    "flagged-confirmed" = "treat --flagged keep as already confirmed",
     yes = "do not ask for confirmation")
-  p <- cli_parse_cmd(args, "export GROUP", desc, flags = "yes")
+  p <- cli_parse_cmd(args, "export GROUP", desc, flags = c("yes", "flagged-confirmed"))
   if (is.null(p)) return(0L)
   o <- p$opts
   if (length(p$pos) != 1L) cli_fail("export needs exactly one GROUP")
@@ -590,6 +616,13 @@ cli_cmd_export <- function(args) {
   }
   ids <- unique(units$ID)
   opts <- get_export_opts(con)
+  tmpl <- export_last_template(con)
+  if (!tmpl %in% list_export_templates(con)) tmpl <- "default"
+  if (tmpl != "default") {
+    t_opts <- get_export_opts(con, tmpl)
+    opts[c("fasta_header", "fasta_header_gene")] <- t_opts[c("fasta_header", "fasta_header_gene")]
+  }
+  message("Header template: ", tmpl)
   opts$fasta_header <- nmnh_template_pref(con, opts$fasta_header)
   d <- export_table_data(con)
   nmnh <- if (nmnh_template_on(opts$fasta_header)) nmnh_resolve(con, ids)
@@ -612,7 +645,7 @@ cli_cmd_export <- function(args) {
   if (length(frag)) warn <- c(warn, paste("Some samples export as multiple records.", export_fragmented_text(frag)))
   if (length(warn)) {
     message(paste0("Warning: ", warn, collapse = "\n\n"))
-    if (!cli_confirm("Export anyway?", yes)) { message("Nothing exported"); return(2L) }
+    if (!cli_confirm("Export anyway?", yes, detail = sub("[.:\n].*", "", warn))) { message("Nothing exported"); return(2L) }
   }
 
   report <- NULL
@@ -653,13 +686,11 @@ cli_cmd_export <- function(args) {
     }
     if (choice == "keep") {
       if (!cli_confirm(sprintf("Export %d flagged sample(s) anyway? This is logged as an override.",
-                               length(flagged_ids)), yes)) {
+                               length(flagged_ids)), yes || isTRUE(o[["flagged_confirmed"]]),
+                       detail = paste0(length(flagged_ids), " flagged sample(s)"))) {
         message("Nothing exported")
         return(2L)
       }
-      fu <- units[units$ID %in% flagged_ids, , drop = FALSE]
-      log_review(con, fu, "export", "override",
-                 rules = vapply(fu$ID, function(id) pass_collapse(unique(f$why[f$ID == id])), ""))
     }
   }
 
@@ -674,7 +705,16 @@ cli_cmd_export <- function(args) {
     out_dir = proj$dir_out, generateAAalignments = opts$aa_alignments, gene_export = opts$gene_export,
     review = FALSE, start_aa = opts$start_aa, stop_aa = opts$stop_aa, ident_pct = opts$ident_pct
   )
-  if (!is.null(kept) && !file.exists(report)) file.copy(kept, report)
+  if (!is.null(kept)) {
+    if (!file.exists(report)) file.copy(kept, report)
+    unlink(kept)
+  }
+  if (choice == "keep" && nrow(f) > 0L) {
+    fu <- units[units$ID %in% unique(f$ID), , drop = FALSE]
+    log_review(con, fu, "export", "override",
+               rules = vapply(fu$ID, function(id) pass_collapse(unique(f$why[f$ID == id])), ""))
+  }
+  if (!is.null(export_ids)) message("Note: the alignment report still shows the dropped samples")
   n <- if (is.null(export_ids)) nrow(units) else sum(units$ID %in% export_ids)
   message(sprintf("Exported %d record(s) to %s", n, file.path(proj$dir_out, "export", group)))
   status
@@ -684,9 +724,10 @@ cli_cmd_export <- function(args) {
 #' @noRd
 cli_unexported_groups <- function(con) {
   g <- DBI::dbGetQuery(con, paste(
-    "SELECT DISTINCT e.export_group FROM export e",
-    "JOIN annotate an ON an.ID = e.ID AND an.path = e.path AND an.scaffold = e.scaffold",
-    "WHERE e.export_group IS NOT NULL AND an.annotate_lock = 1 AND e.export_time_stamp IS NULL",
+    "SELECT e.export_group FROM export e",
+    "LEFT JOIN annotate an ON an.ID = e.ID AND an.path = e.path AND an.scaffold = e.scaffold",
+    "WHERE e.export_group IS NOT NULL GROUP BY e.export_group",
+    "HAVING SUM(COALESCE(an.annotate_lock, 0) = 1) > 0 AND COUNT(e.export_time_stamp) = 0",
     "ORDER BY 1"))$export_group
   g[vapply(g, function(x) nrow(export_group_units(con, x)) > 0L, logical(1))]
 }
@@ -719,6 +760,9 @@ cli_cmd_auto <- function(args) {
   if (!dry) {
     live <- run_active(proj$path)
     if (!is.na(live)) cli_fail(paste0("A run is still in progress in this project: ", live))
+    if (flagged == "keep" && isTRUE(o[["submit"]]) && !yes) {
+      cli_fail("--flagged keep with --submit needs --yes")
+    }
     if (flagged == "keep") {
       if (!cli_confirm("--flagged keep exports flagged samples and logs an override. Continue?", yes)) {
         message("Cancelled")
@@ -732,7 +776,7 @@ cli_cmd_auto <- function(args) {
   if (isTRUE(o[["submit"]])) {
     cmd <- paste(c(cli_self_command(), "auto", if (!is.null(o[["group"]])) c("--group", shQuote(group)),
                    if (!is.null(o[["flagged"]])) c("--flagged", flagged), if (!resume) "--no-resume",
-                   "--yes", "--project", shQuote(proj$path)), collapse = " ")
+                   if (yes) "--yes", "--project", shQuote(proj$path)), collapse = " ")
     res <- submit_pipeline(proj$path, cmd, "auto", dry_run = dry)
     if (dry) {
       cat(res$lines, sep = "\n")
@@ -776,9 +820,18 @@ cli_cmd_auto <- function(args) {
 
   u <- cli_ungrouped_units(con)
   new_groups <- character()
+  n_held <- 0L
   if (nrow(u)) {
-    new_groups <- unique(cli_assign_group(con, u, group, split = TRUE))
-    message(sprintf("%d unit(s) assigned to: %s", nrow(u), paste(new_groups, collapse = ", ")))
+    g <- cli_assign_group(con, u, group, split = TRUE, strict = FALSE)
+    new_groups <- unique(g[!is.na(g)])
+    n_held <- sum(is.na(g))
+    if (length(new_groups)) {
+      message(sprintf("%d unit(s) assigned to: %s", sum(!is.na(g)), paste(new_groups, collapse = ", ")))
+    }
+    if (n_held) {
+      message("Left ungrouped (completeness unknown): ",
+              paste(cli_unit_label(u[is.na(g), , drop = FALSE]), collapse = ", "))
+    }
   } else {
     message("No accepted units without a group")
   }
@@ -786,11 +839,18 @@ cli_cmd_auto <- function(args) {
   results <- integer()
   for (g in todo) {
     message("Exporting group: ", g)
-    ea <- c(g, "--project", proj$path, "--flagged", flagged, if (yes) "--yes")
-    results[g] <- tryCatch(cli_cmd_export(ea), mitopilot_cli_error = function(e) {
-      message("Export of '", g, "' failed: ", conditionMessage(e))
-      1L
-    })
+    ea <- c(g, "--project", proj$path, "--flagged", flagged, if (yes) "--yes",
+            if (flagged == "keep") "--flagged-confirmed")
+    results[g] <- tryCatch(cli_cmd_export(ea),
+      mitopilot_needs_confirm = function(e) {
+        message("Held '", g, "': needs confirmation (", paste(e$detail, collapse = "; "),
+                "); run 'mitopilot export ", g, " --yes' or 'mitopilot auto --yes' to proceed")
+        2L
+      },
+      mitopilot_cli_error = function(e) {
+        message("Export of '", g, "' failed: ", conditionMessage(e))
+        1L
+      })
   }
 
   st <- project_status(con)
@@ -802,5 +862,5 @@ cli_cmd_auto <- function(args) {
     message("Parked: ", paste0(names(codes), " (", as.integer(codes), ")", collapse = ", "))
     message("Run 'mitopilot status --parked' for details.")
   }
-  if (any(results == 1L)) 1L else if (nrow(parked) || any(results == 2L)) 2L else 0L
+  if (any(results == 1L)) 1L else if (nrow(parked) || n_held || any(results == 2L)) 2L else 0L
 }
