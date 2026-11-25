@@ -10,19 +10,19 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# What command-line mode is
+# What is command line mode?
 
-The `mitopilot` command runs a project from raw reads to GenBank files without
-opening the app or an R console. It is made for people who are comfortable in a
-shell, and for anyone who wants to run many samples overnight on a cluster.
+The `mitopilot` command runs a project from raw reads or assemblies to GenBank files without
+opening the app or an R console. It is made for people who need a simplified 
+and scriptable version of the MitoPilot workflow.
 
-The idea is simple. MitoPilot runs every step. A sample that passes a set of
-checks moves on by itself. A sample that fails a check is **parked** with a
-reason, and a person looks at it. Nothing is hidden: every parked sample, every
+Using command line interface (CLI) MitoPilot, every step of the workflow runs automatically. Samples that pass a set of
+checks move on to the next step. A sample that fails a check is **parked** with a
+reason, and the user can then review and fix it. Nothing is hidden: every parked sample, every
 override, and every dropped sample is recorded in the project.
 
-The app and the command line share one project. You can start a project in the
-shell, open it in the app to fix a parked sample, then go back to the shell. You
+The app and the CLI versions of MitoPilot share one project format. You can start a project 
+using the CLI, open it in the app to fix a parked sample, then go back to the CLI. You
 can also do it the other way round.
 
 <div class="alert alert-note">
@@ -35,9 +35,7 @@ review parked samples in the app, as usual.
 
 ## Container-based install
 
-If you work inside the MitoPilot Docker image, the command is already there
-at `/usr/local/bin/mitopilot`; skip this step. Otherwise, run this once, from
-an R session that has MitoPilot installed:
+Run command once from an R session that has MitoPilot installed:
 
 ```{bash eval=FALSE}
 Rscript -e 'MitoPilot::install_cli()'
@@ -49,6 +47,19 @@ on your `PATH`, the command prints the line to add to your shell startup file:
 ```{bash eval=FALSE}
 export PATH="$HOME/.local/bin:$PATH"
 ```
+
+To put the command somewhere else, give the folder with `dir`. The folder is
+created if it does not exist. For example, a shared tools folder that everyone
+in a lab already has on their `PATH`:
+
+```{bash eval=FALSE}
+Rscript -e 'MitoPilot::install_cli(dir = "/shared/lab_tools/bin")'
+```
+
+You need write permission for the folder you choose. Running `install_cli()`
+again replaces the existing command, so the same line also moves or refreshes
+it. The command stays tied to the R installation that ran `install_cli()`; to
+tie it to a different one, add `rscript = "/path/to/bin/Rscript"`.
 
 Check that it works:
 

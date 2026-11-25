@@ -130,7 +130,9 @@ Rscript -e 'MitoPilot::install_cli()'
 ```
 
 The Docker image already includes it. Otherwise it is written to `~/.local/bin`; add that folder to your `PATH` if the command
-says so. See [Command-Line Mode](Command-Line.html).
+says so. To use a different folder, name it with `dir`, for example
+`Rscript -e 'MitoPilot::install_cli(dir = "/shared/lab_tools/bin")'`.
+See [Command-Line Mode](Command-Line.html).
 
 ## Updating, pinning, and rolling back
 
