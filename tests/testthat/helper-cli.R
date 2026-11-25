@@ -16,6 +16,8 @@ local_test_db <- function(env = parent.frame()) {
 
 local_project_fixture <- function(ids = "A", on_disk = character(),
                                   annotate_units = NULL, executor = "local",
+                                  assembled = FALSE, depth = 80, topology = "circular",
+                                  annotated = FALSE, warnings = 0,
                                   env = parent.frame()) {
   con <- local_test_db(env)
   path <- dirname(con@dbname)
@@ -30,12 +32,31 @@ local_project_fixture <- function(ids = "A", on_disk = character(),
   DBI::dbExecute(con, "DELETE FROM annotate")
   asm <- tmpl[rep(1, length(ids)), ]
   asm$ID <- ids
+  if (annotated) assembled <- TRUE
+  if (assembled) {
+    asm$assemble_switch <- 2
+    asm$topology <- rep_len(topology, length(ids))
+  }
+  if (annotated) asm$assemble_lock <- 1
   DBI::dbAppendTable(con, "assemble", asm)
   units <- annotate_units %||% data.frame(ID = ids, path = 1, scaffold = 1)
-  DBI::dbAppendTable(con, "assemblies", data.frame(units, ignore = 0))
+  asmbl <- data.frame(units, ignore = 0)
+  if (assembled) {
+    d <- rep_len(depth, nrow(units))
+    asmbl$topology <- rep_len(topology, nrow(units))
+    asmbl$depth <- ifelse(is.na(d), NA_character_, vapply(d, function(x) paste(rep(x, 5), collapse = " "), ""))
+  }
+  DBI::dbAppendTable(con, "assemblies", asmbl)
+  if (annotated && is.null(annotate_units)) annotate_units <- units
   if (!is.null(annotate_units)) {
     a <- ann[rep(1, nrow(units)), ]
     a[c("ID", "path", "scaffold")] <- units[c("ID", "path", "scaffold")]
+    if (annotated) {
+      a$annotate_switch <- 2
+      a$warnings <- rep_len(warnings, nrow(a))
+      a$problematic <- "no"
+      a$partial <- "no"
+    }
     DBI::dbAppendTable(con, "annotate", a)
   }
   for (u in which(units$ID %in% on_disk)) {

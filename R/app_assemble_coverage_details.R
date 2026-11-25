@@ -731,7 +731,7 @@ assembly_coverage_details_server <- function(id, rv) {
         depth_raw <- rv$focal_assembly$depth[idx]
         d_db <- NULL
         if (!is.na(depth_raw) && nzchar(depth_raw)) {
-          d_db <- suppressWarnings(as.numeric(strsplit(depth_raw, " ")[[1]]))
+          d_db <- parse_stored_depth(depth_raw)
           if (length(d_db) < 2L) d_db <- NULL
         }
         # Always try to read coverageStats CSV for richer stats (Correct, ErrorRate).
