@@ -109,7 +109,7 @@ export_flags <- function(project, group) {
 #' @param units data.frame with `ID`, and `path`, `scaffold` for annotate units.
 #' @param rules One string or one per unit.
 #' @noRd
-log_review <- function(con, units, stage, action = c("auto", "override"), rules = "", reason = NA) {
+log_review <- function(con, units, stage, action = c("auto", "override", "dropped"), rules = "", reason = NA) {
   action <- match.arg(action)
   n <- nrow(units)
   if (n == 0L) return(invisible(NULL))

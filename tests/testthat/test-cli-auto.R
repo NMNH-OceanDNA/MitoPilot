@@ -25,7 +25,7 @@ test_that("auto accepts clean units, parks the rest, exports, and exits 2", {
   f <- auto_fixture()
   calls <- new.env(); exported <- NULL
   local_mocked_bindings(run_pipeline = mock_runs(f, calls),
-    cli_cmd_export = function(args) { exported <<- args[1]; 0L })
+    cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) { exported <<- group; 0L })
   expect_equal(suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path, "--yes"))), 2L)
   expect_equal(calls$v, c("assemble", "annotate")); expect_equal(exported, "g1")
   st <- project_status(f$con)
@@ -43,9 +43,9 @@ test_that("a second auto launches no run and exports nothing new", {
   f <- auto_fixture()
   calls <- new.env(); n_exp <- 0L
   local_mocked_bindings(run_pipeline = mock_runs(f, calls),
-    cli_cmd_export = function(args) {
+    cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) {
       n_exp <<- n_exp + 1L
-      DBI::dbExecute(f$con, "UPDATE export SET export_time_stamp = 1 WHERE export_group = ?", params = list(args[1]))
+      DBI::dbExecute(f$con, "UPDATE export SET export_time_stamp = 1 WHERE export_group = ?", params = list(group))
       0L
     })
   expect_equal(suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path))), 2L)
@@ -57,13 +57,13 @@ test_that("a second auto launches no run and exports nothing new", {
 test_that("auto --dry-run launches and exports nothing", {
   f <- auto_fixture()
   local_mocked_bindings(run_pipeline = function(...) stop("must not launch"),
-    cli_cmd_export = function(args) stop("must not export"))
+    cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) stop("must not export"))
   out <- capture.output(st <- suppressMessages(cli_cmd_auto(c("--dry-run", "--project", f$path))))
   expect_equal(st, 0L); expect_true(any(grepl("nextflow", out)))
   expect_equal(auto_q(f, "SELECT SUM(assemble_lock) FROM assemble"), 0)
 })
 
-test_that("auto --submit --dry-run prints a job script with auto ... --yes", {
+test_that("auto --submit --dry-run prints a job script without --yes", {
   f <- auto_fixture("slurm")
   local_mocked_bindings(cli_self_command = function() "/x/mitopilot", run_pipeline = function(...) stop("must not launch"))
   out <- capture.output(st <- suppressMessages(cli_cmd_auto(c("--submit", "--dry-run", "--project", f$path))))
@@ -78,7 +78,7 @@ test_that("auto skips annotate when gene names are unconfirmed but still groups 
   DBI::dbExecute(f$con, "UPDATE assemble SET assemble_switch = 2")
   calls <- new.env(); exported <- character()
   local_mocked_bindings(run_pipeline = mock_runs(f, calls), annot_import_pending = function(...) TRUE,
-    cli_cmd_export = function(args) { exported <<- c(exported, args[1]); 0L })
+    cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) { exported <<- c(exported, group); 0L })
   suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path)))
   expect_length(calls$v, 0L); expect_equal(exported, "g1")
 })
@@ -92,11 +92,11 @@ clean_fixture <- function(env = parent.frame()) {
 test_that("an export that returns 2 gives exit 2 when nothing is parked, 0 otherwise", {
   f <- clean_fixture()
   calls <- new.env()
-  local_mocked_bindings(run_pipeline = mock_runs(f, calls), cli_cmd_export = function(args) 2L)
+  local_mocked_bindings(run_pipeline = mock_runs(f, calls), cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) 2L)
   expect_equal(suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path))), 2L)
   expect_equal(auto_q(f, "SELECT COUNT(*) FROM export WHERE export_group = 'g1'"), 2)
   g <- clean_fixture()
-  local_mocked_bindings(run_pipeline = mock_runs(g, calls), cli_cmd_export = function(args) 0L)
+  local_mocked_bindings(run_pipeline = mock_runs(g, calls), cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) 0L)
   expect_equal(suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", g$path))), 0L)
 })
 
@@ -105,7 +105,7 @@ test_that("a failing annotate run exits 1 and groups nothing", {
   local_mocked_bindings(run_pipeline = function(project, workflow, ...) {
     if (workflow == "assemble") DBI::dbExecute(f$con, "UPDATE assemble SET assemble_switch = 2")
     list(status = if (workflow == "annotate") 1L else 0L, queued = 1L)
-  }, cli_cmd_export = function(args) stop("must not export"))
+  }, cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) stop("must not export"))
   expect_equal(suppressMessages(cli_cmd_auto(c("--project", f$path))), 1L)
   expect_equal(auto_q(f, "SELECT COUNT(*) FROM export WHERE export_group IS NOT NULL"), 0)
 })
@@ -120,9 +120,9 @@ test_that("an export that errors gives exit 1 and later groups still export", {
       if (workflow == "annotate") DBI::dbExecute(f$con, "UPDATE annotate SET partial = 'yes' WHERE ID = 'B'")
       r
     },
-    cli_cmd_export = function(args) {
-      if (args[1] == "g1-complete") cli_fail("bad header")
-      done <<- c(done, args[1]); 0L
+    cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) {
+      if (group == "g1-complete") cli_fail("bad header")
+      done <<- c(done, group); 0L
     })
   expect_equal(suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path))), 1L)
   expect_equal(done, "g1-partial")
@@ -133,7 +133,7 @@ test_that("an export that needs confirmation is held: exit 2, with the way forwa
   withr::local_options(MitoPilot.cli_interactive = FALSE)
   calls <- new.env()
   local_mocked_bindings(run_pipeline = mock_runs(f, calls),
-    cli_cmd_export = function(args) { cli_confirm("Export anyway?", FALSE, detail = "NMNH values missing"); 0L })
+    cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) { cli_confirm("Export anyway?", FALSE, detail = "NMNH values missing"); 0L })
   msgs <- testthat::capture_messages(st <- cli_cmd_auto(c("--group", "g1", "--project", f$path)))
   expect_equal(st, 2L)
   expect_true(any(grepl("NMNH values missing", msgs, fixed = TRUE)))
@@ -143,21 +143,21 @@ test_that("an export that needs confirmation is held: exit 2, with the way forwa
 test_that("auto --yes is passed to export only when given", {
   f <- clean_fixture()
   calls <- new.env(); got <- list()
-  local_mocked_bindings(run_pipeline = mock_runs(f, calls), cli_cmd_export = function(args) { got[[length(got) + 1L]] <<- args; 0L })
+  local_mocked_bindings(run_pipeline = mock_runs(f, calls), cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) { got[[length(got) + 1L]] <<- yes; 0L })
   suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path)))
-  expect_false("--yes" %in% got[[1]])
+  expect_false(got[[1]])
   DBI::dbExecute(f$con, "UPDATE export SET export_group = NULL")
   suppressMessages(cli_cmd_auto(c("--group", "g1", "--yes", "--project", f$path)))
-  expect_true("--yes" %in% got[[2]])
+  expect_true(got[[2]])
 })
 
 test_that("auto --flagged keep confirms once and tells export it is confirmed", {
   f <- clean_fixture()
   calls <- new.env(); got <- NULL
   withr::local_options(MitoPilot.cli_interactive = TRUE, MitoPilot.cli_input = textConnection("y"))
-  local_mocked_bindings(run_pipeline = mock_runs(f, calls), cli_cmd_export = function(args) { got <<- args; 0L })
+  local_mocked_bindings(run_pipeline = mock_runs(f, calls), cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) { got <<- list(yes = yes, keep = keep_confirmed); 0L })
   suppressMessages(cli_cmd_auto(c("--flagged", "keep", "--group", "g1", "--project", f$path)))
-  expect_true("--flagged-confirmed" %in% got); expect_false("--yes" %in% got)
+  expect_true(got$keep); expect_false(got$yes)
 })
 
 test_that("auto --submit adds --yes to the job only when given", {
@@ -171,15 +171,62 @@ test_that("auto --submit adds --yes to the job only when given", {
   expect_true(any(grepl("--yes", line("--yes"), fixed = TRUE)))
 })
 
-test_that("unexported groups: a group with any stamped unit is not redone", {
+test_that("groups needing export: unstamped accepted units unless dropped on purpose", {
   f <- local_project_fixture(ids = c("A", "B", "C"), annotated = TRUE)
   DBI::dbExecute(f$con, "UPDATE annotate SET annotate_lock = 1")
   u <- DBI::dbGetQuery(f$con, "SELECT ID, path, scaffold FROM annotate ORDER BY ID")
   assign_export_group(f$con, u, c("g1", "g1", "g2"))
   local_mocked_bindings(export_group_units = function(con, group) u)
-  expect_equal(cli_unexported_groups(f$con), c("g1", "g2"))
-  DBI::dbExecute(f$con, "UPDATE export SET export_time_stamp = 5 WHERE ID = 'A'")
-  expect_equal(cli_unexported_groups(f$con), "g2")
+  expect_equal(cli_groups_needing_export(f$con), c("g1", "g2"))
+  DBI::dbExecute(f$con, "UPDATE export SET export_time_stamp = 5 WHERE ID IN ('A', 'C')")
+  expect_equal(cli_groups_needing_export(f$con), "g1")
+  log_review(f$con, u[2, ], "export", "dropped", rules = "low_identity")
+  expect_length(cli_groups_needing_export(f$con), 0L)
+  expect_equal(project_status(f$con)$accepted_by, rep("manual", 3))
+})
+
+test_that("a group that got a new unit after its first export is exported on the next run", {
+  f <- clean_fixture()
+  calls <- new.env(); got <- character()
+  local_mocked_bindings(run_pipeline = mock_runs(f, calls), cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) {
+    got <<- c(got, group)
+    if (length(got) == 1L) {
+      DBI::dbExecute(f$con, "UPDATE export SET export_time_stamp = 5 WHERE ID = 'A'")
+      return(0L)
+    }
+    if (length(got) == 2L) cli_confirm("Export anyway?", FALSE, detail = "x")
+    DBI::dbExecute(f$con, "UPDATE export SET export_time_stamp = 6 WHERE export_group = ?", params = list(group))
+    0L
+  })
+  withr::local_options(MitoPilot.cli_interactive = FALSE)
+  suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path)))
+  expect_equal(suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path))), 2L)
+  expect_equal(suppressMessages(cli_cmd_auto(c("--group", "g1", "--yes", "--project", f$path))), 0L)
+  expect_equal(got, c("g1", "g1", "g1"))
+  expect_equal(auto_q(f, "SELECT COUNT(*) FROM export WHERE export_time_stamp IS NULL"), 0)
+})
+
+test_that("a group whose export errored is retried, and a plain R error does not abort the chain", {
+  f <- clean_fixture()
+  calls <- new.env(); got <- character()
+  local_mocked_bindings(run_pipeline = mock_runs(f, calls), cli_export = function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) {
+    got <<- c(got, group); stop("plain failure")
+  })
+  msgs <- testthat::capture_messages(st <- cli_cmd_auto(c("--group", "g1", "--project", f$path)))
+  expect_equal(st, 1L); expect_true(any(grepl("plain failure", msgs))); expect_true(any(grepl("Summary", msgs)))
+  suppressMessages(cli_cmd_auto(c("--group", "g1", "--project", f$path)))
+  expect_equal(got, c("g1", "g1"))
+})
+
+test_that("an existing NAME-complete holding partial genomes is not extended with complete ones", {
+  f <- local_project_fixture(ids = c("A", "B"), annotated = TRUE)
+  DBI::dbExecute(f$con, "UPDATE annotate SET annotate_lock = 1")
+  DBI::dbExecute(f$con, "UPDATE annotate SET partial = 'yes' WHERE ID = 'A'")
+  u <- DBI::dbGetQuery(f$con, "SELECT ID, path, scaffold FROM annotate ORDER BY ID")
+  assign_export_group(f$con, u[1, ], "g-complete")
+  expect_error(cli_assign_group(f$con, u[2, ], "g", split = TRUE), "g-complete", class = "mitopilot_cli_error")
+  expect_true(is.na(cli_assign_group(f$con, u[2, ], "g", split = TRUE, strict = FALSE)))
+  expect_equal(auto_q(f, "SELECT COUNT(*) FROM export WHERE export_group = 'g' OR ID = 'B' AND export_group IS NOT NULL"), 0)
 })
 
 test_that("group assignment respects existing members and never yields NA names", {

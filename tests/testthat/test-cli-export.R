@@ -165,3 +165,19 @@ test_that("a confirmation failure in a script carries the needs-confirm class", 
   withr::local_options(MitoPilot.cli_interactive = FALSE)
   expect_error(cli_confirm("Go?", FALSE, detail = "x"), class = "mitopilot_needs_confirm")
 })
+
+test_that("drop logs a dropped row per unit; a failed log write is reported loudly with exit 1", {
+  f <- local_export_fixture(group = "g1", ids = c("A", "B"))
+  local_mocked_bindings(export_flags = flagged_two, export_files = function(...) NULL)
+  suppressMessages(cli_cmd_export(c("g1", "--flagged", "drop", "--project", f$path)))
+  lg <- DBI::dbGetQuery(f$con, "SELECT ID, stage, action, rules FROM review_log")
+  expect_equal(c(lg$ID, lg$stage, lg$action), c("B", "export", "dropped"))
+  local_mocked_bindings(log_review = function(...) stop("db locked"))
+  msgs <- testthat::capture_messages(st <- cli_cmd_export(c("g1", "--flagged", "keep", "--yes", "--project", f$path)))
+  expect_equal(st, 1L); expect_true(any(grepl("NOT logged for: B", msgs))); expect_true(any(grepl("db locked", msgs)))
+})
+
+test_that("export has no public --flagged-confirmed option", {
+  f <- local_export_fixture(group = "g1", ids = "A")
+  expect_error(cli_cmd_export(c("g1", "--flagged-confirmed", "--project", f$path)), class = "mitopilot_cli_error")
+})

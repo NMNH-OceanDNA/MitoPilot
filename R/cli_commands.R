@@ -442,10 +442,16 @@ cli_assign_group <- function(con, u, name, split, strict = TRUE) {
   } else {
     sep <- length(c(mem(paste0(name, "-complete")), mem(paste0(name, "-partial")))) > 0L
     for (k in batch) {
-      groups[!unknown & comp == k] <-
-        if (length(have)) {
-          if (all(have == k) && !sep) name else paste0(name, "-", k)
-        } else if (sep || length(batch) > 1L) paste0(name, "-", k) else name
+      target <- if (length(have)) {
+        if (all(have == k) && !sep) name else paste0(name, "-", k)
+      } else if (sep || length(batch) > 1L) paste0(name, "-", k) else name
+      held <- mem(target)
+      if (length(held) && any(held != k)) {
+        if (strict) cli_fail(sprintf("Group '%s' already holds %s genomes; cannot add %s genomes", target,
+                                     setdiff(held, k)[1], k))
+        target <- NA_character_
+      }
+      groups[!unknown & comp == k] <- target
     }
   }
   ok <- !is.na(groups)
@@ -586,19 +592,24 @@ CLI_FLAGGED_MENU <- c(
 cli_cmd_export <- function(args) {
   desc <- c(CLI_DESC_PROJECT,
     flagged = "flagged samples: ask, stop, drop, or keep (default: ask in a terminal, stop in a script)",
-    "flagged-confirmed" = "treat --flagged keep as already confirmed",
     yes = "do not ask for confirmation")
-  p <- cli_parse_cmd(args, "export GROUP", desc, flags = c("yes", "flagged-confirmed"))
+  p <- cli_parse_cmd(args, "export GROUP", desc, flags = "yes")
   if (is.null(p)) return(0L)
   o <- p$opts
   if (length(p$pos) != 1L) cli_fail("export needs exactly one GROUP")
-  group <- p$pos[1]
-  yes <- isTRUE(o[["yes"]])
   choice <- o[["flagged"]] %||% if (cli_is_interactive()) "ask" else "stop"
   if (!choice %in% c("ask", "stop", "drop", "keep")) cli_fail("--flagged must be one of: ask, stop, drop, keep")
   if (choice == "ask" && !cli_is_interactive()) cli_fail("--flagged ask needs a terminal; use stop, drop, or keep")
   proj <- open_project(o[["project"]] %||% ".")
   on.exit(DBI::dbDisconnect(proj$con), add = TRUE)
+  cli_export(proj, p$pos[1], choice, isTRUE(o[["yes"]]))
+}
+
+#' Export one group of an open project
+#' @param choice ask, stop, drop, or keep
+#' @param keep_confirmed TRUE when `keep` was already confirmed by the user
+#' @noRd
+cli_export <- function(proj, group, choice, yes = FALSE, keep_confirmed = FALSE) {
   con <- proj$con
   live <- run_active(proj$path)
   if (!is.na(live)) cli_fail(paste0("A run is still in progress in this project: ", live))
@@ -686,7 +697,7 @@ cli_cmd_export <- function(args) {
     }
     if (choice == "keep") {
       if (!cli_confirm(sprintf("Export %d flagged sample(s) anyway? This is logged as an override.",
-                               length(flagged_ids)), yes || isTRUE(o[["flagged_confirmed"]]),
+                               length(flagged_ids)), yes || keep_confirmed,
                        detail = paste0(length(flagged_ids), " flagged sample(s)"))) {
         message("Nothing exported")
         return(2L)
@@ -709,10 +720,19 @@ cli_cmd_export <- function(args) {
     if (!file.exists(report)) file.copy(kept, report)
     unlink(kept)
   }
-  if (choice == "keep" && nrow(f) > 0L) {
-    fu <- units[units$ID %in% unique(f$ID), , drop = FALSE]
-    log_review(con, fu, "export", "override",
-               rules = vapply(fu$ID, function(id) pass_collapse(unique(f$why[f$ID == id])), ""))
+  logged <- if (choice == "keep" && nrow(f) > 0L) "override" else if (!is.null(export_ids)) "dropped"
+  if (!is.null(logged)) {
+    fu <- units[if (logged == "dropped") !units$ID %in% export_ids else units$ID %in% f$ID, , drop = FALSE]
+    err <- tryCatch({
+      log_review(con, fu, "export", logged,
+                 rules = vapply(fu$ID, function(id) pass_collapse(unique(f$why[f$ID == id])), ""))
+      NULL
+    }, error = function(e) conditionMessage(e))
+    if (!is.null(err)) {
+      message("Exported, but the ", logged, " was NOT logged for: ",
+              paste(cli_unit_label(fu), collapse = ", "), " (", err, ")")
+      return(1L)
+    }
   }
   if (!is.null(export_ids)) message("Note: the alignment report still shows the dropped samples")
   n <- if (is.null(export_ids)) nrow(units) else sum(units$ID %in% export_ids)
@@ -720,14 +740,15 @@ cli_cmd_export <- function(args) {
   status
 }
 
-#' Groups with accepted units that were never exported
+#' Groups holding an accepted unit that was never exported and not dropped on purpose
 #' @noRd
-cli_unexported_groups <- function(con) {
+cli_groups_needing_export <- function(con) {
   g <- DBI::dbGetQuery(con, paste(
-    "SELECT e.export_group FROM export e",
-    "LEFT JOIN annotate an ON an.ID = e.ID AND an.path = e.path AND an.scaffold = e.scaffold",
-    "WHERE e.export_group IS NOT NULL GROUP BY e.export_group",
-    "HAVING SUM(COALESCE(an.annotate_lock, 0) = 1) > 0 AND COUNT(e.export_time_stamp) = 0",
+    "SELECT DISTINCT e.export_group FROM export e",
+    "JOIN annotate an ON an.ID = e.ID AND an.path = e.path AND an.scaffold = e.scaffold",
+    "WHERE e.export_group IS NOT NULL AND an.annotate_lock = 1 AND e.export_time_stamp IS NULL",
+    "AND COALESCE((SELECT l.action FROM review_log l WHERE l.stage = 'export' AND l.ID = e.ID",
+    "AND l.path = e.path AND l.scaffold = e.scaffold ORDER BY l.time_stamp DESC, l.rowid DESC LIMIT 1), '') != 'dropped'",
     "ORDER BY 1"))$export_group
   g[vapply(g, function(x) nrow(export_group_units(con, x)) > 0L, logical(1))]
 }
@@ -829,25 +850,23 @@ cli_cmd_auto <- function(args) {
       message(sprintf("%d unit(s) assigned to: %s", sum(!is.na(g)), paste(new_groups, collapse = ", ")))
     }
     if (n_held) {
-      message("Left ungrouped (completeness unknown): ",
+      message("Left ungrouped (completeness unknown or would mix genomes): ",
               paste(cli_unit_label(u[is.na(g), , drop = FALSE]), collapse = ", "))
     }
   } else {
     message("No accepted units without a group")
   }
-  todo <- unique(c(new_groups, cli_unexported_groups(con)))
+  todo <- cli_groups_needing_export(con)
   results <- integer()
   for (g in todo) {
     message("Exporting group: ", g)
-    ea <- c(g, "--project", proj$path, "--flagged", flagged, if (yes) "--yes",
-            if (flagged == "keep") "--flagged-confirmed")
-    results[g] <- tryCatch(cli_cmd_export(ea),
+    results[g] <- tryCatch(cli_export(proj, g, flagged, yes, keep_confirmed = flagged == "keep"),
       mitopilot_needs_confirm = function(e) {
         message("Held '", g, "': needs confirmation (", paste(e$detail, collapse = "; "),
                 "); run 'mitopilot export ", g, " --yes' or 'mitopilot auto --yes' to proceed")
         2L
       },
-      mitopilot_cli_error = function(e) {
+      error = function(e) {
         message("Export of '", g, "' failed: ", conditionMessage(e))
         1L
       })
